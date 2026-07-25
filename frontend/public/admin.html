@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Panel - T.VỸ-AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8f9fa;
+            color: #1a1a2e;
+            padding: 24px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e4e7ec;
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2d3b8a;
+        }
+        .header .actions {
+            display: flex;
+            gap: 12px;
+        }
+        .header .actions a {
+            padding: 8px 16px;
+            background: #2d3b8a;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+        .header .actions a:hover {
+            opacity: 0.85;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stats-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e4e7ec;
+            text-align: center;
+        }
+        .stats-card .number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2d3b8a;
+        }
+        .stats-card .label {
+            font-size: 14px;
+            color: #8a8aaa;
+            margin-top: 4px;
+        }
+        .table-container {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e4e7ec;
+            overflow: hidden;
+        }
+        .table-container table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .table-container th {
+            background: #f8f9fa;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid #e4e7ec;
+        }
+        .table-container td {
+            padding: 10px 16px;
+            border-bottom: 1px solid #e4e7ec;
+        }
+        .table-container tr:hover td {
+            background: #f8f9fa;
+        }
+        .badge {
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge.admin {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+        .badge.user {
+            background: #eef2ff;
+            color: #2d3b8a;
+        }
+        .badge.premium {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        .btn-delete {
+            color: #ef4444;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-delete:hover {
+            text-decoration: underline;
+        }
+        .btn-role {
+            padding: 4px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            background: #e4e7ec;
+            color: #1a1a2e;
+            transition: 0.2s;
+        }
+        .btn-role:hover {
+            background: #2d3b8a;
+            color: #fff;
+        }
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .table-container {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👑 Admin Panel</h1>
+            <div class="actions">
+                <a href="/">← Về trang chủ</a>
+                <a href="#" onclick="logout()">Đăng xuất</a>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stats-card">
+                <div class="number" id="totalUsers">--</div>
+                <div class="label">Tổng người dùng</div>
+            </div>
+            <div class="stats-card">
+                <div class="number" id="totalConvs">--</div>
+                <div class="label">Tổng đoạn chat</div>
+            </div>
+            <div class="stats-card">
+                <div class="number" id="totalUsage">--</div>
+                <div class="label">Tổng lượt sử dụng</div>
+            </div>
+            <div class="stats-card">
+                <div class="number" id="premiumUsers">--</div>
+                <div class="label">Người dùng trả phí</div>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="table-container" style="margin-top: 20px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tên</th>
+                        <th>Email</th>
+                        <th>Vai trò</th>
+                        <th>Gói</th>
+                        <th>Ngày tạo</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <tr><td colspan="7" style="text-align:center;">Đang tải...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // ===== CHECK ADMIN =====
+        function checkAdmin() {
+            fetch('/api/auth/me')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error || data.role !== 'admin') {
+                        window.location.href = '/';
+                    }
+                });
+        }
+
+        // ===== LOAD STATS =====
+        function loadStats() {
+            fetch('/api/admin/stats')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('totalUsers').textContent = data.total_users || 0;
+                    document.getElementById('totalConvs').textContent = data.total_conversations || 0;
+                    document.getElementById('totalUsage').textContent = data.total_usage || 0;
+                    document.getElementById('premiumUsers').textContent = data.premium_users || 0;
+                });
+        }
+
+        // ===== LOAD USERS =====
+        function loadUsers() {
+            fetch('/api/admin/users')
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('usersTableBody');
+                    if (data.error) {
+                        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">${data.error}</td></tr>`;
+                        return;
+                    }
+                    if (data.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Chưa có người dùng</td></tr>`;
+                        return;
+                    }
+                    tbody.innerHTML = data.map(u => `
+                        <tr>
+                            <td style="font-size:12px;">${u.id.slice(0, 8)}</td>
+                            <td>${u.username}</td>
+                            <td>${u.email || '--'}</td>
+                            <td>
+                                <span class="badge ${u.role === 'admin' ? 'admin' : 'user'}">${u.role === 'admin' ? 'Admin' : 'User'}</span>
+                                ${u.role !== 'admin' ? `<button class="btn-role" onclick="setRole('${u.id}', 'admin')">Set Admin</button>` : ''}
+                            </td>
+                            <td><span class="badge ${u.subscription_tier !== 'basic' ? 'premium' : ''}">${u.subscription_tier || 'basic'}</span></td>
+                            <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                            <td>
+                                ${u.role !== 'admin' ? `<button class="btn-delete" onclick="deleteUser('${u.id}')">🗑️</button>` : '--'}
+                            </td>
+                        </tr>
+                    `).join('');
+                });
+        }
+
+        // ===== DELETE USER =====
+        function deleteUser(userId) {
+            if (!confirm('Xóa người dùng này?')) return;
+            fetch(`/api/admin/delete_user/${userId}`, { method: 'DELETE' })
+                .then(() => {
+                    loadUsers();
+                    loadStats();
+                });
+        }
+
+        // ===== SET ROLE =====
+        function setRole(userId, role) {
+            if (!confirm(`Chuyển user này thành ${role}?`)) return;
+            fetch('/api/admin/set_role', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, role: role })
+            })
+            .then(() => {
+                loadUsers();
+            });
+        }
+
+        // ===== LOGOUT =====
+        function logout() {
+            fetch('/api/auth/logout', { method: 'POST' })
+                .then(() => window.location.href = '/');
+        }
+
+        // ===== INIT =====
+        checkAdmin();
+        loadStats();
+        loadUsers();
+
+        // Tự động refresh mỗi 30 giây
+        setInterval(() => {
+            loadStats();
+            loadUsers();
+        }, 30000);
+    </script>
+</body>
+</html>

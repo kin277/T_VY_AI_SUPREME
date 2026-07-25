@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>T.VỸ-AI-SUPREME</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/assets/css/main.css" />
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <style>
+        /* ===== STYLE BỔ SUNG ===== */
+        .upgrade-card {
+            background: var(--color-bg);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            border: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: 0.3s;
+        }
+        .upgrade-card:hover {
+            border-color: var(--color-primary);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        }
+        .upgrade-card .upgrade-btn {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 20px;
+            background: var(--color-primary);
+            color: #fff;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .upgrade-card .upgrade-btn:hover {
+            opacity: 0.85;
+            transform: scale(1.02);
+        }
+        .upgrade-card .upgrade-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .momo-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 6px;
+            transition: 0.3s;
+            color: #fff;
+        }
+        .momo-btn:hover {
+            opacity: 0.9;
+            transform: scale(1.01);
+        }
+        .momo-btn.pro { background: #a83279; }
+        .momo-btn.plus { background: #8b5cf6; }
+        .momo-btn.pro3 { background: #ef4444; }
+        .toast-message {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            background: var(--color-bg-secondary);
+            color: var(--color-text);
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--color-border);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            z-index: 999;
+            animation: slideIn 0.3s ease;
+            max-width: 350px;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .toast-message.success { border-left: 4px solid #22c55e; }
+        .toast-message.error { border-left: 4px solid #ef4444; }
+        .toast-message.info { border-left: 4px solid #3b82f6; }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--color-border);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .history-item:hover {
+            background: var(--color-bg);
+        }
+        .history-item .delete-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .history-item .delete-btn:hover {
+            opacity: 0.7;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 10px 16px;
+            background: var(--color-bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--color-border);
+            margin-bottom: 12px;
+            max-width: 60px;
+        }
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--color-primary);
+            border-radius: 50%;
+            margin: 0 3px;
+            animation: dotBounce 1.4s infinite;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dotBounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-8px); }
+        }
+
+        .search-result {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            background: var(--color-bg-secondary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--color-border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            font-size: 13px;
+            z-index: 999;
+            display: none;
+        }
+        .search-result.show { display: block; }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--color-bg-secondary);
+            border-top: 1px solid var(--color-border);
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .toolbar button {
+            padding: 6px 14px;
+            background: var(--color-primary);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+        .toolbar button:hover {
+            opacity: 0.85;
+            transform: scale(1.02);
+        }
+        .toolbar button.danger {
+            background: #ef4444;
+            margin-left: auto;
+        }
+        .toolbar button.danger:hover {
+            background: #dc2626;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== APP CONTAINER ===== -->
+    <div class="app-container">
+
+        <!-- ===== SIDEBAR ===== -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="logo">T.VỸ.AI</div>
+                <span class="version">v11.0</span>
+            </div>
+
+            <div class="level-selector">
+                <span class="label">Cấp độ AI</span>
+                <select id="levelSelect">
+                    <option value="basic">AI Thường</option>
+                    <option value="pro" selected>AI Pro</option>
+                    <option value="plus">AI Plus</option>
+                    <option value="pro3">AI 3.0 Pro</option>
+                </select>
+                <div id="usageInfo" style="font-size:12px;color:#8a8aaa;margin-top:6px;">Lượt còn lại: --</div>
+            </div>
+
+            <nav>
+                <button class="nav-item active" data-tab="chat">Trò chuyện</button>
+                <button class="nav-item" data-tab="history">Lịch sử</button>
+                <button class="nav-item" data-tab="upgrade">Nâng cấp</button>
+                <button class="nav-item" data-tab="settings">Cài đặt</button>
+            </nav>
+
+            <div class="user-profile" id="userProfile">
+                <div class="avatar" id="userAvatar">TV</div>
+                <div class="info">
+                    <div class="name" id="userName">T.VỸ</div>
+                    <div class="status" id="userStatus">Đang hoạt động</div>
+                </div>
+                <button id="logoutBtn" style="background:none;border:none;color:#8a8aaa;cursor:pointer;font-size:14px;" title="Đăng xuất">🚪</button>
+            </div>
+        </aside>
+
+        <!-- ===== MAIN ===== -->
+        <main class="main">
+            <header class="header">
+                <div>
+                    <span class="title">Trò chuyện với <span id="chatName">AI Pro</span></span>
+                    <span class="level-badge" id="levelBadge">AI Pro</span>
+                </div>
+                <div class="actions">
+                    <div class="search-box">
+                        <input type="text" placeholder="Tìm kiếm tin nhắn..." id="searchInput" />
+                        <button onclick="searchMessages()" style="background:none;border:none;cursor:pointer;font-size:14px;">🔍</button>
+                    </div>
+                    <button class="btn-icon" id="themeToggle" title="Chuyển chế độ sáng/tối">🌙</button>
+                    <button class="btn-icon" id="exportBtn" title="Xuất chat" style="display:none;">📤</button>
+                </div>
+            </header>
+
+            <div class="chat-container" id="chatContainer">
+                <div class="message-wrapper ai">
+                    <div class="message ai">
+                        <strong>T.VỸ-AI-SUPREME v11.0</strong>
+                        <br /><br />
+                        Tôi là trợ lý AI thế hệ mới với ràng buộc đạo đức.
+                        <br /><br />
+                        Tôi có thể giúp bạn trong nhiều lĩnh vực:
+                        <br />
+                        - Lập trình và phát triển phần mềm
+                        <br />
+                        - Sáng tạo nội dung (viết, vẽ, âm nhạc)
+                        <br />
+                        - Tìm kiếm và tổng hợp thông tin
+                        <br />
+                        - Tư vấn và hướng dẫn kỹ thuật
+                        <br /><br />
+                        Tôi không can thiệp vào game, không hack, không tạo công cụ gian lận.
+                        <br />
+                        Tôi chỉ đưa ra hướng dẫn hợp pháp và an toàn.
+                        <br /><br />
+                        Hãy hỏi tôi bất kỳ điều gì!
+                        <span class="time">Bây giờ</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="toolbar">
+                <button onclick="useMultiAI()">🧠 AI Đa luồng</button>
+                <button onclick="summarizeText()">📝 Tóm tắt</button>
+                <button onclick="translateText()">🌐 Dịch</button>
+                <button onclick="generateVideo()">🎬 Tạo video</button>
+                <button onclick="analyzeData()">📊 Phân tích</button>
+                <button onclick="generateMusicWithLyrics()">🎵 Tạo nhạc</button>
+                <button class="danger" onclick="clearAllMessages()">🗑️ Xóa chat</button>
+            </div>
+
+            <div class="input-area">
+                <input type="text" id="inputField" placeholder="Nhập câu hỏi của bạn..." />
+                <button id="sendBtn">Gửi</button>
+            </div>
+
+            <footer class="footer">
+                Bản quyền T.VỸ-VIP-FILE | Phiên bản 11.0
+            </footer>
+        </main>
+    </div>
+
+    <!-- ===== MODALS ===== -->
+
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2>Lịch sử trò chuyện</h2>
+                <button class="close-btn" onclick="closeModal('historyModal')">✕</button>
+            </div>
+            <div id="historyList">Đang tải...</div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="upgradeModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2>Nâng cấp AI</h2>
+                <button class="close-btn" onclick="closeModal('upgradeModal')">✕</button>
+            </div>
+            <div id="upgradeList">
+                <div class="upgrade-card" data-tier="pro">
+                    <div>
+                        <div style="font-weight:600;">🔵 AI Pro</div>
+                        <div style="font-size:13px;color:#8a8aaa;">Trả lời chi tiết, tìm web</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="font-weight:700;color:#2d3b8a;">20.000đ/tháng</span>
+                        <button class="upgrade-btn" onclick="upgradeTier('pro')">Nâng cấp</button>
+                    </div>
+                </div>
+                <div class="upgrade-card" data-tier="plus">
+                    <div>
+                        <div style="font-weight:600;">🟣 AI Plus</div>
+                        <div style="font-size:13px;color:#8a8aaa;">Phân tích sâu, suy luận logic</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="font-weight:700;color:#2d3b8a;">50.000đ/tháng</span>
+                        <button class="upgrade-btn" onclick="upgradeTier('plus')">Nâng cấp</button>
+                    </div>
+                </div>
+                <div class="upgrade-card" data-tier="pro3">
+                    <div>
+                        <div style="font-weight:600;">🔴 AI 3.0 Pro</div>
+                        <div style="font-size:13px;color:#8a8aaa;">Siêu thông minh, dự đoán</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="font-weight:700;color:#2d3b8a;">100.000đ/tháng</span>
+                        <button class="upgrade-btn" onclick="upgradeTier('pro3')">Nâng cấp</button>
+                    </div>
+                </div>
+
+                <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--color-border);">
+                    <p style="font-size:13px;font-weight:600;color:var(--color-text);margin-bottom:8px;">💳 Thanh toán qua MoMo</p>
+                    <button class="momo-btn pro" onclick="upgradeWithMomo('pro')">Nâng cấp Pro - 20.000đ</button>
+                    <button class="momo-btn plus" onclick="upgradeWithMomo('plus')">Nâng cấp Plus - 50.000đ</button>
+                    <button class="momo-btn pro3" onclick="upgradeWithMomo('pro3')">Nâng cấp 3.0 Pro - 100.000đ</button>
+                    <p style="font-size:11px;color:#8a8aaa;margin-top:8px;text-align:center;">🔒 Thanh toán an toàn qua MoMo</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2>Cài đặt</h2>
+                <button class="close-btn" onclick="closeModal('settingsModal')">✕</button>
+            </div>
+            <div>
+                <p style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-border);">
+                    <span>Chế độ tối</span>
+                    <input type="checkbox" id="darkModeToggle" />
+                </p>
+                <p style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-border);">
+                    <span>Ngôn ngữ</span>
+                    <select id="langSelect">
+                        <option value="vi">Tiếng Việt</option>
+                        <option value="en">English</option>
+                    </select>
+                </p>
+                <button onclick="saveSettings()" style="margin-top:16px;padding:10px 24px;background:var(--color-primary);color:#fff;border:none;border-radius:8px;cursor:pointer;width:100%;font-weight:600;">Lưu cài đặt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-box" style="max-width:400px;text-align:center;">
+            <div style="margin-bottom:24px;">
+                <div style="font-size:48px;margin-bottom:8px;">🔐</div>
+                <h2>Đăng nhập</h2>
+                <p style="color:#8a8aaa;font-size:14px;">Sử dụng tài khoản Google hoặc Facebook</p>
+            </div>
+            <button onclick="loginGoogle()" style="width:100%;padding:12px;background:#fff;border:1px solid #e4e7ec;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;margin-bottom:10px;">
+                <img src="https://www.google.com/favicon.ico" style="width:20px;height:20px;" alt="Google" /> Đăng nhập với Google
+            </button>
+            <button onclick="loginFacebook()" style="width:100%;padding:12px;background:#1877f2;color:#fff;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;">
+                <img src="https://www.facebook.com/favicon.ico" style="width:20px;height:20px;" alt="Facebook" /> Đăng nhập với Facebook
+            </button>
+            <div style="margin-top:16px;font-size:12px;color:#8a8aaa;">
+                Admin: <strong style="color:var(--color-primary);">admin.ltvy@gmail.com</strong> (Google)
+            </div>
+        </div>
+    </div>
+
+    <div class="search-result" id="searchResult">🔍 Tìm thấy 0 kết quả</div>
+
+    <!-- ============================================================ -->
+    <!-- JAVASCRIPT CHÍNH -->
+    <!-- ============================================================ -->
+    <script>
+        // ================================================================
+        // FIREBASE CONFIG
+        // ================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyA4rZOgKFKKt3_b1XChI7i3c6cZ6mVkz6A",
+            authDomain: "ltv-pro-applock.firebaseapp.com",
+            databaseURL: "https://ltv-pro-applock-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "ltv-pro-applock",
+            storageBucket: "ltv-pro-applock.firebasestorage.app",
+            messagingSenderId: "317259598683",
+            appId: "1:317259598683:web:fa14536c138d17f36ea87e",
+            measurementId: "G-9J6X4WL6WS"
+        };
+
+        // Khởi tạo Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+            .catch(error => console.error('Persistence error:', error));
+
+        // ================================================================
+        // DOM
+        // ================================================================
+        const chatContainer = document.getElementById('chatContainer');
+        const inputField = document.getElementById('inputField');
+        const sendBtn = document.getElementById('sendBtn');
+        const levelSelect = document.getElementById('levelSelect');
+        const levelBadge = document.getElementById('levelBadge');
+        const chatName = document.getElementById('chatName');
+        const searchInput = document.getElementById('searchInput');
+        const themeToggle = document.getElementById('themeToggle');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const usageInfo = document.getElementById('usageInfo');
+        const exportBtn = document.getElementById('exportBtn');
+        const userAvatar = document.getElementById('userAvatar');
+        const userName = document.getElementById('userName');
+
+        // ===== STATE =====
+        let currentConversationId = null;
+        let currentLevel = 'pro';
+        let isDark = false;
+        let isLoggedIn = false;
+        let userData = null;
+        let socket = null;
+
+        const LEVEL_NAMES = {
+            basic: 'AI Thường',
+            pro: 'AI Pro',
+            plus: 'AI Plus',
+            pro3: 'AI 3.0 Pro'
+        };
+
+        // ================================================================
+        // TOAST
+        // ================================================================
+        function showToast(message, type = 'info') {
+            const existing = document.querySelector('.toast-message');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = `toast-message ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // ================================================================
+        // THEME
+        // ================================================================
+        function toggleTheme() {
+            isDark = !isDark;
+            const root = document.documentElement;
+            if (isDark) {
+                root.style.setProperty('--color-bg', '#1a1a2e');
+                root.style.setProperty('--color-bg-secondary', '#2a2a4e');
+                root.style.setProperty('--color-text', '#f0f0f0');
+                root.style.setProperty('--color-text-secondary', '#b0b0c0');
+                root.style.setProperty('--color-text-muted', '#8888aa');
+                root.style.setProperty('--color-border', '#3a3a5e');
+                root.style.setProperty('--color-primary-light', '#3a3a5e');
+                themeToggle.textContent = '☀️';
+            } else {
+                root.style.setProperty('--color-bg', '#f8f9fa');
+                root.style.setProperty('--color-bg-secondary', '#ffffff');
+                root.style.setProperty('--color-text', '#1a1a2e');
+                root.style.setProperty('--color-text-secondary', '#5a5a7a');
+                root.style.setProperty('--color-text-muted', '#8a8aaa');
+                root.style.setProperty('--color-border', '#e4e7ec');
+                root.style.setProperty('--color-primary-light', '#eef2ff');
+                themeToggle.textContent = '🌙';
+            }
+            localStorage.setItem('tv_theme', isDark ? 'dark' : 'light');
+        }
+
+        if (localStorage.getItem('tv_theme') === 'dark') {
+            isDark = true;
+            document.documentElement.style.setProperty('--color-bg', '#1a1a2e');
+            document.documentElement.style.setProperty('--color-bg-secondary', '#2a2a4e');
+            document.documentElement.style.setProperty('--color-text', '#f0f0f0');
+            document.documentElement.style.setProperty('--color-text-secondary', '#b0b0c0');
+            document.documentElement.style.setProperty('--color-text-muted', '#8888aa');
+            document.documentElement.style.setProperty('--color-border', '#3a3a5e');
+            document.documentElement.style.setProperty('--color-primary-light', '#3a3a5e');
+            themeToggle.textContent = '☀️';
+        }
+
+        themeToggle.addEventListener('click', toggleTheme);
+
+        // ================================================================
+        // LOGIN / LOGOUT
+        // ================================================================
+        function loginGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            provider.addScope('email');
+            provider.addScope('profile');
+
+            showToast('⏳ Đang kết nối với Google...', 'info');
+
+            firebase.auth().signInWithPopup(provider)
+                .then((result) => {
+                    const user = result.user;
+                    return fetch('/api/auth/google', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: user.email,
+                            name: user.displayName || user.email.split('@')[0],
+                            id_token: user.accessToken
+                        })
+                    });
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('✅ Đăng nhập thành công!', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast('❌ ' + (data.error || 'Đăng nhập thất bại'), 'error');
+                    }
+                })
+                .catch((error) => {
+                    console.error('Google login error:', error);
+                    if (error.code === 'auth/popup-closed-by-user') {
+                        showToast('⚠️ Bạn đã đóng cửa sổ đăng nhập', 'error');
+                    } else {
+                        showToast('❌ Lỗi: ' + error.message, 'error');
+                    }
+                });
+        }
+
+        function loginFacebook() {
+            const provider = new firebase.auth.FacebookAuthProvider();
+            provider.addScope('email');
+            provider.addScope('public_profile');
+
+            showToast('⏳ Đang kết nối với Facebook...', 'info');
+
+            firebase.auth().signInWithPopup(provider)
+                .then((result) => {
+                    const user = result.user;
+                    return fetch('/api/auth/facebook', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: user.email,
+                            name: user.displayName || user.email.split('@')[0],
+                            access_token: user.accessToken
+                        })
+                    });
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('✅ Đăng nhập thành công!', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast('❌ ' + (data.error || 'Đăng nhập thất bại'), 'error');
+                    }
+                })
+                .catch((error) => {
+                    console.error('Facebook login error:', error);
+                    showToast('❌ Lỗi: ' + error.message, 'error');
+                });
+        }
+
+        function logout() {
+            if (!confirm('Đăng xuất?')) return;
+
+            firebase.auth().signOut()
+                .then(() => {
+                    return fetch('/api/auth/logout', { method: 'POST' });
+                })
+                .then(() => {
+                    location.reload();
+                })
+                .catch(error => {
+                    showToast('❌ Lỗi đăng xuất: ' + error.message, 'error');
+                });
+        }
+
+        // ===== CHECK LOGIN =====
+        function checkLogin() {
+            fetch('/api/auth/me')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        // Hiển thị login modal
+                        document.getElementById('loginModal').classList.add('active');
+                        return;
+                    }
+                    userData = data;
+                    isLoggedIn = true;
+                    userName.textContent = data.username || 'User';
+                    userAvatar.textContent = (data.username || 'U').charAt(0).toUpperCase();
+                    document.getElementById('loginModal').classList.remove('active');
+                    loadUsage();
+                    loadConversations();
+                })
+                .catch(() => {
+                    document.getElementById('loginModal').classList.add('active');
+                });
+        }
+
+        // ===== SOCKET.IO =====
+        function initSocket() {
+            socket = io();
+            socket.on('connect', () => {
+                console.log('✅ Connected to socket');
+                socket.emit('join', { room: 'global' });
+            });
+            socket.on('new_message', (data) => {
+                if (data.message && data.user_id !== userData?.id) {
+                    addMessage('ai', data.message);
+                }
+            });
+        }
+
+        // ================================================================
+        // USAGE
+        // ================================================================
+        function loadUsage() {
+            const tier = levelSelect.value;
+            fetch(`/api/usage/${tier}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.unlimited) {
+                        usageInfo.textContent = '♾️ Không giới hạn';
+                    } else if (data.remaining <= 0) {
+                        usageInfo.textContent = '⚠️ Hết lượt hôm nay';
+                    } else {
+                        usageInfo.textContent = `Lượt còn lại: ${data.remaining}/${data.max}`;
+                    }
+                })
+                .catch(() => {});
+        }
+
+        levelSelect.addEventListener('change', function() {
+            currentLevel = this.value;
+            const name = LEVEL_NAMES[currentLevel] || 'AI Pro';
+            levelBadge.textContent = name;
+            chatName.textContent = name;
+            loadUsage();
+        });
+
+        // ================================================================
+        // NAVIGATION
+        // ================================================================
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                this.classList.add('active');
+                const tab = this.dataset.tab;
+                if (tab === 'history') {
+                    openModal('historyModal');
+                    loadHistory();
+                } else if (tab === 'settings') {
+                    openModal('settingsModal');
+                } else if (tab === 'upgrade') {
+                    openModal('upgradeModal');
+                } else if (tab === 'chat') {
+                    closeModal('historyModal');
+                    closeModal('settingsModal');
+                    closeModal('upgradeModal');
+                    inputField.focus();
+                }
+            });
+        });
+
+        // ================================================================
+        // MODALS
+        // ================================================================
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('active');
+            });
+        });
+
+        // ================================================================
+        // SEND MESSAGE
+        // ================================================================
+        function sendMessage() {
+            const text = inputField.value.trim();
+            if (!text) return;
+
+            if (!isLoggedIn) {
+                document.getElementById('loginModal').classList.add('active');
+                return;
+            }
+
+            addMessage('user', text);
+            inputField.value = '';
+
+            const level = levelSelect.value;
+
+            showTyping();
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: text,
+                    conversation_id: currentConversationId,
+                    level: level
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                hideTyping();
+                if (data.error) {
+                    addMessage('ai', '❌ ' + data.error);
+                    if (data.limit_reached) {
+                        openModal('upgradeModal');
+                    }
+                    return;
+                }
+                if (data.conversation_id) {
+                    currentConversationId = data.conversation_id;
+                    exportBtn.style.display = 'inline-block';
+                }
+                addMessage('ai', data.message || 'Đã xử lý thành công.');
+                loadUsage();
+                if (data.conversation_id) {
+                    fetch('/conversations')
+                        .then(r => r.json())
+                        .then(d => {
+                            const conv = d.conversations?.find(c => c.id === data.conversation_id);
+                            if (conv) chatName.textContent = conv.name || 'AI Pro';
+                        });
+                }
+            })
+            .catch(err => {
+                hideTyping();
+                addMessage('ai', '❌ Lỗi kết nối: ' + err.message);
+            });
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        inputField.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // ================================================================
+        // ADD MESSAGE
+        // ================================================================
+        function addMessage(role, content) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'message-wrapper ' + role;
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message ' + role;
+            msgDiv.innerHTML = content + `<span class="time">${new Date().toLocaleTimeString()}</span>`;
+
+            wrapper.appendChild(msgDiv);
+            chatContainer.appendChild(wrapper);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // ================================================================
+        // CONVERSATIONS
+        // ================================================================
+        function loadConversations() {
+            fetch('/conversations')
+                .then(res => res.json())
+                .then(data => {
+                    const convs = data.conversations || [];
+                    const badge = document.querySelector('.nav-item[data-tab="history"] .badge');
+                    if (badge) badge.textContent = convs.length;
+                })
+                .catch(() => {});
+        }
+
+        // ================================================================
+        // HISTORY
+        // ================================================================
+        function loadHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = 'Đang tải...';
+
+            fetch('/conversations')
+                .then(res => res.json())
+                .then(data => {
+                    const convs = data.conversations || [];
+                    if (convs.length === 0) {
+                        list.innerHTML = 'Chưa có đoạn chat nào.';
+                        return;
+                    }
+                    list.innerHTML = convs.map(c => `
+                        <div class="history-item" onclick="loadConversation('${c.id}')">
+                            <span>${c.name}</span>
+                            <span style="color:#8a8aaa;font-size:12px;">${new Date(c.updated_at || c.created_at).toLocaleString()}</span>
+                            <button class="delete-btn" onclick="event.stopPropagation();deleteConversation('${c.id}')">✕</button>
+                        </div>
+                    `).join('');
+                })
+                .catch(() => list.innerHTML = 'Lỗi tải lịch sử.');
+        }
+
+        function loadConversation(id) {
+            fetch(`/conversation/${id}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.conversation) {
+                        const c = data.conversation;
+                        currentConversationId = c.id;
+                        chatContainer.innerHTML = '';
+                        c.messages.forEach(m => addMessage(m.role, m.content));
+                        closeModal('historyModal');
+                        exportBtn.style.display = 'inline-block';
+                        if (c.level) {
+                            levelSelect.value = c.level;
+                            const name = LEVEL_NAMES[c.level] || 'AI Pro';
+                            levelBadge.textContent = name;
+                            chatName.textContent = c.name || name;
+                            currentLevel = c.level;
+                            loadUsage();
+                        }
+                        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                        document.querySelector('.nav-item[data-tab="chat"]').classList.add('active');
+                    }
+                });
+        }
+
+        function deleteConversation(id) {
+            if (!confirm('Xóa đoạn chat này?')) return;
+            fetch(`/delete/${id}`, { method: 'DELETE' })
+                .then(() => {
+                    if (id === currentConversationId) {
+                        currentConversationId = null;
+                        chatContainer.innerHTML = '';
+                        exportBtn.style.display = 'none';
+                        addMessage('ai', 'Đoạn chat mới đã được tạo. Hãy bắt đầu trò chuyện!');
+                        chatName.textContent = 'AI Pro';
+                    }
+                    loadHistory();
+                    loadConversations();
+                });
+        }
+
+        // ================================================================
+        // EXPORT
+        // ================================================================
+        exportBtn.addEventListener('click', function() {
+            if (!currentConversationId) {
+                showToast('Không có đoạn chat để xuất', 'error');
+                return;
+            }
+            window.location.href = `/api/export/${currentConversationId}`;
+        });
+
+        // ================================================================
+        // SEARCH
+        // ================================================================
+        function searchMessages() {
+            const keyword = searchInput.value.trim();
+            if (!keyword) {
+                document.querySelectorAll('.message').forEach(el => el.style.background = '');
+                document.getElementById('searchResult').classList.remove('show');
+                return;
+            }
+
+            const messages = document.querySelectorAll('.message');
+            let found = 0;
+            messages.forEach(msg => {
+                const text = msg.textContent.toLowerCase();
+                if (text.includes(keyword.toLowerCase())) {
+                    msg.style.background = '#fef3c7';
+                    msg.style.transition = 'background 0.3s';
+                    found++;
+                    if (found === 1) {
+                        msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                } else {
+                    msg.style.background = '';
+                }
+            });
+
+            const resultEl = document.getElementById('searchResult');
+            resultEl.textContent = `🔍 Tìm thấy ${found} kết quả cho "${keyword}"`;
+            resultEl.classList.add('show');
+            setTimeout(() => resultEl.classList.remove('show'), 4000);
+        }
+
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchMessages();
+            }
+        });
+
+        // ================================================================
+        // UPGRADE
+        // ================================================================
+        function upgradeTier(tier) {
+            if (!isLoggedIn) {
+                document.getElementById('loginModal').classList.add('active');
+                return;
+            }
+
+            const tierNames = {
+                'pro': 'Pro',
+                'plus': 'Plus',
+                'pro3': '3.0 Pro'
+            };
+
+            if (!confirm(`Xác nhận nâng cấp lên gói ${tierNames[tier]}?`)) return;
+
+            fetch('/api/upgrade', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tier: tier })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('✅ ' + data.message, 'success');
+                    levelSelect.value = tier;
+                    const name = LEVEL_NAMES[tier] || 'AI Pro';
+                    levelBadge.textContent = name;
+                    chatName.textContent = name;
+                    currentLevel = tier;
+                    loadUsage();
+                    closeModal('upgradeModal');
+                } else {
+                    showToast('❌ ' + data.error, 'error');
+                }
+            })
+            .catch(() => showToast('❌ Lỗi kết nối', 'error'));
+        }
+
+        function upgradeWithMomo(tier) {
+            if (!isLoggedIn) {
+                document.getElementById('loginModal').classList.add('active');
+                return;
+            }
+
+            const tierNames = {
+                'pro': 'Pro',
+                'plus': 'Plus',
+                'pro3': '3.0 Pro'
+            };
+
+            if (!confirm(`Xác nhận nâng cấp lên gói ${tierNames[tier]} qua MoMo?`)) return;
+
+            fetch('/api/payment/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tier: tier })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showToast('❌ ' + data.error, 'error');
+                    return;
+                }
+                if (data.payUrl) {
+                    window.open(data.payUrl, '_blank');
+                    showToast('⏳ Đang chuyển đến MoMo...', 'info');
+                }
+            })
+            .catch(() => showToast('❌ Lỗi kết nối', 'error'));
+        }
+
+        // ================================================================
+        // SETTINGS
+        // ================================================================
+        function saveSettings() {
+            const darkMode = document.getElementById('darkModeToggle').checked;
+            const lang = document.getElementById('langSelect').value;
+
+            if (darkMode !== isDark) toggleTheme();
+            localStorage.setItem('tv_lang', lang);
+
+            showToast('✅ Cài đặt đã được lưu!', 'success');
+            closeModal('settingsModal');
+        }
+
+        // ================================================================
+        // TYPING INDICATOR
+        // ================================================================
+        function showTyping() {
+            const typing = document.createElement('div');
+            typing.className = 'typing-indicator';
+            typing.id = 'typingIndicator';
+            typing.style.display = 'block';
+            typing.innerHTML = '<span></span><span></span><span></span>';
+            chatContainer.appendChild(typing);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function hideTyping() {
+            const el = document.getElementById('typingIndicator');
+            if (el) el.remove();
+        }
+
+        // ================================================================
+        // TOOLBAR FUNCTIONS
+        // ================================================================
+        function useMultiAI() {
+            const text = inputField.value.trim();
+            if (!text) {
+                showToast('Vui lòng nhập câu hỏi!', 'error');
+                return;
+            }
+
+            addMessage('user', '🧠 Yêu cầu AI Đa luồng: ' + text);
+            inputField.value = '';
+
+            showTyping();
+            fetch('/api/multi_ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: text })
+            })
+            .then(res => res.json())
+            .then(data => {
+                hideTyping();
+                if (data.error) {
+                    addMessage('ai', '❌ ' + data.error);
+                    return;
+                }
+
+                let html = '🧠 **Kết quả AI Đa luồng:**\n\n';
+                data.results.forEach(r => {
+                    html += `📌 **${r.model}** (Độ chính xác: ${r.accuracy}%):\n${r.response}\n\n`;
+                });
+                html += `🏆 **Kết quả tốt nhất:** ${data.best.model}`;
+                addMessage('ai', html);
+            })
+            .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        }
+
+        function summarizeText() {
+            const text = inputField.value.trim();
+            if (!text) {
+                showToast('Vui lòng nhập văn bản cần tóm tắt!', 'error');
+                return;
+            }
+
+            addMessage('user', '📝 Yêu cầu tóm tắt: ' + text);
+            inputField.value = '';
+
+            showTyping();
+            fetch('/api/summarize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text, max_sentences: 5 })
+            })
+            .then(res => res.json())
+            .then(data => {
+                hideTyping();
+                if (data.error) {
+                    addMessage('ai', '❌ ' + data.error);
+                    return;
+                }
+                addMessage('ai', `📝 **Tóm tắt:**\n\n${data.summary}\n\n📊 Độ dài gốc: ${data.original_length} ký tự → ${data.summarized_length} ký tự`);
+            })
+            .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        }
+
+        function translateText() {
+            const text = inputField.value.trim();
+            if (!text) {
+                showToast('Vui lòng nhập văn bản cần dịch!', 'error');
+                return;
+            }
+
+            const lang = prompt('Nhập mã ngôn ngữ đích:\nvi (Tiếng Việt)\nen (English)\nko (한국어)\nja (日本語)\nzh (中文)\nfr (Français)\nde (Deutsch)\nes (Español)\nru (Русский)\nar (العربية)', 'en');
+            if (!lang) return;
+
+            addMessage('user', `🌐 Yêu cầu dịch sang ${lang}: ${text}`);
+            inputField.value = '';
+
+            showTyping();
+            fetch('/api/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text, lang: lang })
+            })
+            .then(res => res.json())
+            .then(data => {
+                hideTyping();
+                if (data.error) {
+                    addMessage('ai', '❌ ' + data.error);
+                    return;
+                }
+                addMessage('ai', `🌐 **Dịch sang ${lang}:**\n\n${data.translated}`);
+            })
+            .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        }
+
+        function generateVideo() {
+            const text = inputField.value.trim();
+            if (!text) {
+                showToast('Vui lòng nhập mô tả video!', 'error');
+                return;
+            }
+
+            const template = prompt('Chọn loại video:\nshort (15s)\nmedium (30s)\nlong (60s)', 'short');
+            if (!template) return;
+
+            addMessage('user', `🎬 Yêu cầu tạo video (${template}): ${text}`);
+            inputField.value = '';
+
+            showTyping();
+            fetch('/api/generate_video', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: text, template: template })
+            })
+            .then(res => res.json())
+            .then(data => {
+                hideTyping();
+                if (data.error) {
+                    addMessage('ai', '❌ ' + data.error);
+                    return;
+                }
+                addMessage('ai', `🎬 **Video đang được tạo:**\n\n📌 Tiêu đề: ${data.title}\n⏱️ Thời lượng: ${data.duration}s\n📐 Độ phân giải: ${data.resolution}\n🎨 Phong cách: ${data.style}\n🔗 Link: ${data.url}\n\n⏳ Trạng thái: ${data.status}`);
+            })
+            .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        }
+
+        function analyzeData() {
+            const text = inputField.value.trim();
+            if (!text) {
+                showToast('Vui lòng nhập văn bản hoặc số cần phân tích!', 'error');
+                return;
+            }
+
+            const numbers = text.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
+
+            if (numbers.length > 1) {
+                addMessage('user', '📊 Yêu cầu phân tích số: ' + text);
+                inputField.value = '';
+
+                showTyping();
+                fetch('/api/analyze_numbers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ numbers: numbers })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    hideTyping();
+                    if (data.error) {
+                        addMessage('ai', '❌ ' + data.error);
+                        return;
+                    }
+                    addMessage('ai', `📊 **Phân tích dữ liệu số:**\n\n📌 Số lượng: ${data.count}\n📉 Nhỏ nhất: ${data.min}\n📈 Lớn nhất: ${data.max}\n📊 Trung bình: ${data.mean}\n📏 Trung vị: ${data.median}\n📐 Tổng: ${data.sum}`);
+                })
+                .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+            } else {
+                addMessage('user', '📊 Yêu cầu phân tích văn bản: ' + text);
+                inputField.value = '';
+
+                showTyping();
+                fetch('/api/analyze_text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    hideTyping();
+                    if (data.error) {
+                        addMessage('ai', '❌ ' + data.error);
+                        return;
+                    }
+                    addMessage('ai', `📊 **Phân tích văn bản:**\n\n📌 Số từ: ${data.word_count}\n📝 Số câu: ${data.sentence_count}\n📏 Độ dài trung bình từ: ${data.avg_word_length}\n🔤 Số từ độc nhất: ${data.unique_words}\n📖 Độ dễ đọc: ${data.readability}`);
+                })
+                .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+            }
+        }
+
+        function clearAllMessages() {
+            if (!confirm('Xóa toàn bộ tin nhắn trong chat hiện tại?')) return;
+            chatContainer.innerHTML = '';
+            addMessage('ai', '🗑️ Chat đã được xóa. Hãy bắt đầu trò chuyện mới!');
+            currentConversationId = null;
+            exportBtn.style.display = 'none';
+        }
+
+        // ================================================================
+        // INIT
+        // ================================================================
+        checkLogin();
+        inputField.focus();
+
+        // Auto-refresh usage every 60 seconds
+        setInterval(() => {
+            if (isLoggedIn) loadUsage();
+        }, 60000);
+
+        // Socket IO (nếu có)
+        if (typeof io !== 'undefined') {
+            initSocket();
+        }
+
+        console.log('🚀 T.VỸ-AI-SUPREME v11.0 đã sẵn sàng!');
+        console.log('📌 Bản quyền: T.VỸ-VIP-FILE');
+        console.log('🔐 Firebase OAuth đã được tích hợp');
+    </script>
+</body>
+</html>
