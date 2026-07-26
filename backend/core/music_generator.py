@@ -40,6 +40,46 @@ HF_API_URL = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B
 # ================================================================
 
 class LyricGenerator:
+    def generate_music_advanced(self, prompt: str, duration: int = 30, genre: str = "pop") -> Dict:
+        """Tạo nhạc nâng cao với MIDI + Lyrics"""
+        
+        # 1. Tạo lời bài hát
+        lyrics = self._generate_lyrics_advanced(prompt, genre)
+        
+        # 2. Tạo giai điệu MIDI
+        midi_path = self._create_midi_melody(prompt, genre, duration)
+        
+        # 3. Tạo giọng nói từ lyrics (TTS)
+        audio_path = self._generate_tts(lyrics)
+        
+        return {
+            "success": True,
+            "lyrics": lyrics,
+            "midi_file": midi_path,
+            "audio_file": audio_path,
+            "duration": duration,
+            "genre": genre,
+            "message": "🎵 Bài hát đã được tạo thành công!"
+        }
+
+    def _generate_lyrics_advanced(self, prompt: str, genre: str) -> str:
+        """Tạo lời bài hát nâng cao"""
+        # Sử dụng API hoặc AI local
+        lyrics_templates = {
+            "pop": f"""Verse 1:
+    {self._generate_verse(prompt)}
+    Pre-chorus:
+    {self._generate_pre_chorus()}
+    Chorus:
+    {self._generate_chorus(prompt)}
+    Bridge:
+    {self._generate_bridge()}
+    Outro:
+    {self._generate_outro(prompt)}""",
+            # ...
+        }
+        return lyrics_templates.get(genre, lyrics_templates["pop"])
+    
     def __init__(self):
         self.headers = {"Authorization": f"Bearer {HF_TOKEN}"} if HF_TOKEN else {}
         self.fallback_lyrics = self._load_fallback_lyrics()
