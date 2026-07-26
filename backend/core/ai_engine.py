@@ -266,7 +266,7 @@ if __name__ == "__main__":
     """
         }
 
-        def handle_image(self, query: str) -> Dict[str, Any]:
+    def handle_image(self, query: str) -> Dict[str, Any]:
         """Xử lý tạo ảnh"""
         desc = self._analyze_image_prompt(query)
         style = self._detect_style(query)
