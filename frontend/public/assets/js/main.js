@@ -91,6 +91,25 @@ function showToast(message, type = 'info') {
     }, 4000);
 }
 
+// ===== TOGGLE MENU =====
+function toggleMenu() {
+    const menu = document.getElementById('functionMenu');
+    if (menu) {
+        menu.classList.toggle('show');
+    }
+}
+
+// Đóng menu khi click ra ngoài
+document.addEventListener('click', function(event) {
+    const menu = document.getElementById('functionMenu');
+    const toggleBtn = document.getElementById('menuToggle');
+    if (menu && toggleBtn) {
+        if (!menu.contains(event.target) && !toggleBtn.contains(event.target)) {
+            menu.classList.remove('show');
+        }
+    }
+});
+
 // ===== LOGIN =====
 function checkLogin() {
     fetch('/api/auth/me')
@@ -499,7 +518,6 @@ function upgradeTier(tier) {
     .catch(() => showToast('❌ Lỗi kết nối', 'error'));
 }
 
-// ===== UPGRADE WITH MOMO =====
 function upgradeWithMomo(tier) {
     if (!isLoggedIn) {
         showLogin();
@@ -760,7 +778,7 @@ function generateMusicWithLyrics() {
     const mood = prompt('Chọn tâm trạng:\nhappy, sad, romantic, epic, neutral', 'happy');
     if (!mood) return;
 
-    const duration = parseInt(prompt('Chọn độ dài (giây, tối đa 420 - 7 phút):', '60')) || 60;
+    const duration = parseInt(prompt('Chọn độ dài (giây, tối đa 30):', '15')) || 15;
 
     addMessage('user', `🎵 Yêu cầu tạo nhạc (${style}, ${mood}, ${duration}s): ${text}`);
     inputField.value = '';
@@ -773,7 +791,7 @@ function generateMusicWithLyrics() {
             prompt: text,
             style: style,
             mood: mood,
-            duration: Math.min(duration, 420)
+            duration: duration
         })
     })
     .then(res => res.json())
@@ -785,62 +803,11 @@ function generateMusicWithLyrics() {
         }
         
         let html = `🎵 **Bài hát đã được tạo!**\n\n`;
-        html += `📌 Thời lượng: ${data.duration} giây\n`;
+        html += `📌 Lời bài hát:\n${data.lyrics}\n\n`;
+        html += `🎶 Nhạc nền: ${data.duration}s\n`;
         html += `🎤 Thể loại: ${data.style}\n`;
-        html += `🎭 Tâm trạng: ${data.mood}\n`;
-        html += `📦 Số đoạn ghép: ${data.num_segments || 1}\n\n`;
-        html += `📝 Lời bài hát:\n${data.lyrics}\n\n`;
+        html += `🎭 Tâm trạng: ${data.mood}\n\n`;
         html += `🔊 Tải nhạc: <a href="${data.download_url}" download style="color:var(--color-primary);text-decoration:underline;">${data.music_file}</a>`;
-        addMessage('ai', html);
-    })
-    .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
-}
-
-// ===== TẠO NHẠC =====
-function generateMusic() {
-    const text = inputField.value.trim();
-    if (!text) {
-        showToast('Vui lòng nhập mô tả bài hát!', 'error');
-        return;
-    }
-
-    const style = prompt('Chọn thể loại nhạc:\npop, rock, jazz, edm, classical, rap, ballad, v_pop, k_pop, rnb', 'pop');
-    if (!style) return;
-    
-    const mood = prompt('Chọn tâm trạng:\nhappy, sad, romantic, epic, neutral', 'romantic');
-    if (!mood) return;
-
-    addMessage('user', `🎵 Yêu cầu tạo nhạc (${style}, ${mood}): ${text}`);
-    inputField.value = '';
-
-    showTyping();
-    fetch('/api/generate_music', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            prompt: text,
-            style: style,
-            mood: mood
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        hideTyping();
-        if (data.error) {
-            addMessage('ai', '❌ ' + data.error);
-            return;
-        }
-        let html = `🎵 **Bài hát đã được tạo!**\n\n`;
-        html += `📌 Tiêu đề: ${data.title || 'Bài hát mới'}\n`;
-        html += `🎶 Thể loại: ${data.style || style}\n`;
-        html += `🎭 Tâm trạng: ${data.mood || mood}\n`;
-        html += `🎵 Tempo: ${data.tempo || '--'} BPM\n`;
-        html += `🎹 Key: ${data.key || '--'}\n`;
-        html += `🎸 Hợp âm: ${data.chords || '--'}\n`;
-        html += `🎤 Lời bài hát:\n${data.lyrics || 'Đang cập nhật...'}\n`;
-        if (data.audio_url) {
-            html += `\n🔊 Nghe thử: ${data.audio_url}`;
-        }
         addMessage('ai', html);
     })
     .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });

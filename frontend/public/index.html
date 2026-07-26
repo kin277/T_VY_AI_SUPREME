@@ -158,28 +158,69 @@
             border-top: 1px solid var(--color-border);
             flex-wrap: wrap;
             border-bottom: 1px solid var(--color-border);
+            align-items: center;
         }
-        .toolbar button {
+        .toolbar .menu-btn {
             padding: 6px 14px;
             background: var(--color-primary);
             color: #fff;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 12px;
-            font-weight: 500;
+            font-size: 18px;
+            font-weight: 700;
             transition: 0.3s;
         }
-        .toolbar button:hover {
+        .toolbar .menu-btn:hover {
             opacity: 0.85;
             transform: scale(1.02);
         }
-        .toolbar button.danger {
-            background: #ef4444;
-            margin-left: auto;
+        .toolbar .menu-hint {
+            font-size: 13px;
+            color: var(--text-muted);
         }
-        .toolbar button.danger:hover {
-            background: #dc2626;
+        .toolbar .dropdown-menu {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 0;
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 6px 0;
+            min-width: 180px;
+            z-index: 100;
+        }
+        .toolbar .dropdown-menu.show {
+            display: block;
+        }
+        .toolbar .dropdown-menu button {
+            display: block;
+            width: 100%;
+            padding: 8px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 13px;
+            color: var(--color-text);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .toolbar .dropdown-menu button:hover {
+            background: var(--color-bg);
+            color: var(--color-primary);
+        }
+        .toolbar .dropdown-menu .danger {
+            color: #ef4444;
+        }
+        .toolbar .dropdown-menu hr {
+            border: none;
+            border-top: 1px solid var(--color-border);
+            margin: 4px 0;
+        }
+        .toolbar .menu-wrapper {
+            position: relative;
         }
     </style>
 </head>
@@ -267,16 +308,25 @@
                 </div>
             </div>
 
+            <!-- ===== TOOLBAR MỚI ===== -->
             <div class="toolbar">
-                <button onclick="useMultiAI()">🧠 AI Đa luồng</button>
-                <button onclick="summarizeText()">📝 Tóm tắt</button>
-                <button onclick="translateText()">🌐 Dịch</button>
-                <button onclick="generateVideo()">🎬 Tạo video</button>
-                <button onclick="analyzeData()">📊 Phân tích</button>
-                <button onclick="generateMusicWithLyrics()">🎵 Tạo nhạc</button>
-                <button class="danger" onclick="clearAllMessages()">🗑️ Xóa chat</button>
+                <div class="menu-wrapper">
+                    <button class="menu-btn" id="menuToggle" onclick="toggleMenu()">➕</button>
+                    <div class="dropdown-menu" id="functionMenu">
+                        <button onclick="useMultiAI()">🧠 AI Đa luồng</button>
+                        <button onclick="summarizeText()">📝 Tóm tắt</button>
+                        <button onclick="translateText()">🌐 Dịch</button>
+                        <button onclick="generateVideo()">🎬 Tạo video</button>
+                        <button onclick="analyzeData()">📊 Phân tích</button>
+                        <button onclick="generateMusicWithLyrics()">🎵 Tạo nhạc</button>
+                        <hr>
+                        <button class="danger" onclick="clearAllMessages()">🗑️ Xóa chat</button>
+                    </div>
+                </div>
+                <span class="menu-hint">Nhấn ➕ để xem các chức năng AI</span>
             </div>
 
+            <!-- Input Area -->
             <div class="input-area">
                 <input type="text" id="inputField" placeholder="Nhập câu hỏi của bạn..." />
                 <button id="sendBtn">Gửi</button>
@@ -625,6 +675,23 @@
                     document.getElementById('loginModal').classList.add('active');
                 });
         }
+
+        // ===== TOGGLE MENU =====
+        function toggleMenu() {
+            const menu = document.getElementById('functionMenu');
+            menu.classList.toggle('show');
+        }
+
+        // Đóng menu khi click ra ngoài
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('functionMenu');
+            const toggleBtn = document.getElementById('menuToggle');
+            if (menu && toggleBtn) {
+                if (!menu.contains(event.target) && !toggleBtn.contains(event.target)) {
+                    menu.classList.remove('show');
+                }
+            }
+        });
 
         // ===== SOCKET.IO =====
         function initSocket() {
@@ -1207,6 +1274,55 @@
             }
         }
 
+        function generateMusicWithLyrics() {
+            const text = inputField.value.trim();
+            if (!text) {
+                showToast('Vui lòng nhập mô tả bài hát!', 'error');
+                return;
+            }
+
+            const style = prompt('Chọn thể loại:\npop, rock, jazz, edm, classical, rap, ballad, v_pop, k_pop', 'pop');
+            if (!style) return;
+
+            const mood = prompt('Chọn tâm trạng:\nhappy, sad, romantic, epic, neutral', 'happy');
+            if (!mood) return;
+
+            const duration = parseInt(prompt('Chọn độ dài (giây, tối đa 420 - 7 phút):', '60')) || 60;
+
+            addMessage('user', `🎵 Yêu cầu tạo nhạc (${style}, ${mood}, ${duration}s): ${text}`);
+            inputField.value = '';
+
+            showTyping();
+            fetch('/api/generate_music', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: text,
+                    style: style,
+                    mood: mood,
+                    duration: Math.min(duration, 420)
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                hideTyping();
+                if (data.error) {
+                    addMessage('ai', '❌ ' + data.error);
+                    return;
+                }
+
+                let html = `🎵 **Bài hát đã được tạo!**\n\n`;
+                html += `📌 Thời lượng: ${data.duration} giây\n`;
+                html += `🎤 Thể loại: ${data.style}\n`;
+                html += `🎭 Tâm trạng: ${data.mood}\n`;
+                html += `📦 Số đoạn ghép: ${data.num_segments || 1}\n\n`;
+                html += `📝 Lời bài hát:\n${data.lyrics}\n\n`;
+                html += `🔊 Tải nhạc: <a href="${data.download_url}" download style="color:var(--color-primary);text-decoration:underline;">${data.music_file}</a>`;
+                addMessage('ai', html);
+            })
+            .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        }
+
         function clearAllMessages() {
             if (!confirm('Xóa toàn bộ tin nhắn trong chat hiện tại?')) return;
             chatContainer.innerHTML = '';
@@ -1234,6 +1350,7 @@
         console.log('🚀 T.VỸ-AI-SUPREME v11.0 đã sẵn sàng!');
         console.log('📌 Bản quyền: T.VỸ-VIP-FILE');
         console.log('🔐 Firebase OAuth đã được tích hợp');
+        console.log('📋 Menu chức năng đã được gom vào nút ➕');
     </script>
 </body>
 </html>
