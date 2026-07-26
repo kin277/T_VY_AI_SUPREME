@@ -16,6 +16,7 @@ LEVEL_CONFIG = {
         "description": "Trả lời cơ bản, không tìm kiếm web.",
         "level": 0
     },
+    
     "pro": {
         "id": "pro",
         "name": "AI Pro",
@@ -48,6 +49,24 @@ LEVEL_CONFIG = {
         "features": ["Siêu thông minh", "Dự đoán chính xác", "Tối ưu tuyệt đối", "Hỗ trợ 24/7"],
         "description": "Siêu thông minh, dự đoán và tối ưu tuyệt đối.",
         "level": 3
+    }
+    # ===== THÊM VÀO LEVELS.PY =====
+    "expert": {
+        "id": "expert",
+        "name": "Chế độ Chuyên gia",
+        "icon": "🎯",
+        "color": "#f59e0b",
+        "price": 200000,
+        "price_text": "200.000đ/tháng",
+        "max_uses_per_day": 0,
+        "features": [
+            "Phân tích chuyên sâu từng lĩnh vực",
+            "Trích dẫn nguồn tham khảo",
+            "Xuất báo cáo chi tiết",
+            "Tư vấn chuyên môn cao"
+        ],
+        "description": "Chế độ chuyên gia cho các vấn đề phức tạp.",
+        "level": 4
     }
 }
 
