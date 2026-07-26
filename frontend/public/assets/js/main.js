@@ -16,6 +16,7 @@ const usageInfo = document.getElementById('usageInfo');
 const exportBtn = document.getElementById('exportBtn');
 const userAvatar = document.getElementById('userAvatar');
 const userName = document.getElementById('userName');
+const userStatus = document.getElementById('userStatus');
 
 // ===== STATE =====
 let currentConversationId = null;
@@ -24,8 +25,9 @@ let isDark = false;
 let isLoggedIn = false;
 let userData = null;
 let socket = null;
+let sessionTimer = null;
+const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 giờ
 
-// ===== LEVEL CONFIG =====
 const LEVEL_NAMES = {
     basic: 'AI Thường',
     pro: 'AI Pro',
@@ -34,27 +36,132 @@ const LEVEL_NAMES = {
 };
 
 // ================================================================
-// DEEP THINK INDICATOR
+// AUTH FUNCTIONS
 // ================================================================
-function showDeepThink(stage = 0) {
-    const indicator = document.getElementById('deepThinkIndicator');
-    const status = document.getElementById('thinkStatus');
-    if (!indicator || !status) return;
 
-    const stages = [
-        "🔍 Đang phân tích câu hỏi...",
-        "📚 Tìm kiếm kiến thức liên quan...",
-        "🧠 Xây dựng lập luận...",
-        "✍️ Tổng hợp câu trả lời..."
-    ];
-
-    indicator.style.display = 'block';
-    status.textContent = stages[Math.min(stage, stages.length - 1)] || stages[0];
+// ===== SWITCH AUTH TAB =====
+function switchAuthTab(tab) {
+    const loginTab = document.getElementById('loginTab');
+    const registerTab = document.getElementById('registerTab');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    
+    if (tab === 'login') {
+        loginTab.classList.add('active');
+        registerTab.classList.remove('active');
+        loginForm.style.display = 'block';
+        registerForm.style.display = 'none';
+    } else {
+        registerTab.classList.add('active');
+        loginTab.classList.remove('active');
+        registerForm.style.display = 'block';
+        loginForm.style.display = 'none';
+    }
 }
 
-function hideDeepThink() {
-    const indicator = document.getElementById('deepThinkIndicator');
-    if (indicator) indicator.style.display = 'none';
+// ===== OPEN LOGIN/REGISTER =====
+function openLoginModal() {
+    switchAuthTab('login');
+    openModal('loginModal');
+}
+
+function openRegisterModal() {
+    switchAuthTab('register');
+    openModal('loginModal');
+}
+
+// ===== CHECK LOGIN =====
+function checkLogin() {
+    fetch('/api/auth/me')
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                showGuestMode();
+                return;
+            }
+            userData = data;
+            isLoggedIn = true;
+            showUserMode(data);
+            loadUsage();
+            loadConversations();
+            checkSessionTimeout();
+        })
+        .catch(() => {
+            showGuestMode();
+        });
+}
+
+function showGuestMode() {
+    isLoggedIn = false;
+    document.getElementById('authButtons').style.display = 'flex';
+    document.getElementById('userInfo').style.display = 'none';
+    userName.textContent = 'Khách';
+    userAvatar.textContent = '👤';
+    userStatus.textContent = 'Chế độ khách';
+    logoutBtn.style.display = 'none';
+    document.getElementById('upgradeRequired').style.display = 'none';
+    showToast('🔓 Bạn đang sử dụng chế độ Khách. Một số chức năng bị giới hạn.', 'info');
+}
+
+function showUserMode(user) {
+    isLoggedIn = true;
+    document.getElementById('authButtons').style.display = 'none';
+    document.getElementById('userInfo').style.display = 'flex';
+    document.getElementById('headerUserName').textContent = user.username || 'User';
+    document.getElementById('headerUserRole').textContent = user.role === 'admin' ? 'Admin' : 'User';
+    userName.textContent = user.username || 'User';
+    userAvatar.textContent = (user.username || 'U').charAt(0).toUpperCase();
+    userStatus.textContent = user.role === 'admin' ? '👑 Admin' : 'Đã đăng nhập';
+    logoutBtn.style.display = 'block';
+    document.getElementById('upgradeRequired').style.display = 'none';
+}
+
+// ===== SESSION TIMEOUT =====
+function checkSessionTimeout() {
+    if (sessionTimer) clearTimeout(sessionTimer);
+    sessionTimer = setTimeout(() => {
+        if (isLoggedIn) {
+            showToast('⏰ Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'warning');
+            logout();
+        }
+    }, SESSION_TIMEOUT);
+}
+
+// Refresh session khi có hoạt động
+document.addEventListener('click', () => {
+    if (isLoggedIn) checkSessionTimeout();
+});
+document.addEventListener('keydown', () => {
+    if (isLoggedIn) checkSessionTimeout();
+});
+
+// ===== CHECK IF FUNCTION IS ALLOWED =====
+function requireAuth() {
+    if (!isLoggedIn) {
+        document.getElementById('upgradeRequired').style.display = 'block';
+        document.getElementById('upgradeRequired').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+    return true;
+}
+
+// ================================================================
+// TOAST
+// ================================================================
+function showToast(message, type = 'info') {
+    const existing = document.querySelector('.toast-message');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.className = `toast-message ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
 }
 
 // ================================================================
@@ -85,7 +192,6 @@ function toggleTheme() {
     localStorage.setItem('tv_theme', isDark ? 'dark' : 'light');
 }
 
-// Load theme from localStorage
 if (localStorage.getItem('tv_theme') === 'dark') {
     isDark = true;
     document.documentElement.style.setProperty('--color-bg', '#1a1a2e');
@@ -101,32 +207,11 @@ if (localStorage.getItem('tv_theme') === 'dark') {
 themeToggle.addEventListener('click', toggleTheme);
 
 // ================================================================
-// TOAST
-// ================================================================
-function showToast(message, type = 'info') {
-    const existing = document.querySelector('.toast-message');
-    if (existing) existing.remove();
-
-    const toast = document.createElement('div');
-    toast.className = `toast-message ${type}`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.3s';
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
-}
-
-// ================================================================
 // TOGGLE MENU
 // ================================================================
 function toggleMenu() {
     const menu = document.getElementById('functionMenu');
-    if (menu) {
-        menu.classList.toggle('show');
-    }
+    if (menu) menu.classList.toggle('show');
 }
 
 document.addEventListener('click', function(event) {
@@ -140,86 +225,145 @@ document.addEventListener('click', function(event) {
 });
 
 // ================================================================
-// LOGIN
+// DEEP THINK
 // ================================================================
-function checkLogin() {
-    fetch('/api/auth/me')
+function showDeepThink(stage = 0) {
+    const indicator = document.getElementById('deepThinkIndicator');
+    const status = document.getElementById('thinkStatus');
+    if (!indicator || !status) return;
+
+    const stages = [
+        "🔍 Đang phân tích câu hỏi...",
+        "📚 Tìm kiếm kiến thức liên quan...",
+        "🧠 Xây dựng lập luận...",
+        "✍️ Tổng hợp câu trả lời..."
+    ];
+
+    indicator.style.display = 'block';
+    status.textContent = stages[Math.min(stage, stages.length - 1)] || stages[0];
+}
+
+function hideDeepThink() {
+    const indicator = document.getElementById('deepThinkIndicator');
+    if (indicator) indicator.style.display = 'none';
+}
+
+// ================================================================
+// LOGIN / LOGOUT
+// ================================================================
+function loginGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.addScope('email');
+    provider.addScope('profile');
+
+    showToast('⏳ Đang kết nối với Google...', 'info');
+
+    firebase.auth().signInWithPopup(provider)
+        .then((result) => {
+            const user = result.user;
+            return fetch('/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: user.email,
+                    name: user.displayName || user.email.split('@')[0],
+                    id_token: user.accessToken
+                })
+            });
+        })
         .then(res => res.json())
         .then(data => {
-            if (data.error) {
-                showLogin();
-                return;
+            if (data.success) {
+                showToast('✅ Đăng nhập thành công!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('❌ ' + (data.error || 'Đăng nhập thất bại'), 'error');
             }
-            userData = data;
-            isLoggedIn = true;
-            userName.textContent = data.name || 'User';
-            userAvatar.textContent = (data.name || 'U').charAt(0).toUpperCase();
-            if (data.avatar) {
-                userAvatar.style.backgroundImage = `url(${data.avatar})`;
-                userAvatar.style.backgroundSize = 'cover';
-                userAvatar.style.backgroundPosition = 'center';
-                userAvatar.textContent = '';
-            }
-            document.getElementById('loginModal').classList.remove('active');
-            loadUsage();
-            initSocket();
-            loadConversations();
         })
-        .catch(() => showLogin());
-}
-
-function showLogin() {
-    document.getElementById('loginModal').classList.add('active');
-}
-
-function loginGoogle() {
-    const email = prompt('Nhập email Google của bạn:', 'user@gmail.com');
-    if (!email) return;
-    const name = email.split('@')[0];
-    fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id_token: email })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            showToast(data.error || 'Đăng nhập thất bại', 'error');
-        }
-    })
-    .catch(() => showToast('Lỗi kết nối', 'error'));
+        .catch((error) => {
+            console.error('Google login error:', error);
+            if (error.code === 'auth/popup-closed-by-user') {
+                showToast('⚠️ Bạn đã đóng cửa sổ đăng nhập', 'error');
+            } else {
+                showToast('❌ Lỗi: ' + error.message, 'error');
+            }
+        });
 }
 
 function loginFacebook() {
-    const email = prompt('Nhập email Facebook của bạn:', 'user@gmail.com');
-    if (!email) return;
-    const name = email.split('@')[0];
-    fetch('/api/auth/facebook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ access_token: email })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            showToast(data.error || 'Đăng nhập thất bại', 'error');
-        }
-    })
-    .catch(() => showToast('Lỗi kết nối', 'error'));
+    const provider = new firebase.auth.FacebookAuthProvider();
+    provider.addScope('email');
+    provider.addScope('public_profile');
+
+    showToast('⏳ Đang kết nối với Facebook...', 'info');
+
+    firebase.auth().signInWithPopup(provider)
+        .then((result) => {
+            const user = result.user;
+            return fetch('/api/auth/facebook', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: user.email,
+                    name: user.displayName || user.email.split('@')[0],
+                    access_token: user.accessToken
+                })
+            });
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showToast('✅ Đăng nhập thành công!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('❌ ' + (data.error || 'Đăng nhập thất bại'), 'error');
+            }
+        })
+        .catch((error) => {
+            console.error('Facebook login error:', error);
+            showToast('❌ Lỗi: ' + error.message, 'error');
+        });
 }
 
-logoutBtn.addEventListener('click', function() {
+function loginGitHub() {
+    const clientId = 'YOUR_GITHUB_CLIENT_ID';
+    const redirectUri = window.location.origin + '/auth/github/callback';
+    const scope = 'user:email';
+    const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
+    window.open(url, 'github-auth', 'width=600,height=600');
+    showToast('⏳ Đang chuyển đến GitHub...', 'info');
+}
+
+function logout() {
     if (!confirm('Đăng xuất?')) return;
-    fetch('/api/auth/logout', { method: 'POST' })
+
+    firebase.auth().signOut()
         .then(() => {
-            isLoggedIn = false;
-            if (socket) socket.disconnect();
+            return fetch('/api/auth/logout', { method: 'POST' });
+        })
+        .then(() => {
             location.reload();
+        })
+        .catch(error => {
+            showToast('❌ Lỗi đăng xuất: ' + error.message, 'error');
         });
+}
+
+// ================================================================
+// MODALS
+// ================================================================
+function openModal(id) {
+    document.getElementById(id).classList.add('active');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', function(e) {
+        if (e.target === this) this.classList.remove('active');
+    });
 });
 
 // ================================================================
@@ -227,24 +371,14 @@ logoutBtn.addEventListener('click', function() {
 // ================================================================
 function initSocket() {
     socket = io();
-
     socket.on('connect', () => {
-        console.log('✅ Đã kết nối WebSocket');
+        console.log('✅ Connected to socket');
         socket.emit('join', { room: 'global' });
     });
-
     socket.on('new_message', (data) => {
         if (data.message && data.user_id !== userData?.id) {
             addMessage('ai', data.message);
         }
-    });
-
-    socket.on('joined', (data) => {
-        console.log(`📡 Đã tham gia phòng: ${data.room}`);
-    });
-
-    socket.on('disconnect', () => {
-        console.log('❌ Ngắt kết nối WebSocket');
     });
 }
 
@@ -300,23 +434,6 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 // ================================================================
-// MODALS
-// ================================================================
-function openModal(id) {
-    document.getElementById(id).classList.add('active');
-}
-
-function closeModal(id) {
-    document.getElementById(id).classList.remove('active');
-}
-
-document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', function(e) {
-        if (e.target === this) this.classList.remove('active');
-    });
-});
-
-// ================================================================
 // SEND MESSAGE
 // ================================================================
 function sendMessage() {
@@ -324,7 +441,9 @@ function sendMessage() {
     if (!text) return;
 
     if (!isLoggedIn) {
-        showLogin();
+        showToast('🔒 Vui lòng đăng nhập để sử dụng chức năng này.', 'warning');
+        document.getElementById('upgradeRequired').style.display = 'block';
+        document.getElementById('upgradeRequired').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
 
@@ -543,7 +662,8 @@ searchInput.addEventListener('keydown', function(e) {
 // ================================================================
 function upgradeTier(tier) {
     if (!isLoggedIn) {
-        showLogin();
+        showToast('🔒 Vui lòng đăng nhập để nâng cấp.', 'warning');
+        openLoginModal();
         return;
     }
 
@@ -580,7 +700,8 @@ function upgradeTier(tier) {
 
 function upgradeWithMomo(tier) {
     if (!isLoggedIn) {
-        showLogin();
+        showToast('🔒 Vui lòng đăng nhập để nâng cấp.', 'warning');
+        openLoginModal();
         return;
     }
 
@@ -644,240 +765,235 @@ function hideTyping() {
 }
 
 // ================================================================
-// TOOLBAR FUNCTIONS
+// TOOLBAR FUNCTIONS (CÓ KIỂM TRA ĐĂNG NHẬP)
 // ================================================================
 
-// ===== AI ĐA LUỒNG =====
+function requireAuthAndExecute(callback) {
+    if (!isLoggedIn) {
+        document.getElementById('upgradeRequired').style.display = 'block';
+        document.getElementById('upgradeRequired').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast('🔒 Vui lòng đăng nhập để sử dụng chức năng này.', 'warning');
+        return;
+    }
+    callback();
+}
+
 function useMultiAI() {
-    const text = inputField.value.trim();
-    if (!text) {
-        showToast('Vui lòng nhập câu hỏi!', 'error');
-        return;
-    }
-
-    addMessage('user', '🧠 Yêu cầu AI Đa luồng: ' + text);
-    inputField.value = '';
-
-    showTyping();
-    fetch('/api/multi_ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: text })
-    })
-    .then(res => res.json())
-    .then(data => {
-        hideTyping();
-        if (data.error) {
-            addMessage('ai', '❌ ' + data.error);
+    requireAuthAndExecute(() => {
+        const text = inputField.value.trim();
+        if (!text) {
+            showToast('Vui lòng nhập câu hỏi!', 'error');
             return;
         }
-        
-        let html = '🧠 **Kết quả AI Đa luồng:**\n\n';
-        data.results.forEach(r => {
-            html += `📌 **${r.model}** (Độ chính xác: ${r.accuracy}%):\n${r.response}\n\n`;
-        });
-        html += `🏆 **Kết quả tốt nhất:** ${data.best.model}`;
-        addMessage('ai', html);
-    })
-    .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        addMessage('user', '🧠 Yêu cầu AI Đa luồng: ' + text);
+        inputField.value = '';
+        showTyping();
+        fetch('/api/multi_ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: text })
+        })
+        .then(res => res.json())
+        .then(data => {
+            hideTyping();
+            if (data.error) {
+                addMessage('ai', '❌ ' + data.error);
+                return;
+            }
+            let html = '🧠 **Kết quả AI Đa luồng:**\n\n';
+            data.results.forEach(r => {
+                html += `📌 **${r.model}** (Độ chính xác: ${r.accuracy}%):\n${r.response}\n\n`;
+            });
+            html += `🏆 **Kết quả tốt nhất:** ${data.best.model}`;
+            addMessage('ai', html);
+        })
+        .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+    });
 }
 
-// ===== TÓM TẮT =====
 function summarizeText() {
-    const text = inputField.value.trim();
-    if (!text) {
-        showToast('Vui lòng nhập văn bản cần tóm tắt!', 'error');
-        return;
-    }
-
-    addMessage('user', '📝 Yêu cầu tóm tắt: ' + text);
-    inputField.value = '';
-
-    showTyping();
-    fetch('/api/summarize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text, max_sentences: 5 })
-    })
-    .then(res => res.json())
-    .then(data => {
-        hideTyping();
-        if (data.error) {
-            addMessage('ai', '❌ ' + data.error);
+    requireAuthAndExecute(() => {
+        const text = inputField.value.trim();
+        if (!text) {
+            showToast('Vui lòng nhập văn bản cần tóm tắt!', 'error');
             return;
         }
-        addMessage('ai', `📝 **Tóm tắt:**\n\n${data.summary}\n\n📊 Độ dài gốc: ${data.original_length} ký tự → ${data.summarized_length} ký tự`);
-    })
-    .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        addMessage('user', '📝 Yêu cầu tóm tắt: ' + text);
+        inputField.value = '';
+        showTyping();
+        fetch('/api/summarize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: text, max_sentences: 5 })
+        })
+        .then(res => res.json())
+        .then(data => {
+            hideTyping();
+            if (data.error) {
+                addMessage('ai', '❌ ' + data.error);
+                return;
+            }
+            addMessage('ai', `📝 **Tóm tắt:**\n\n${data.summary}\n\n📊 Độ dài gốc: ${data.original_length} ký tự → ${data.summarized_length} ký tự`);
+        })
+        .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+    });
 }
 
-// ===== DỊCH NGÔN NGỮ =====
 function translateText() {
-    const text = inputField.value.trim();
-    if (!text) {
-        showToast('Vui lòng nhập văn bản cần dịch!', 'error');
-        return;
-    }
-
-    const lang = prompt('Nhập mã ngôn ngữ đích:\nvi (Tiếng Việt)\nen (English)\nko (한국어)\nja (日本語)\nzh (中文)\nfr (Français)\nde (Deutsch)\nes (Español)\nru (Русский)\nar (العربية)', 'en');
-    if (!lang) return;
-
-    addMessage('user', `🌐 Yêu cầu dịch sang ${lang}: ${text}`);
-    inputField.value = '';
-
-    showTyping();
-    fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text, lang: lang })
-    })
-    .then(res => res.json())
-    .then(data => {
-        hideTyping();
-        if (data.error) {
-            addMessage('ai', '❌ ' + data.error);
+    requireAuthAndExecute(() => {
+        const text = inputField.value.trim();
+        if (!text) {
+            showToast('Vui lòng nhập văn bản cần dịch!', 'error');
             return;
         }
-        addMessage('ai', `🌐 **Dịch sang ${lang}:**\n\n${data.translated}`);
-    })
-    .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        const lang = prompt('Nhập mã ngôn ngữ đích:\nvi (Tiếng Việt)\nen (English)\nko (한국어)\nja (日本語)\nzh (中文)\nfr (Français)\nde (Deutsch)\nes (Español)\nru (Русский)\nar (العربية)', 'en');
+        if (!lang) return;
+        addMessage('user', `🌐 Yêu cầu dịch sang ${lang}: ${text}`);
+        inputField.value = '';
+        showTyping();
+        fetch('/api/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: text, lang: lang })
+        })
+        .then(res => res.json())
+        .then(data => {
+            hideTyping();
+            if (data.error) {
+                addMessage('ai', '❌ ' + data.error);
+                return;
+            }
+            addMessage('ai', `🌐 **Dịch sang ${lang}:**\n\n${data.translated}`);
+        })
+        .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+    });
 }
 
-// ===== TẠO VIDEO =====
 function generateVideo() {
-    const text = inputField.value.trim();
-    if (!text) {
-        showToast('Vui lòng nhập mô tả video!', 'error');
-        return;
-    }
-
-    const template = prompt('Chọn loại video:\nshort (15s)\nmedium (30s)\nlong (60s)', 'short');
-    if (!template) return;
-
-    addMessage('user', `🎬 Yêu cầu tạo video (${template}): ${text}`);
-    inputField.value = '';
-
-    showTyping();
-    fetch('/api/generate_video', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: text, template: template })
-    })
-    .then(res => res.json())
-    .then(data => {
-        hideTyping();
-        if (data.error) {
-            addMessage('ai', '❌ ' + data.error);
+    requireAuthAndExecute(() => {
+        const text = inputField.value.trim();
+        if (!text) {
+            showToast('Vui lòng nhập mô tả video!', 'error');
             return;
         }
-        addMessage('ai', `🎬 **Video đang được tạo:**\n\n📌 Tiêu đề: ${data.title}\n⏱️ Thời lượng: ${data.duration}s\n📐 Độ phân giải: ${data.resolution}\n🎨 Phong cách: ${data.style}\n🔗 Link: ${data.url}\n\n⏳ Trạng thái: ${data.status}`);
-    })
-    .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        const template = prompt('Chọn loại video:\nshort (15s)\nmedium (30s)\nlong (60s)', 'short');
+        if (!template) return;
+        addMessage('user', `🎬 Yêu cầu tạo video (${template}): ${text}`);
+        inputField.value = '';
+        showTyping();
+        fetch('/api/generate_video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: text, template: template })
+        })
+        .then(res => res.json())
+        .then(data => {
+            hideTyping();
+            if (data.error) {
+                addMessage('ai', '❌ ' + data.error);
+                return;
+            }
+            addMessage('ai', `🎬 **Video đang được tạo:**\n\n📌 Tiêu đề: ${data.title}\n⏱️ Thời lượng: ${data.duration}s\n📐 Độ phân giải: ${data.resolution}\n🎨 Phong cách: ${data.style}\n🔗 Link: ${data.url}\n\n⏳ Trạng thái: ${data.status}`);
+        })
+        .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+    });
 }
 
-// ===== PHÂN TÍCH DỮ LIỆU =====
 function analyzeData() {
-    const text = inputField.value.trim();
-    if (!text) {
-        showToast('Vui lòng nhập văn bản hoặc số cần phân tích!', 'error');
-        return;
-    }
-
-    const numbers = text.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
-    
-    if (numbers.length > 1) {
-        addMessage('user', '📊 Yêu cầu phân tích số: ' + text);
-        inputField.value = '';
-
-        showTyping();
-        fetch('/api/analyze_numbers', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ numbers: numbers })
-        })
-        .then(res => res.json())
-        .then(data => {
-            hideTyping();
-            if (data.error) {
-                addMessage('ai', '❌ ' + data.error);
-                return;
-            }
-            addMessage('ai', `📊 **Phân tích dữ liệu số:**\n\n📌 Số lượng: ${data.count}\n📉 Nhỏ nhất: ${data.min}\n📈 Lớn nhất: ${data.max}\n📊 Trung bình: ${data.mean}\n📏 Trung vị: ${data.median}\n📐 Tổng: ${data.sum}`);
-        })
-        .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
-    } else {
-        addMessage('user', '📊 Yêu cầu phân tích văn bản: ' + text);
-        inputField.value = '';
-
-        showTyping();
-        fetch('/api/analyze_text', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: text })
-        })
-        .then(res => res.json())
-        .then(data => {
-            hideTyping();
-            if (data.error) {
-                addMessage('ai', '❌ ' + data.error);
-                return;
-            }
-            addMessage('ai', `📊 **Phân tích văn bản:**\n\n📌 Số từ: ${data.word_count}\n📝 Số câu: ${data.sentence_count}\n📏 Độ dài trung bình từ: ${data.avg_word_length}\n🔤 Số từ độc nhất: ${data.unique_words}\n📖 Độ dễ đọc: ${data.readability}`);
-        })
-        .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
-    }
-}
-
-// ===== TẠO NHẠC CÓ LỜI =====
-function generateMusicWithLyrics() {
-    const text = inputField.value.trim();
-    if (!text) {
-        showToast('Vui lòng nhập mô tả bài hát!', 'error');
-        return;
-    }
-
-    const style = prompt('Chọn thể loại:\npop, rock, jazz, edm, classical, rap, ballad, v_pop, k_pop, rnb', 'pop');
-    if (!style) return;
-    
-    const mood = prompt('Chọn tâm trạng:\nhappy, sad, romantic, epic, neutral', 'happy');
-    if (!mood) return;
-
-    const duration = parseInt(prompt('Chọn độ dài (giây, tối đa 30):', '15')) || 15;
-
-    addMessage('user', `🎵 Yêu cầu tạo nhạc (${style}, ${mood}, ${duration}s): ${text}`);
-    inputField.value = '';
-
-    showTyping();
-    fetch('/api/generate_music', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            prompt: text,
-            style: style,
-            mood: mood,
-            duration: duration
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        hideTyping();
-        if (data.error) {
-            addMessage('ai', '❌ ' + data.error);
+    requireAuthAndExecute(() => {
+        const text = inputField.value.trim();
+        if (!text) {
+            showToast('Vui lòng nhập văn bản hoặc số cần phân tích!', 'error');
             return;
         }
-        
-        let html = `🎵 **Bài hát đã được tạo!**\n\n`;
-        html += `📌 Lời bài hát:\n${data.lyrics}\n\n`;
-        html += `🎶 Nhạc nền: ${data.duration}s\n`;
-        html += `🎤 Thể loại: ${data.style}\n`;
-        html += `🎭 Tâm trạng: ${data.mood}\n\n`;
-        html += `🔊 Tải nhạc: <a href="${data.download_url}" download style="color:var(--color-primary);text-decoration:underline;">${data.music_file}</a>`;
-        addMessage('ai', html);
-    })
-    .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        const numbers = text.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
+        if (numbers.length > 1) {
+            addMessage('user', '📊 Yêu cầu phân tích số: ' + text);
+            inputField.value = '';
+            showTyping();
+            fetch('/api/analyze_numbers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ numbers: numbers })
+            })
+            .then(res => res.json())
+            .then(data => {
+                hideTyping();
+                if (data.error) {
+                    addMessage('ai', '❌ ' + data.error);
+                    return;
+                }
+                addMessage('ai', `📊 **Phân tích dữ liệu số:**\n\n📌 Số lượng: ${data.count}\n📉 Nhỏ nhất: ${data.min}\n📈 Lớn nhất: ${data.max}\n📊 Trung bình: ${data.mean}\n📏 Trung vị: ${data.median}\n📐 Tổng: ${data.sum}`);
+            })
+            .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        } else {
+            addMessage('user', '📊 Yêu cầu phân tích văn bản: ' + text);
+            inputField.value = '';
+            showTyping();
+            fetch('/api/analyze_text', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            })
+            .then(res => res.json())
+            .then(data => {
+                hideTyping();
+                if (data.error) {
+                    addMessage('ai', '❌ ' + data.error);
+                    return;
+                }
+                addMessage('ai', `📊 **Phân tích văn bản:**\n\n📌 Số từ: ${data.word_count}\n📝 Số câu: ${data.sentence_count}\n📏 Độ dài trung bình từ: ${data.avg_word_length}\n🔤 Số từ độc nhất: ${data.unique_words}\n📖 Độ dễ đọc: ${data.readability}`);
+            })
+            .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        }
+    });
 }
 
-// ===== XÓA CHAT =====
+function generateMusicWithLyrics() {
+    requireAuthAndExecute(() => {
+        const text = inputField.value.trim();
+        if (!text) {
+            showToast('Vui lòng nhập mô tả bài hát!', 'error');
+            return;
+        }
+        const style = prompt('Chọn thể loại:\npop, rock, jazz, edm, classical, rap, ballad, v_pop, k_pop', 'pop');
+        if (!style) return;
+        const mood = prompt('Chọn tâm trạng:\nhappy, sad, romantic, epic, neutral', 'happy');
+        if (!mood) return;
+        const duration = parseInt(prompt('Chọn độ dài (giây, tối đa 420 - 7 phút):', '60')) || 60;
+        addMessage('user', `🎵 Yêu cầu tạo nhạc (${style}, ${mood}, ${duration}s): ${text}`);
+        inputField.value = '';
+        showTyping();
+        fetch('/api/generate_music', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: text,
+                style: style,
+                mood: mood,
+                duration: Math.min(duration, 420)
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            hideTyping();
+            if (data.error) {
+                addMessage('ai', '❌ ' + data.error);
+                return;
+            }
+            let html = `🎵 **Bài hát đã được tạo!**\n\n`;
+            html += `📌 Thời lượng: ${data.duration} giây\n`;
+            html += `🎤 Thể loại: ${data.style}\n`;
+            html += `🎭 Tâm trạng: ${data.mood}\n`;
+            html += `📦 Số đoạn ghép: ${data.num_segments || 1}\n\n`;
+            html += `📝 Lời bài hát:\n${data.lyrics}\n\n`;
+            html += `🔊 Tải nhạc: <a href="${data.download_url}" download style="color:var(--color-primary);text-decoration:underline;">${data.music_file}</a>`;
+            addMessage('ai', html);
+        })
+        .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+    });
+}
+
 function clearAllMessages() {
     if (!confirm('Xóa toàn bộ tin nhắn trong chat hiện tại?')) return;
     chatContainer.innerHTML = '';
@@ -897,7 +1013,11 @@ setInterval(() => {
     if (isLoggedIn) loadUsage();
 }, 60000);
 
-console.log('🚀 T.VỸ-AI-SUPREME v10.6 đã sẵn sàng!');
+if (typeof io !== 'undefined') {
+    initSocket();
+}
+
+console.log('🚀 T.VỸ-AI-SUPREME v11.0 đã sẵn sàng!');
 console.log('📌 Bản quyền: T.VỸ-VIP-FILE');
-console.log('💳 Thanh toán MoMo đã được tích hợp');
-console.log('🧠 Deep Think đã được bật');
+console.log('🔐 Hệ thống đăng nhập OAuth đã được tích hợp');
+console.log('👤 Chế độ Khách: các chức năng bị giới hạn');

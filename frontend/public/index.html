@@ -86,6 +86,7 @@
         .toast-message.success { border-left: 4px solid #22c55e; }
         .toast-message.error { border-left: 4px solid #ef4444; }
         .toast-message.info { border-left: 4px solid #3b82f6; }
+        .toast-message.warning { border-left: 4px solid #f59e0b; }
 
         .history-item {
             display: flex;
@@ -245,6 +246,131 @@
             0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
             30% { transform: translateY(-8px); opacity: 1; }
         }
+
+        /* ===== HEADER AUTH BUTTONS ===== */
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .auth-buttons {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .btn-auth {
+            padding: 6px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: 20px;
+            background: var(--color-bg-secondary);
+            color: var(--color-text);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn-auth:hover {
+            background: var(--color-primary);
+            color: #fff;
+            border-color: var(--color-primary);
+        }
+        .btn-auth.btn-register {
+            background: var(--color-primary);
+            color: #fff;
+            border-color: var(--color-primary);
+        }
+        .btn-auth.btn-register:hover {
+            opacity: 0.85;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .user-info .user-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .user-info .user-role {
+            font-size: 11px;
+            padding: 2px 10px;
+            border-radius: 12px;
+            background: var(--color-primary-light);
+            color: var(--color-primary);
+        }
+        .btn-logout {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: var(--text-muted);
+            transition: 0.3s;
+        }
+        .btn-logout:hover {
+            color: var(--color-primary);
+        }
+
+        /* ===== AUTH TABS ===== */
+        .auth-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .auth-tab {
+            flex: 1;
+            padding: 10px;
+            background: var(--color-bg);
+            color: var(--text-muted);
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: 0.3s;
+        }
+        .auth-tab.active {
+            background: var(--color-primary);
+            color: #fff;
+        }
+        .auth-tab:hover:not(.active) {
+            background: var(--color-bg-secondary);
+        }
+
+        /* ===== UPGRADE REQUIRED ===== */
+        .upgrade-required {
+            padding: 16px 20px;
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            color: #78350f;
+            display: none;
+        }
+        .upgrade-required .btn-upgrade {
+            padding: 8px 20px;
+            background: #f59e0b;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 8px;
+            transition: 0.3s;
+        }
+        .upgrade-required .btn-upgrade:hover {
+            opacity: 0.85;
+        }
+
+        @media (max-width: 768px) {
+            .auth-buttons .btn-auth {
+                font-size: 11px;
+                padding: 4px 10px;
+            }
+            .user-info .user-name {
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -278,12 +404,12 @@
             </nav>
 
             <div class="user-profile" id="userProfile">
-                <div class="avatar" id="userAvatar">TV</div>
+                <div class="avatar" id="userAvatar">👤</div>
                 <div class="info">
-                    <div class="name" id="userName">T.VỸ</div>
-                    <div class="status" id="userStatus">Đang hoạt động</div>
+                    <div class="name" id="userName">Khách</div>
+                    <div class="status" id="userStatus">Chế độ khách</div>
                 </div>
-                <button id="logoutBtn" style="background:none;border:none;color:#8a8aaa;cursor:pointer;font-size:14px;" title="Đăng xuất">🚪</button>
+                <button id="logoutBtn" style="display:none;background:none;border:none;color:#8a8aaa;cursor:pointer;font-size:14px;" title="Đăng xuất">🚪</button>
             </div>
         </aside>
 
@@ -294,17 +420,39 @@
                     <span class="title">Trò chuyện với <span id="chatName">AI Pro</span></span>
                     <span class="level-badge" id="levelBadge">AI Pro</span>
                 </div>
-                <div class="actions">
+                <div class="header-right">
                     <div class="search-box">
                         <input type="text" placeholder="Tìm kiếm tin nhắn..." id="searchInput" />
                         <button onclick="searchMessages()" style="background:none;border:none;cursor:pointer;font-size:14px;">🔍</button>
                     </div>
+                    
+                    <!-- ===== AUTH BUTTONS ===== -->
+                    <div class="auth-buttons" id="authButtons">
+                        <button class="btn-auth" onclick="openLoginModal()">🔐 Đăng nhập</button>
+                        <button class="btn-auth btn-register" onclick="openRegisterModal()">📝 Đăng ký</button>
+                    </div>
+                    
+                    <!-- ===== USER INFO ===== -->
+                    <div class="user-info" id="userInfo" style="display:none;">
+                        <span class="user-name" id="headerUserName">User</span>
+                        <span class="user-role" id="headerUserRole">User</span>
+                        <button class="btn-logout" onclick="logout()" title="Đăng xuất">🚪</button>
+                    </div>
+                    
                     <button class="btn-icon" id="themeToggle" title="Chuyển chế độ sáng/tối">🌙</button>
                     <button class="btn-icon" id="exportBtn" title="Xuất chat" style="display:none;">📤</button>
                 </div>
             </header>
 
             <div class="chat-container" id="chatContainer">
+
+                <!-- ===== UPGRADE REQUIRED (hiển thị khi guest dùng chức năng bị khóa) ===== -->
+                <div class="upgrade-required" id="upgradeRequired">
+                    <strong>🔒 Chức năng này yêu cầu đăng nhập!</strong>
+                    <p style="margin:4px 0;font-size:14px;">Vui lòng đăng nhập hoặc đăng ký tài khoản để sử dụng.</p>
+                    <button class="btn-upgrade" onclick="openLoginModal()">🔐 Đăng nhập ngay</button>
+                    <button class="btn-upgrade" onclick="openRegisterModal()" style="background:#4f6ef7;margin-left:8px;">📝 Đăng ký</button>
+                </div>
 
                 <!-- ===== DEEP THINK INDICATOR ===== -->
                 <div id="deepThinkIndicator">
@@ -462,22 +610,54 @@
         </div>
     </div>
 
-    <!-- Login Modal -->
+    <!-- ===== LOGIN MODAL ===== -->
     <div class="modal-overlay" id="loginModal">
-        <div class="modal-box" style="max-width:400px;text-align:center;">
-            <div style="margin-bottom:24px;">
-                <div style="font-size:48px;margin-bottom:8px;">🔐</div>
-                <h2>Đăng nhập</h2>
-                <p style="color:#8a8aaa;font-size:14px;">Sử dụng tài khoản Google hoặc Facebook</p>
+        <div class="modal-box" style="max-width:420px;">
+            <div class="modal-header">
+                <h2>🔐 Đăng nhập</h2>
+                <button class="close-btn" onclick="closeModal('loginModal')">✕</button>
             </div>
-            <button onclick="loginGoogle()" style="width:100%;padding:12px;background:#fff;border:1px solid #e4e7ec;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;margin-bottom:10px;">
-                <img src="https://www.google.com/favicon.ico" style="width:20px;height:20px;" alt="Google" /> Đăng nhập với Google
-            </button>
-            <button onclick="loginFacebook()" style="width:100%;padding:12px;background:#1877f2;color:#fff;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;">
-                <img src="https://www.facebook.com/favicon.ico" style="width:20px;height:20px;" alt="Facebook" /> Đăng nhập với Facebook
-            </button>
-            <div style="margin-top:16px;font-size:12px;color:#8a8aaa;">
-                Admin: <strong style="color:var(--color-primary);">admin.ltvy@gmail.com</strong> (Google)
+            
+            <!-- Tabs -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="loginTab" onclick="switchAuthTab('login')">Đăng nhập</button>
+                <button class="auth-tab" id="registerTab" onclick="switchAuthTab('register')">Đăng ký</button>
+            </div>
+            
+            <!-- Form đăng nhập -->
+            <div id="loginForm">
+                <button onclick="loginGoogle()" style="width:100%;padding:12px;background:#fff;border:1px solid var(--color-border);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;margin-bottom:10px;">
+                    <img src="https://www.google.com/favicon.ico" style="width:20px;height:20px;" alt="Google" /> Đăng nhập với Google
+                </button>
+                <button onclick="loginFacebook()" style="width:100%;padding:12px;background:#1877f2;color:#fff;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;margin-bottom:10px;">
+                    <img src="https://www.facebook.com/favicon.ico" style="width:20px;height:20px;" alt="Facebook" /> Đăng nhập với Facebook
+                </button>
+                <button onclick="loginGitHub()" style="width:100%;padding:12px;background:#24292e;color:#fff;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;">
+                    <img src="https://github.com/favicon.ico" style="width:20px;height:20px;" alt="GitHub" /> Đăng nhập với GitHub
+                </button>
+                <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;">
+                    Chưa có tài khoản? <span style="color:var(--color-primary);cursor:pointer;" onclick="switchAuthTab('register')">Đăng ký ngay</span>
+                </div>
+            </div>
+            
+            <!-- Form đăng ký -->
+            <div id="registerForm" style="display:none;">
+                <button onclick="loginGoogle()" style="width:100%;padding:12px;background:#fff;border:1px solid var(--color-border);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;margin-bottom:10px;">
+                    <img src="https://www.google.com/favicon.ico" style="width:20px;height:20px;" alt="Google" /> Đăng ký với Google
+                </button>
+                <button onclick="loginFacebook()" style="width:100%;padding:12px;background:#1877f2;color:#fff;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;margin-bottom:10px;">
+                    <img src="https://www.facebook.com/favicon.ico" style="width:20px;height:20px;" alt="Facebook" /> Đăng ký với Facebook
+                </button>
+                <button onclick="loginGitHub()" style="width:100%;padding:12px;background:#24292e;color:#fff;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;">
+                    <img src="https://github.com/favicon.ico" style="width:20px;height:20px;" alt="GitHub" /> Đăng ký với GitHub
+                </button>
+                <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;">
+                    Đã có tài khoản? <span style="color:var(--color-primary);cursor:pointer;" onclick="switchAuthTab('login')">Đăng nhập</span>
+                </div>
+            </div>
+            
+            <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;border-top:1px solid var(--color-border);padding-top:12px;">
+                👑 Admin: <strong style="color:var(--color-primary);">admin.ltvy@gmail.com</strong>
             </div>
         </div>
     </div>
@@ -502,7 +682,6 @@
             measurementId: "G-9J6X4WL6WS"
         };
 
-        // Khởi tạo Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
@@ -524,6 +703,7 @@
         const exportBtn = document.getElementById('exportBtn');
         const userAvatar = document.getElementById('userAvatar');
         const userName = document.getElementById('userName');
+        const userStatus = document.getElementById('userStatus');
 
         // ===== STATE =====
         let currentConversationId = null;
@@ -532,6 +712,8 @@
         let isLoggedIn = false;
         let userData = null;
         let socket = null;
+        let sessionTimer = null;
+        const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 giờ
 
         const LEVEL_NAMES = {
             basic: 'AI Thường',
@@ -539,6 +721,117 @@
             plus: 'AI Plus',
             pro3: 'AI 3.0 Pro'
         };
+
+        // ================================================================
+        // AUTH FUNCTIONS
+        // ================================================================
+
+        // ===== SWITCH AUTH TAB =====
+        function switchAuthTab(tab) {
+            const loginTab = document.getElementById('loginTab');
+            const registerTab = document.getElementById('registerTab');
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            
+            if (tab === 'login') {
+                loginTab.classList.add('active');
+                registerTab.classList.remove('active');
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+            } else {
+                registerTab.classList.add('active');
+                loginTab.classList.remove('active');
+                registerForm.style.display = 'block';
+                loginForm.style.display = 'none';
+            }
+        }
+
+        // ===== OPEN LOGIN/REGISTER =====
+        function openLoginModal() {
+            switchAuthTab('login');
+            openModal('loginModal');
+        }
+
+        function openRegisterModal() {
+            switchAuthTab('register');
+            openModal('loginModal');
+        }
+
+        // ===== CHECK LOGIN =====
+        function checkLogin() {
+            fetch('/api/auth/me')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        showGuestMode();
+                        return;
+                    }
+                    userData = data;
+                    isLoggedIn = true;
+                    showUserMode(data);
+                    loadUsage();
+                    loadConversations();
+                    checkSessionTimeout();
+                })
+                .catch(() => {
+                    showGuestMode();
+                });
+        }
+
+        function showGuestMode() {
+            isLoggedIn = false;
+            document.getElementById('authButtons').style.display = 'flex';
+            document.getElementById('userInfo').style.display = 'none';
+            userName.textContent = 'Khách';
+            userAvatar.textContent = '👤';
+            userStatus.textContent = 'Chế độ khách';
+            logoutBtn.style.display = 'none';
+            document.getElementById('upgradeRequired').style.display = 'none';
+            showToast('🔓 Bạn đang sử dụng chế độ Khách. Một số chức năng bị giới hạn.', 'info');
+        }
+
+        function showUserMode(user) {
+            isLoggedIn = true;
+            document.getElementById('authButtons').style.display = 'none';
+            document.getElementById('userInfo').style.display = 'flex';
+            document.getElementById('headerUserName').textContent = user.username || 'User';
+            document.getElementById('headerUserRole').textContent = user.role === 'admin' ? 'Admin' : 'User';
+            userName.textContent = user.username || 'User';
+            userAvatar.textContent = (user.username || 'U').charAt(0).toUpperCase();
+            userStatus.textContent = user.role === 'admin' ? '👑 Admin' : 'Đã đăng nhập';
+            logoutBtn.style.display = 'block';
+            document.getElementById('upgradeRequired').style.display = 'none';
+        }
+
+        // ===== SESSION TIMEOUT =====
+        function checkSessionTimeout() {
+            if (sessionTimer) clearTimeout(sessionTimer);
+            sessionTimer = setTimeout(() => {
+                if (isLoggedIn) {
+                    showToast('⏰ Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'warning');
+                    logout();
+                }
+            }, SESSION_TIMEOUT);
+        }
+
+        // Refresh session khi có hoạt động
+        document.addEventListener('click', () => {
+            if (isLoggedIn) checkSessionTimeout();
+        });
+        document.addEventListener('keydown', () => {
+            if (isLoggedIn) checkSessionTimeout();
+        });
+
+        // ===== CHECK IF FUNCTION IS ALLOWED =====
+        function requireAuth() {
+            if (!isLoggedIn) {
+                document.getElementById('upgradeRequired').style.display = 'block';
+                // Cuộn lên để thấy thông báo
+                document.getElementById('upgradeRequired').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            return true;
+        }
 
         // ================================================================
         // TOAST
@@ -606,9 +899,7 @@
         // ================================================================
         function toggleMenu() {
             const menu = document.getElementById('functionMenu');
-            if (menu) {
-                menu.classList.toggle('show');
-            }
+            if (menu) menu.classList.toggle('show');
         }
 
         document.addEventListener('click', function(event) {
@@ -622,7 +913,7 @@
         });
 
         // ================================================================
-        // DEEP THINK INDICATOR
+        // DEEP THINK
         // ================================================================
         function showDeepThink(stage = 0) {
             const indicator = document.getElementById('deepThinkIndicator');
@@ -722,6 +1013,15 @@
                 });
         }
 
+        function loginGitHub() {
+            const clientId = 'YOUR_GITHUB_CLIENT_ID'; // Thay bằng Client ID của bạn
+            const redirectUri = window.location.origin + '/auth/github/callback';
+            const scope = 'user:email';
+            const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
+            window.open(url, 'github-auth', 'width=600,height=600');
+            showToast('⏳ Đang chuyển đến GitHub...', 'info');
+        }
+
         function logout() {
             if (!confirm('Đăng xuất?')) return;
 
@@ -737,29 +1037,26 @@
                 });
         }
 
-        // ===== CHECK LOGIN =====
-        function checkLogin() {
-            fetch('/api/auth/me')
-                .then(res => res.json())
-                .then(data => {
-                    if (data.error) {
-                        document.getElementById('loginModal').classList.add('active');
-                        return;
-                    }
-                    userData = data;
-                    isLoggedIn = true;
-                    userName.textContent = data.username || 'User';
-                    userAvatar.textContent = (data.username || 'U').charAt(0).toUpperCase();
-                    document.getElementById('loginModal').classList.remove('active');
-                    loadUsage();
-                    loadConversations();
-                })
-                .catch(() => {
-                    document.getElementById('loginModal').classList.add('active');
-                });
+        // ================================================================
+        // MODALS
+        // ================================================================
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
         }
 
-        // ===== SOCKET.IO =====
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('active');
+            });
+        });
+
+        // ================================================================
+        // SOCKET.IO
+        // ================================================================
         function initSocket() {
             socket = io();
             socket.on('connect', () => {
@@ -825,23 +1122,6 @@
         });
 
         // ================================================================
-        // MODALS
-        // ================================================================
-        function openModal(id) {
-            document.getElementById(id).classList.add('active');
-        }
-
-        function closeModal(id) {
-            document.getElementById(id).classList.remove('active');
-        }
-
-        document.querySelectorAll('.modal-overlay').forEach(overlay => {
-            overlay.addEventListener('click', function(e) {
-                if (e.target === this) this.classList.remove('active');
-            });
-        });
-
-        // ================================================================
         // SEND MESSAGE
         // ================================================================
         function sendMessage() {
@@ -849,7 +1129,9 @@
             if (!text) return;
 
             if (!isLoggedIn) {
-                document.getElementById('loginModal').classList.add('active');
+                showToast('🔒 Vui lòng đăng nhập để sử dụng chức năng này.', 'warning');
+                document.getElementById('upgradeRequired').style.display = 'block';
+                document.getElementById('upgradeRequired').scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
 
@@ -1051,7 +1333,7 @@
             });
 
             const resultEl = document.getElementById('searchResult');
-            resultEl.textContent = `🔍 Tìm thấy ${found} kết quả pentru "${keyword}"`;
+            resultEl.textContent = `🔍 Tìm thấy ${found} kết quả cho "${keyword}"`;
             resultEl.classList.add('show');
             setTimeout(() => resultEl.classList.remove('show'), 4000);
         }
@@ -1068,7 +1350,8 @@
         // ================================================================
         function upgradeTier(tier) {
             if (!isLoggedIn) {
-                document.getElementById('loginModal').classList.add('active');
+                showToast('🔒 Vui lòng đăng nhập để nâng cấp.', 'warning');
+                openLoginModal();
                 return;
             }
 
@@ -1105,7 +1388,8 @@
 
         function upgradeWithMomo(tier) {
             if (!isLoggedIn) {
-                document.getElementById('loginModal').classList.add('active');
+                showToast('🔒 Vui lòng đăng nhập để nâng cấp.', 'warning');
+                openLoginModal();
                 return;
             }
 
@@ -1169,231 +1453,233 @@
         }
 
         // ================================================================
-        // TOOLBAR FUNCTIONS
+        // TOOLBAR FUNCTIONS (CÓ KIỂM TRA ĐĂNG NHẬP)
         // ================================================================
-        function useMultiAI() {
-            const text = inputField.value.trim();
-            if (!text) {
-                showToast('Vui lòng nhập câu hỏi!', 'error');
+
+        function requireAuthAndExecute(callback) {
+            if (!isLoggedIn) {
+                document.getElementById('upgradeRequired').style.display = 'block';
+                document.getElementById('upgradeRequired').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                showToast('🔒 Vui lòng đăng nhập để sử dụng chức năng này.', 'warning');
                 return;
             }
+            callback();
+        }
 
-            addMessage('user', '🧠 Yêu cầu AI Đa luồng: ' + text);
-            inputField.value = '';
-
-            showTyping();
-            fetch('/api/multi_ai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: text })
-            })
-            .then(res => res.json())
-            .then(data => {
-                hideTyping();
-                if (data.error) {
-                    addMessage('ai', '❌ ' + data.error);
+        function useMultiAI() {
+            requireAuthAndExecute(() => {
+                const text = inputField.value.trim();
+                if (!text) {
+                    showToast('Vui lòng nhập câu hỏi!', 'error');
                     return;
                 }
-
-                let html = '🧠 **Kết quả AI Đa luồng:**\n\n';
-                data.results.forEach(r => {
-                    html += `📌 **${r.model}** (Độ chính xác: ${r.accuracy}%):\n${r.response}\n\n`;
-                });
-                html += `🏆 **Kết quả tốt nhất:** ${data.best.model}`;
-                addMessage('ai', html);
-            })
-            .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+                addMessage('user', '🧠 Yêu cầu AI Đa luồng: ' + text);
+                inputField.value = '';
+                showTyping();
+                fetch('/api/multi_ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: text })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    hideTyping();
+                    if (data.error) {
+                        addMessage('ai', '❌ ' + data.error);
+                        return;
+                    }
+                    let html = '🧠 **Kết quả AI Đa luồng:**\n\n';
+                    data.results.forEach(r => {
+                        html += `📌 **${r.model}** (Độ chính xác: ${r.accuracy}%):\n${r.response}\n\n`;
+                    });
+                    html += `🏆 **Kết quả tốt nhất:** ${data.best.model}`;
+                    addMessage('ai', html);
+                })
+                .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+            });
         }
 
         function summarizeText() {
-            const text = inputField.value.trim();
-            if (!text) {
-                showToast('Vui lòng nhập văn bản cần tóm tắt!', 'error');
-                return;
-            }
-
-            addMessage('user', '📝 Yêu cầu tóm tắt: ' + text);
-            inputField.value = '';
-
-            showTyping();
-            fetch('/api/summarize', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text, max_sentences: 5 })
-            })
-            .then(res => res.json())
-            .then(data => {
-                hideTyping();
-                if (data.error) {
-                    addMessage('ai', '❌ ' + data.error);
+            requireAuthAndExecute(() => {
+                const text = inputField.value.trim();
+                if (!text) {
+                    showToast('Vui lòng nhập văn bản cần tóm tắt!', 'error');
                     return;
                 }
-                addMessage('ai', `📝 **Tóm tắt:**\n\n${data.summary}\n\n📊 Độ dài gốc: ${data.original_length} ký tự → ${data.summarized_length} ký tự`);
-            })
-            .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+                addMessage('user', '📝 Yêu cầu tóm tắt: ' + text);
+                inputField.value = '';
+                showTyping();
+                fetch('/api/summarize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text, max_sentences: 5 })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    hideTyping();
+                    if (data.error) {
+                        addMessage('ai', '❌ ' + data.error);
+                        return;
+                    }
+                    addMessage('ai', `📝 **Tóm tắt:**\n\n${data.summary}\n\n📊 Độ dài gốc: ${data.original_length} ký tự → ${data.summarized_length} ký tự`);
+                })
+                .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+            });
         }
 
         function translateText() {
-            const text = inputField.value.trim();
-            if (!text) {
-                showToast('Vui lòng nhập văn bản cần dịch!', 'error');
-                return;
-            }
-
-            const lang = prompt('Nhập mã ngôn ngữ đích:\nvi (Tiếng Việt)\nen (English)\nko (한국어)\nja (日本語)\nzh (中文)\nfr (Français)\nde (Deutsch)\nes (Español)\nru (Русский)\nar (العربية)', 'en');
-            if (!lang) return;
-
-            addMessage('user', `🌐 Yêu cầu dịch sang ${lang}: ${text}`);
-            inputField.value = '';
-
-            showTyping();
-            fetch('/api/translate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text, lang: lang })
-            })
-            .then(res => res.json())
-            .then(data => {
-                hideTyping();
-                if (data.error) {
-                    addMessage('ai', '❌ ' + data.error);
+            requireAuthAndExecute(() => {
+                const text = inputField.value.trim();
+                if (!text) {
+                    showToast('Vui lòng nhập văn bản cần dịch!', 'error');
                     return;
                 }
-                addMessage('ai', `🌐 **Dịch sang ${lang}:**\n\n${data.translated}`);
-            })
-            .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+                const lang = prompt('Nhập mã ngôn ngữ đích:\nvi (Tiếng Việt)\nen (English)\nko (한국어)\nja (日本語)\nzh (中文)\nfr (Français)\nde (Deutsch)\nes (Español)\nru (Русский)\nar (العربية)', 'en');
+                if (!lang) return;
+                addMessage('user', `🌐 Yêu cầu dịch sang ${lang}: ${text}`);
+                inputField.value = '';
+                showTyping();
+                fetch('/api/translate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text, lang: lang })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    hideTyping();
+                    if (data.error) {
+                        addMessage('ai', '❌ ' + data.error);
+                        return;
+                    }
+                    addMessage('ai', `🌐 **Dịch sang ${lang}:**\n\n${data.translated}`);
+                })
+                .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+            });
         }
 
         function generateVideo() {
-            const text = inputField.value.trim();
-            if (!text) {
-                showToast('Vui lòng nhập mô tả video!', 'error');
-                return;
-            }
-
-            const template = prompt('Chọn loại video:\nshort (15s)\nmedium (30s)\nlong (60s)', 'short');
-            if (!template) return;
-
-            addMessage('user', `🎬 Yêu cầu tạo video (${template}): ${text}`);
-            inputField.value = '';
-
-            showTyping();
-            fetch('/api/generate_video', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: text, template: template })
-            })
-            .then(res => res.json())
-            .then(data => {
-                hideTyping();
-                if (data.error) {
-                    addMessage('ai', '❌ ' + data.error);
+            requireAuthAndExecute(() => {
+                const text = inputField.value.trim();
+                if (!text) {
+                    showToast('Vui lòng nhập mô tả video!', 'error');
                     return;
                 }
-                addMessage('ai', `🎬 **Video đang được tạo:**\n\n📌 Tiêu đề: ${data.title}\n⏱️ Thời lượng: ${data.duration}s\n📐 Độ phân giải: ${data.resolution}\n🎨 Phong cách: ${data.style}\n🔗 Link: ${data.url}\n\n⏳ Trạng thái: ${data.status}`);
-            })
-            .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+                const template = prompt('Chọn loại video:\nshort (15s)\nmedium (30s)\nlong (60s)', 'short');
+                if (!template) return;
+                addMessage('user', `🎬 Yêu cầu tạo video (${template}): ${text}`);
+                inputField.value = '';
+                showTyping();
+                fetch('/api/generate_video', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: text, template: template })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    hideTyping();
+                    if (data.error) {
+                        addMessage('ai', '❌ ' + data.error);
+                        return;
+                    }
+                    addMessage('ai', `🎬 **Video đang được tạo:**\n\n📌 Tiêu đề: ${data.title}\n⏱️ Thời lượng: ${data.duration}s\n📐 Độ phân giải: ${data.resolution}\n🎨 Phong cách: ${data.style}\n🔗 Link: ${data.url}\n\n⏳ Trạng thái: ${data.status}`);
+                })
+                .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+            });
         }
 
         function analyzeData() {
-            const text = inputField.value.trim();
-            if (!text) {
-                showToast('Vui lòng nhập văn bản hoặc số cần phân tích!', 'error');
-                return;
-            }
-
-            const numbers = text.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
-
-            if (numbers.length > 1) {
-                addMessage('user', '📊 Yêu cầu phân tích số: ' + text);
-                inputField.value = '';
-
-                showTyping();
-                fetch('/api/analyze_numbers', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ numbers: numbers })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    hideTyping();
-                    if (data.error) {
-                        addMessage('ai', '❌ ' + data.error);
-                        return;
-                    }
-                    addMessage('ai', `📊 **Phân tích dữ liệu số:**\n\n📌 Số lượng: ${data.count}\n📉 Nhỏ nhất: ${data.min}\n📈 Lớn nhất: ${data.max}\n📊 Trung bình: ${data.mean}\n📏 Trung vị: ${data.median}\n📐 Tổng: ${data.sum}`);
-                })
-                .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
-            } else {
-                addMessage('user', '📊 Yêu cầu phân tích văn bản: ' + text);
-                inputField.value = '';
-
-                showTyping();
-                fetch('/api/analyze_text', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    hideTyping();
-                    if (data.error) {
-                        addMessage('ai', '❌ ' + data.error);
-                        return;
-                    }
-                    addMessage('ai', `📊 **Phân tích văn bản:**\n\n📌 Số từ: ${data.word_count}\n📝 Số câu: ${data.sentence_count}\n📏 Độ dài trung bình từ: ${data.avg_word_length}\n🔤 Số từ độc nhất: ${data.unique_words}\n📖 Độ dễ đọc: ${data.readability}`);
-                })
-                .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
-            }
+            requireAuthAndExecute(() => {
+                const text = inputField.value.trim();
+                if (!text) {
+                    showToast('Vui lòng nhập văn bản hoặc số cần phân tích!', 'error');
+                    return;
+                }
+                const numbers = text.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
+                if (numbers.length > 1) {
+                    addMessage('user', '📊 Yêu cầu phân tích số: ' + text);
+                    inputField.value = '';
+                    showTyping();
+                    fetch('/api/analyze_numbers', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ numbers: numbers })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        hideTyping();
+                        if (data.error) {
+                            addMessage('ai', '❌ ' + data.error);
+                            return;
+                        }
+                        addMessage('ai', `📊 **Phân tích dữ liệu số:**\n\n📌 Số lượng: ${data.count}\n📉 Nhỏ nhất: ${data.min}\n📈 Lớn nhất: ${data.max}\n📊 Trung bình: ${data.mean}\n📏 Trung vị: ${data.median}\n📐 Tổng: ${data.sum}`);
+                    })
+                    .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+                } else {
+                    addMessage('user', '📊 Yêu cầu phân tích văn bản: ' + text);
+                    inputField.value = '';
+                    showTyping();
+                    fetch('/api/analyze_text', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: text })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        hideTyping();
+                        if (data.error) {
+                            addMessage('ai', '❌ ' + data.error);
+                            return;
+                        }
+                        addMessage('ai', `📊 **Phân tích văn bản:**\n\n📌 Số từ: ${data.word_count}\n📝 Số câu: ${data.sentence_count}\n📏 Độ dài trung bình từ: ${data.avg_word_length}\n🔤 Số từ độc nhất: ${data.unique_words}\n📖 Độ dễ đọc: ${data.readability}`);
+                    })
+                    .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+                }
+            });
         }
 
         function generateMusicWithLyrics() {
-            const text = inputField.value.trim();
-            if (!text) {
-                showToast('Vui lòng nhập mô tả bài hát!', 'error');
-                return;
-            }
-
-            const style = prompt('Chọn thể loại:\npop, rock, jazz, edm, classical, rap, ballad, v_pop, k_pop', 'pop');
-            if (!style) return;
-
-            const mood = prompt('Chọn tâm trạng:\nhappy, sad, romantic, epic, neutral', 'happy');
-            if (!mood) return;
-
-            const duration = parseInt(prompt('Chọn độ dài (giây, tối đa 420 - 7 phút):', '60')) || 60;
-
-            addMessage('user', `🎵 Yêu cầu tạo nhạc (${style}, ${mood}, ${duration}s): ${text}`);
-            inputField.value = '';
-
-            showTyping();
-            fetch('/api/generate_music', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    prompt: text,
-                    style: style,
-                    mood: mood,
-                    duration: Math.min(duration, 420)
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                hideTyping();
-                if (data.error) {
-                    addMessage('ai', '❌ ' + data.error);
+            requireAuthAndExecute(() => {
+                const text = inputField.value.trim();
+                if (!text) {
+                    showToast('Vui lòng nhập mô tả bài hát!', 'error');
                     return;
                 }
-
-                let html = `🎵 **Bài hát đã được tạo!**\n\n`;
-                html += `📌 Thời lượng: ${data.duration} giây\n`;
-                html += `🎤 Thể loại: ${data.style}\n`;
-                html += `🎭 Tâm trạng: ${data.mood}\n`;
-                html += `📦 Số đoạn ghép: ${data.num_segments || 1}\n\n`;
-                html += `📝 Lời bài hát:\n${data.lyrics}\n\n`;
-                html += `🔊 Tải nhạc: <a href="${data.download_url}" download style="color:var(--color-primary);text-decoration:underline;">${data.music_file}</a>`;
-                addMessage('ai', html);
-            })
-            .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+                const style = prompt('Chọn thể loại:\npop, rock, jazz, edm, classical, rap, ballad, v_pop, k_pop', 'pop');
+                if (!style) return;
+                const mood = prompt('Chọn tâm trạng:\nhappy, sad, romantic, epic, neutral', 'happy');
+                if (!mood) return;
+                const duration = parseInt(prompt('Chọn độ dài (giây, tối đa 420 - 7 phút):', '60')) || 60;
+                addMessage('user', `🎵 Yêu cầu tạo nhạc (${style}, ${mood}, ${duration}s): ${text}`);
+                inputField.value = '';
+                showTyping();
+                fetch('/api/generate_music', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: text,
+                        style: style,
+                        mood: mood,
+                        duration: Math.min(duration, 420)
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    hideTyping();
+                    if (data.error) {
+                        addMessage('ai', '❌ ' + data.error);
+                        return;
+                    }
+                    let html = `🎵 **Bài hát đã được tạo!**\n\n`;
+                    html += `📌 Thời lượng: ${data.duration} giây\n`;
+                    html += `🎤 Thể loại: ${data.style}\n`;
+                    html += `🎭 Tâm trạng: ${data.mood}\n`;
+                    html += `📦 Số đoạn ghép: ${data.num_segments || 1}\n\n`;
+                    html += `📝 Lời bài hát:\n${data.lyrics}\n\n`;
+                    html += `🔊 Tải nhạc: <a href="${data.download_url}" download style="color:var(--color-primary);text-decoration:underline;">${data.music_file}</a>`;
+                    addMessage('ai', html);
+                })
+                .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+            });
         }
 
         function clearAllMessages() {
@@ -1415,15 +1701,14 @@
             if (isLoggedIn) loadUsage();
         }, 60000);
 
-        // Socket IO (nếu có)
         if (typeof io !== 'undefined') {
             initSocket();
         }
 
         console.log('🚀 T.VỸ-AI-SUPREME v11.0 đã sẵn sàng!');
         console.log('📌 Bản quyền: T.VỸ-VIP-FILE');
-        console.log('🔐 Firebase OAuth đã được tích hợp');
-        console.log('🧠 Deep Think đã được bật');
+        console.log('🔐 Hệ thống đăng nhập OAuth đã được tích hợp');
+        console.log('👤 Chế độ Khách: các chức năng bị giới hạn');
     </script>
 </body>
 </html>
