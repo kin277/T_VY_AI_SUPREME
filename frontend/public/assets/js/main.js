@@ -325,13 +325,42 @@ function loginFacebook() {
         });
 }
 
+// ===== GITHUB LOGIN =====
 function loginGitHub() {
-    const clientId = 'YOUR_GITHUB_CLIENT_ID';
+    const clientId = 'Ov23liwojcTDuo4p42aG';
     const redirectUri = window.location.origin + '/auth/github/callback';
     const scope = 'user:email';
     const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
-    window.open(url, 'github-auth', 'width=600,height=600');
+    
+    // Mở popup
+    const width = 600;
+    const height = 600;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+    const popup = window.open(
+        url,
+        'github-auth',
+        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+    );
+    
     showToast('⏳ Đang chuyển đến GitHub...', 'info');
+    
+    // Kiểm tra popup đóng
+    const checkPopup = setInterval(() => {
+        if (popup && popup.closed) {
+            clearInterval(checkPopup);
+            // Reload trang sau khi popup đóng
+            setTimeout(() => {
+                fetch('/api/auth/me')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.error) {
+                            location.reload();
+                        }
+                    });
+            }, 500);
+        }
+    }, 500);
 }
 
 function logout() {

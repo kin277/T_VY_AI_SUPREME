@@ -471,6 +471,90 @@ def delete_conversation(conv_id):
     delete_conversation_by_id(conv_id, user_id)
     return jsonify({"success": True})
 
+# ===== THÊM VÀO APP.PY (SAU CÁC ROUTE KHÁC) =====
+
+from backend.api.auth import auth_github_callback
+
+# ===== GITHUB OAUTH CALLBACK =====
+@app.route('/auth/github/callback')
+def github_callback_route():
+    """Xử lý callback từ GitHub OAuth"""
+    code = request.args.get('code')
+    
+    if not code:
+        return """
+        <html>
+        <head><title>Lỗi</title></head>
+        <body style="font-family:Arial;text-align:center;padding:50px;">
+            <h2>❌ Lỗi xác thực</h2>
+            <p>Không tìm thấy mã xác thực từ GitHub.</p>
+            <p><a href="/">Quay lại trang chủ</a></p>
+        </body>
+        </html>
+        """, 400
+    
+    result = auth_github_callback(code)
+    
+    if result.get("error"):
+        return f"""
+        <html>
+        <head><title>Lỗi</title></head>
+        <body style="font-family:Arial;text-align:center;padding:50px;">
+            <h2>❌ Đăng nhập thất bại</h2>
+            <p>{result['error']}</p>
+            <p><a href="/">Quay lại trang chủ</a></p>
+        </body>
+        </html>
+        """, 400
+    
+    if result.get("success"):
+        # Lưu session
+        session['user_id'] = result['user_id']
+        session['user_email'] = result['email']
+        session['user_name'] = result['name']
+        
+        # Đóng popup và reload trang chính
+        return """
+        <html>
+        <head>
+            <title>Đăng nhập thành công</title>
+            <style>
+                body { font-family: Arial; text-align: center; padding: 50px; background: #0a0a0f; color: #fff; }
+                .success { color: #22c55e; font-size: 48px; }
+                .btn { display: inline-block; padding: 10px 24px; background: #6c5ce7; color: #fff; text-decoration: none; border-radius: 8px; margin-top: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class="success">✅</div>
+            <h2>Đăng nhập thành công!</h2>
+            <p>Chào mừng <strong>{}</strong>!</p>
+            <p>Đang chuyển hướng...</p>
+            <a href="/" class="btn">Về trang chủ</a>
+            <script>
+                setTimeout(() => {
+                    if (window.opener) {
+                        window.opener.location.reload();
+                        window.close();
+                    } else {
+                        window.location.href = '/';
+                    }
+                }, 1500);
+            </script>
+        </body>
+        </html>
+        """.format(result['name'])
+    
+    return """
+    <html>
+    <head><title>Lỗi</title></head>
+    <body style="font-family:Arial;text-align:center;padding:50px;">
+        <h2>❌ Đăng nhập thất bại</h2>
+        <p>Đã xảy ra lỗi không xác định.</p>
+        <p><a href="/">Quay lại trang chủ</a></p>
+    </body>
+    </html>
+    """, 400
+
 # ================================================================
 # MUSIC ROUTES
 # ================================================================
