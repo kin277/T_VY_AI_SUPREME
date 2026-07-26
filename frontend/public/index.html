@@ -160,6 +160,9 @@
             border-bottom: 1px solid var(--color-border);
             align-items: center;
         }
+        .toolbar .menu-wrapper {
+            position: relative;
+        }
         .toolbar .menu-btn {
             padding: 6px 14px;
             background: var(--color-primary);
@@ -174,10 +177,6 @@
         .toolbar .menu-btn:hover {
             opacity: 0.85;
             transform: scale(1.02);
-        }
-        .toolbar .menu-hint {
-            font-size: 13px;
-            color: var(--text-muted);
         }
         .toolbar .dropdown-menu {
             display: none;
@@ -209,7 +208,6 @@
         }
         .toolbar .dropdown-menu button:hover {
             background: var(--color-bg);
-            color: var(--color-primary);
         }
         .toolbar .dropdown-menu .danger {
             color: #ef4444;
@@ -219,8 +217,33 @@
             border-top: 1px solid var(--color-border);
             margin: 4px 0;
         }
-        .toolbar .menu-wrapper {
-            position: relative;
+        .toolbar .menu-hint {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* ===== DEEP THINK INDICATOR ===== */
+        #deepThinkIndicator {
+            display: none;
+            padding: 12px 20px;
+            background: var(--color-bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--color-border);
+            margin-bottom: 12px;
+        }
+        .think-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--color-primary);
+            border-radius: 50%;
+            display: inline-block;
+            animation: thinkBounce 1.4s infinite;
+        }
+        .think-dot:nth-child(2) { animation-delay: 0.2s; }
+        .think-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes thinkBounce {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
+            30% { transform: translateY(-8px); opacity: 1; }
         }
     </style>
 </head>
@@ -282,6 +305,23 @@
             </header>
 
             <div class="chat-container" id="chatContainer">
+
+                <!-- ===== DEEP THINK INDICATOR ===== -->
+                <div id="deepThinkIndicator">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="font-size:20px;">🧠</span>
+                        <div>
+                            <div style="font-weight:600;color:var(--text-primary);">Đang suy nghĩ sâu...</div>
+                            <div style="font-size:13px;color:var(--text-muted);" id="thinkStatus">Phân tích vấn đề...</div>
+                        </div>
+                        <div style="margin-left:auto;display:flex;gap:4px;">
+                            <span class="think-dot"></span>
+                            <span class="think-dot"></span>
+                            <span class="think-dot"></span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="message-wrapper ai">
                     <div class="message ai">
                         <strong>T.VỸ-AI-SUPREME v11.0</strong>
@@ -308,7 +348,7 @@
                 </div>
             </div>
 
-            <!-- ===== TOOLBAR MỚI ===== -->
+            <!-- ===== TOOLBAR ===== -->
             <div class="toolbar">
                 <div class="menu-wrapper">
                     <button class="menu-btn" id="menuToggle" onclick="toggleMenu()">➕</button>
@@ -562,6 +602,50 @@
         themeToggle.addEventListener('click', toggleTheme);
 
         // ================================================================
+        // TOGGLE MENU
+        // ================================================================
+        function toggleMenu() {
+            const menu = document.getElementById('functionMenu');
+            if (menu) {
+                menu.classList.toggle('show');
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('functionMenu');
+            const toggleBtn = document.getElementById('menuToggle');
+            if (menu && toggleBtn) {
+                if (!menu.contains(event.target) && !toggleBtn.contains(event.target)) {
+                    menu.classList.remove('show');
+                }
+            }
+        });
+
+        // ================================================================
+        // DEEP THINK INDICATOR
+        // ================================================================
+        function showDeepThink(stage = 0) {
+            const indicator = document.getElementById('deepThinkIndicator');
+            const status = document.getElementById('thinkStatus');
+            if (!indicator || !status) return;
+
+            const stages = [
+                "🔍 Đang phân tích câu hỏi...",
+                "📚 Tìm kiếm kiến thức liên quan...",
+                "🧠 Xây dựng lập luận...",
+                "✍️ Tổng hợp câu trả lời..."
+            ];
+
+            indicator.style.display = 'block';
+            status.textContent = stages[Math.min(stage, stages.length - 1)] || stages[0];
+        }
+
+        function hideDeepThink() {
+            const indicator = document.getElementById('deepThinkIndicator');
+            if (indicator) indicator.style.display = 'none';
+        }
+
+        // ================================================================
         // LOGIN / LOGOUT
         // ================================================================
         function loginGoogle() {
@@ -659,7 +743,6 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.error) {
-                        // Hiển thị login modal
                         document.getElementById('loginModal').classList.add('active');
                         return;
                     }
@@ -675,23 +758,6 @@
                     document.getElementById('loginModal').classList.add('active');
                 });
         }
-
-        // ===== TOGGLE MENU =====
-        function toggleMenu() {
-            const menu = document.getElementById('functionMenu');
-            menu.classList.toggle('show');
-        }
-
-        // Đóng menu khi click ra ngoài
-        document.addEventListener('click', function(event) {
-            const menu = document.getElementById('functionMenu');
-            const toggleBtn = document.getElementById('menuToggle');
-            if (menu && toggleBtn) {
-                if (!menu.contains(event.target) && !toggleBtn.contains(event.target)) {
-                    menu.classList.remove('show');
-                }
-            }
-        });
 
         // ===== SOCKET.IO =====
         function initSocket() {
@@ -793,6 +859,11 @@
             const level = levelSelect.value;
 
             showTyping();
+            showDeepThink(0);
+
+            setTimeout(() => showDeepThink(1), 800);
+            setTimeout(() => showDeepThink(2), 1600);
+            setTimeout(() => showDeepThink(3), 2400);
 
             fetch('/chat', {
                 method: 'POST',
@@ -806,6 +877,7 @@
             .then(res => res.json())
             .then(data => {
                 hideTyping();
+                hideDeepThink();
                 if (data.error) {
                     addMessage('ai', '❌ ' + data.error);
                     if (data.limit_reached) {
@@ -830,6 +902,7 @@
             })
             .catch(err => {
                 hideTyping();
+                hideDeepThink();
                 addMessage('ai', '❌ Lỗi kết nối: ' + err.message);
             });
         }
@@ -978,7 +1051,7 @@
             });
 
             const resultEl = document.getElementById('searchResult');
-            resultEl.textContent = `🔍 Tìm thấy ${found} kết quả cho "${keyword}"`;
+            resultEl.textContent = `🔍 Tìm thấy ${found} kết quả pentru "${keyword}"`;
             resultEl.classList.add('show');
             setTimeout(() => resultEl.classList.remove('show'), 4000);
         }
@@ -1350,7 +1423,7 @@
         console.log('🚀 T.VỸ-AI-SUPREME v11.0 đã sẵn sàng!');
         console.log('📌 Bản quyền: T.VỸ-VIP-FILE');
         console.log('🔐 Firebase OAuth đã được tích hợp');
-        console.log('📋 Menu chức năng đã được gom vào nút ➕');
+        console.log('🧠 Deep Think đã được bật');
     </script>
 </body>
 </html>
