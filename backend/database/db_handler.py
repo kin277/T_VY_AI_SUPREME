@@ -14,6 +14,34 @@ from contextlib import contextmanager
 
 DB_PATH = "database.db"
 
+# ===== THÊM VÀO DB_HANDLER.PY =====
+
+def save_memory(user_id: str, key: str, value: str):
+    """Lưu trí nhớ của AI về người dùng"""
+    with get_db() as conn:
+        conn.execute("""
+            INSERT OR REPLACE INTO user_memory (user_id, memory_key, memory_value, updated_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        """, (user_id, key, value))
+        conn.commit()
+
+def get_memory(user_id: str, key: str) -> Optional[str]:
+    """Lấy trí nhớ của AI về người dùng"""
+    with get_db() as conn:
+        result = conn.execute(
+            "SELECT memory_value FROM user_memory WHERE user_id = ? AND memory_key = ?",
+            (user_id, key)
+        ).fetchone()
+        return result['memory_value'] if result else None
+
+def get_all_memories(user_id: str) -> Dict[str, str]:
+    """Lấy tất cả trí nhớ của AI về người dùng"""
+    with get_db() as conn:
+        results = conn.execute(
+            "SELECT memory_key, memory_value FROM user_memory WHERE user_id = ?",
+            (user_id,)
+        ).fetchall()
+        return {row['memory_key']: row['memory_value'] for row in results}
 
 def init_db():
     """Khởi tạo database và các bảng"""

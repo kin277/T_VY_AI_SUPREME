@@ -33,7 +33,33 @@ const LEVEL_NAMES = {
     pro3: 'AI 3.0 Pro'
 };
 
-// ===== THEME =====
+// ================================================================
+// DEEP THINK INDICATOR
+// ================================================================
+function showDeepThink(stage = 0) {
+    const indicator = document.getElementById('deepThinkIndicator');
+    const status = document.getElementById('thinkStatus');
+    if (!indicator || !status) return;
+
+    const stages = [
+        "🔍 Đang phân tích câu hỏi...",
+        "📚 Tìm kiếm kiến thức liên quan...",
+        "🧠 Xây dựng lập luận...",
+        "✍️ Tổng hợp câu trả lời..."
+    ];
+
+    indicator.style.display = 'block';
+    status.textContent = stages[Math.min(stage, stages.length - 1)] || stages[0];
+}
+
+function hideDeepThink() {
+    const indicator = document.getElementById('deepThinkIndicator');
+    if (indicator) indicator.style.display = 'none';
+}
+
+// ================================================================
+// THEME
+// ================================================================
 function toggleTheme() {
     isDark = !isDark;
     const root = document.documentElement;
@@ -74,7 +100,9 @@ if (localStorage.getItem('tv_theme') === 'dark') {
 
 themeToggle.addEventListener('click', toggleTheme);
 
-// ===== TOAST =====
+// ================================================================
+// TOAST
+// ================================================================
 function showToast(message, type = 'info') {
     const existing = document.querySelector('.toast-message');
     if (existing) existing.remove();
@@ -91,7 +119,9 @@ function showToast(message, type = 'info') {
     }, 4000);
 }
 
-// ===== TOGGLE MENU =====
+// ================================================================
+// TOGGLE MENU
+// ================================================================
 function toggleMenu() {
     const menu = document.getElementById('functionMenu');
     if (menu) {
@@ -99,7 +129,6 @@ function toggleMenu() {
     }
 }
 
-// Đóng menu khi click ra ngoài
 document.addEventListener('click', function(event) {
     const menu = document.getElementById('functionMenu');
     const toggleBtn = document.getElementById('menuToggle');
@@ -110,7 +139,9 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// ===== LOGIN =====
+// ================================================================
+// LOGIN
+// ================================================================
 function checkLogin() {
     fetch('/api/auth/me')
         .then(res => res.json())
@@ -191,7 +222,9 @@ logoutBtn.addEventListener('click', function() {
         });
 });
 
-// ===== SOCKET.IO =====
+// ================================================================
+// SOCKET.IO
+// ================================================================
 function initSocket() {
     socket = io();
 
@@ -215,7 +248,9 @@ function initSocket() {
     });
 }
 
-// ===== USAGE =====
+// ================================================================
+// USAGE
+// ================================================================
 function loadUsage() {
     const tier = levelSelect.value;
     fetch(`/api/usage/${tier}`)
@@ -240,7 +275,9 @@ levelSelect.addEventListener('change', function() {
     loadUsage();
 });
 
-// ===== NAVIGATION =====
+// ================================================================
+// NAVIGATION
+// ================================================================
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', function() {
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -262,7 +299,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
     });
 });
 
-// ===== MODALS =====
+// ================================================================
+// MODALS
+// ================================================================
 function openModal(id) {
     document.getElementById(id).classList.add('active');
 }
@@ -277,7 +316,9 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
     });
 });
 
-// ===== SEND MESSAGE =====
+// ================================================================
+// SEND MESSAGE
+// ================================================================
 function sendMessage() {
     const text = inputField.value.trim();
     if (!text) return;
@@ -293,6 +334,11 @@ function sendMessage() {
     const level = levelSelect.value;
 
     showTyping();
+    showDeepThink(0);
+
+    setTimeout(() => showDeepThink(1), 800);
+    setTimeout(() => showDeepThink(2), 1600);
+    setTimeout(() => showDeepThink(3), 2400);
 
     fetch('/chat', {
         method: 'POST',
@@ -306,6 +352,7 @@ function sendMessage() {
     .then(res => res.json())
     .then(data => {
         hideTyping();
+        hideDeepThink();
         if (data.error) {
             addMessage('ai', '❌ ' + data.error);
             if (data.limit_reached) {
@@ -330,6 +377,7 @@ function sendMessage() {
     })
     .catch(err => {
         hideTyping();
+        hideDeepThink();
         addMessage('ai', '❌ Lỗi kết nối: ' + err.message);
     });
 }
@@ -342,7 +390,9 @@ inputField.addEventListener('keydown', function(e) {
     }
 });
 
-// ===== ADD MESSAGE =====
+// ================================================================
+// ADD MESSAGE
+// ================================================================
 function addMessage(role, content) {
     const wrapper = document.createElement('div');
     wrapper.className = 'message-wrapper ' + role;
@@ -356,7 +406,9 @@ function addMessage(role, content) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// ===== CONVERSATIONS =====
+// ================================================================
+// CONVERSATIONS
+// ================================================================
 function loadConversations() {
     fetch('/conversations')
         .then(res => res.json())
@@ -368,7 +420,9 @@ function loadConversations() {
         .catch(() => {});
 }
 
-// ===== HISTORY =====
+// ================================================================
+// HISTORY
+// ================================================================
 function loadHistory() {
     const list = document.getElementById('historyList');
     list.innerHTML = 'Đang tải...';
@@ -433,7 +487,9 @@ function deleteConversation(id) {
         });
 }
 
-// ===== EXPORT CHAT =====
+// ================================================================
+// EXPORT CHAT
+// ================================================================
 exportBtn.addEventListener('click', function() {
     if (!currentConversationId) {
         showToast('Không có đoạn chat để xuất', 'error');
@@ -442,7 +498,9 @@ exportBtn.addEventListener('click', function() {
     window.location.href = `/api/export/${currentConversationId}`;
 });
 
-// ===== SEARCH MESSAGES =====
+// ================================================================
+// SEARCH MESSAGES
+// ================================================================
 function searchMessages() {
     const keyword = searchInput.value.trim();
     if (!keyword) {
@@ -480,7 +538,9 @@ searchInput.addEventListener('keydown', function(e) {
     }
 });
 
-// ===== UPGRADE =====
+// ================================================================
+// UPGRADE
+// ================================================================
 function upgradeTier(tier) {
     if (!isLoggedIn) {
         showLogin();
@@ -551,7 +611,9 @@ function upgradeWithMomo(tier) {
     .catch(() => showToast('❌ Lỗi kết nối', 'error'));
 }
 
-// ===== SETTINGS =====
+// ================================================================
+// SETTINGS
+// ================================================================
 function saveSettings() {
     const darkMode = document.getElementById('darkModeToggle').checked;
     const lang = document.getElementById('langSelect').value;
@@ -563,7 +625,9 @@ function saveSettings() {
     closeModal('settingsModal');
 }
 
-// ===== TYPING INDICATOR =====
+// ================================================================
+// TYPING INDICATOR
+// ================================================================
 function showTyping() {
     const typing = document.createElement('div');
     typing.className = 'typing-indicator';
@@ -822,7 +886,9 @@ function clearAllMessages() {
     exportBtn.style.display = 'none';
 }
 
-// ===== INIT =====
+// ================================================================
+// INIT
+// ================================================================
 checkLogin();
 inputField.focus();
 
@@ -834,3 +900,4 @@ setInterval(() => {
 console.log('🚀 T.VỸ-AI-SUPREME v10.6 đã sẵn sàng!');
 console.log('📌 Bản quyền: T.VỸ-VIP-FILE');
 console.log('💳 Thanh toán MoMo đã được tích hợp');
+console.log('🧠 Deep Think đã được bật');
