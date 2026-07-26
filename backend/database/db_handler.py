@@ -11,6 +11,7 @@ import json
 import uuid
 import datetime
 from contextlib import contextmanager
+from typing import Dict, Any, Optional, List
 
 DB_PATH = "database.db"
 
