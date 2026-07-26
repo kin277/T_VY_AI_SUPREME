@@ -49,7 +49,7 @@ LEVEL_CONFIG = {
         "features": ["Siêu thông minh", "Dự đoán chính xác", "Tối ưu tuyệt đối", "Hỗ trợ 24/7"],
         "description": "Siêu thông minh, dự đoán và tối ưu tuyệt đối.",
         "level": 3
-    }
+    },
     # ===== THÊM VÀO LEVELS.PY =====
     "expert": {
         "id": "expert",
@@ -67,7 +67,7 @@ LEVEL_CONFIG = {
         ],
         "description": "Chế độ chuyên gia cho các vấn đề phức tạp.",
         "level": 4
-    }
+    },
 }
 
 
