@@ -247,49 +247,51 @@
             30% { transform: translateY(-8px); opacity: 1; }
         }
 
-        /* ===== HEADER AUTH BUTTONS ===== */
+        /* ===== HEADER AUTH BUTTONS - CHỮ THUẦN, KHÔNG ICON ===== */
         .header-right {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
         .auth-buttons {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             align-items: center;
         }
         .btn-auth {
-            padding: 6px 16px;
-            border: 1px solid var(--color-border);
-            border-radius: 20px;
-            background: var(--color-bg-secondary);
-            color: var(--color-text);
-            font-size: 13px;
+            padding: 6px 14px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             transition: 0.3s;
         }
         .btn-auth:hover {
-            background: var(--color-primary);
-            color: #fff;
-            border-color: var(--color-primary);
+            background: var(--bg-input);
+            color: var(--text-primary);
         }
         .btn-auth.btn-register {
             background: var(--color-primary);
             color: #fff;
-            border-color: var(--color-primary);
+            border-radius: 6px;
         }
         .btn-auth.btn-register:hover {
             opacity: 0.85;
+            background: var(--color-primary);
         }
+
         .user-info {
             display: flex;
             align-items: center;
             gap: 8px;
         }
         .user-info .user-name {
-            font-weight: 600;
+            font-weight: 500;
             font-size: 14px;
+            color: var(--text-primary);
         }
         .user-info .user-role {
             font-size: 11px;
@@ -302,12 +304,15 @@
             background: none;
             border: none;
             cursor: pointer;
-            font-size: 18px;
+            font-size: 13px;
             color: var(--text-muted);
+            padding: 4px 10px;
+            border-radius: 4px;
             transition: 0.3s;
         }
         .btn-logout:hover {
-            color: var(--color-primary);
+            background: #fee2e2;
+            color: #ef4444;
         }
 
         /* ===== AUTH TABS ===== */
@@ -364,11 +369,14 @@
 
         @media (max-width: 768px) {
             .auth-buttons .btn-auth {
-                font-size: 11px;
+                font-size: 12px;
                 padding: 4px 10px;
             }
             .user-info .user-name {
                 font-size: 12px;
+            }
+            .header-right .search-box input {
+                width: 100px;
             }
         }
     </style>
@@ -422,21 +430,21 @@
                 </div>
                 <div class="header-right">
                     <div class="search-box">
-                        <input type="text" placeholder="Tìm kiếm tin nhắn..." id="searchInput" />
+                        <input type="text" placeholder="Tìm kiếm..." id="searchInput" />
                         <button onclick="searchMessages()" style="background:none;border:none;cursor:pointer;font-size:14px;">🔍</button>
                     </div>
                     
-                    <!-- ===== AUTH BUTTONS ===== -->
+                    <!-- ===== AUTH BUTTONS (CHỮ THUẦN, KHÔNG ICON) ===== -->
                     <div class="auth-buttons" id="authButtons">
-                        <button class="btn-auth" onclick="openLoginModal()">🔐 Đăng nhập</button>
-                        <button class="btn-auth btn-register" onclick="openRegisterModal()">📝 Đăng ký</button>
+                        <button class="btn-auth" onclick="openLoginModal()">Đăng nhập</button>
+                        <button class="btn-auth btn-register" onclick="openRegisterModal()">Đăng ký</button>
                     </div>
                     
                     <!-- ===== USER INFO ===== -->
                     <div class="user-info" id="userInfo" style="display:none;">
                         <span class="user-name" id="headerUserName">User</span>
                         <span class="user-role" id="headerUserRole">User</span>
-                        <button class="btn-logout" onclick="logout()" title="Đăng xuất">🚪</button>
+                        <button class="btn-logout" onclick="logout()">Đăng xuất</button>
                     </div>
                     
                     <button class="btn-icon" id="themeToggle" title="Chuyển chế độ sáng/tối">🌙</button>
@@ -446,12 +454,12 @@
 
             <div class="chat-container" id="chatContainer">
 
-                <!-- ===== UPGRADE REQUIRED (hiển thị khi guest dùng chức năng bị khóa) ===== -->
+                <!-- ===== UPGRADE REQUIRED ===== -->
                 <div class="upgrade-required" id="upgradeRequired">
                     <strong>🔒 Chức năng này yêu cầu đăng nhập!</strong>
                     <p style="margin:4px 0;font-size:14px;">Vui lòng đăng nhập hoặc đăng ký tài khoản để sử dụng.</p>
-                    <button class="btn-upgrade" onclick="openLoginModal()">🔐 Đăng nhập ngay</button>
-                    <button class="btn-upgrade" onclick="openRegisterModal()" style="background:#4f6ef7;margin-left:8px;">📝 Đăng ký</button>
+                    <button class="btn-upgrade" onclick="openLoginModal()">Đăng nhập</button>
+                    <button class="btn-upgrade" onclick="openRegisterModal()" style="background:#4f6ef7;margin-left:8px;">Đăng ký</button>
                 </div>
 
                 <!-- ===== DEEP THINK INDICATOR ===== -->
@@ -614,7 +622,7 @@
     <div class="modal-overlay" id="loginModal">
         <div class="modal-box" style="max-width:420px;">
             <div class="modal-header">
-                <h2>🔐 Đăng nhập</h2>
+                <h2>Đăng nhập</h2>
                 <button class="close-btn" onclick="closeModal('loginModal')">✕</button>
             </div>
             
@@ -636,7 +644,7 @@
                     <img src="https://github.com/favicon.ico" style="width:20px;height:20px;" alt="GitHub" /> Đăng nhập với GitHub
                 </button>
                 <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;">
-                    Chưa có tài khoản? <span style="color:var(--color-primary);cursor:pointer;" onclick="switchAuthTab('register')">Đăng ký ngay</span>
+                    Chưa có tài khoản? <span style="color:var(--color-primary);cursor:pointer;" onclick="switchAuthTab('register')">Đăng ký</span>
                 </div>
             </div>
             
@@ -826,7 +834,6 @@
         function requireAuth() {
             if (!isLoggedIn) {
                 document.getElementById('upgradeRequired').style.display = 'block';
-                // Cuộn lên để thấy thông báo
                 document.getElementById('upgradeRequired').scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return false;
             }
@@ -1014,7 +1021,7 @@
         }
 
         function loginGitHub() {
-            const clientId = 'YOUR_GITHUB_CLIENT_ID'; // Thay bằng Client ID của bạn
+            const clientId = 'YOUR_GITHUB_CLIENT_ID';
             const redirectUri = window.location.origin + '/auth/github/callback';
             const scope = 'user:email';
             const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
@@ -1295,7 +1302,7 @@
         }
 
         // ================================================================
-        // EXPORT
+        // EXPORT CHAT
         // ================================================================
         exportBtn.addEventListener('click', function() {
             if (!currentConversationId) {
@@ -1306,7 +1313,7 @@
         });
 
         // ================================================================
-        // SEARCH
+        // SEARCH MESSAGES
         // ================================================================
         function searchMessages() {
             const keyword = searchInput.value.trim();
