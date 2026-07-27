@@ -550,6 +550,7 @@
             position: relative;
             word-wrap: break-word;
             box-shadow: var(--shadow-sm);
+            white-space: pre-wrap;
         }
 
         .message.user {
@@ -1869,16 +1870,11 @@
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    let html = '🧠 **Kết quả AI Đa luồng:**
-
-';
+                    let html = '🧠 **Kết quả AI Đa luồng:**\n\n';
                     data.results.forEach(r => {
-                        html += `📌 **${r.model}** (Độ chính xác: ${r.accuracy}%):
-${r.response}
-
-`;
+                        html += `📌 **\${r.model}** (Độ chính xác: \${r.accuracy}%):\n\${r.response}\n\n`;
                     });
-                    html += `🏆 **Kết quả tốt nhất:** ${data.best.model}`;
+                    html += `🏆 **Kết quả tốt nhất:** \${data.best.model}`;
                     addMessage('ai', html);
                 })
                 .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
@@ -1907,11 +1903,7 @@ ${r.response}
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    addMessage('ai', `📝 **Tóm tắt:**
-
-${data.summary}
-
-📊 Độ dài gốc: ${data.original_length} ký tự → ${data.summarized_length} ký tự`);
+                    addMessage('ai', `📝 **Tóm tắt:**\n\n\${data.summary}\n\n📊 Độ dài gốc: \${data.original_length} ký tự → \${data.summarized_length} ký tự`);
                 })
                 .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
             });
@@ -1924,19 +1916,9 @@ ${data.summary}
                     showToast('Vui lòng nhập văn bản cần dịch!', 'error');
                     return;
                 }
-                const lang = prompt('Nhập mã ngôn ngữ đích:
-vi (Tiếng Việt)
-en (English)
-ko (한국어)
-ja (日本語)
-zh (中文)
-fr (Français)
-de (Deutsch)
-es (Español)
-ru (Русский)
-ar (العربية)', 'en');
+                const lang = prompt('Nhập mã ngôn ngữ đích:\nvi (Tiếng Việt)\nen (English)\nko (한국어)\nja (日本語)\nzh (中文)\nfr (Français)\nde (Deutsch)\nes (Español)\nru (Русский)\nar (العربية)', 'en');
                 if (!lang) return;
-                addMessage('user', `🌐 Yêu cầu dịch sang ${lang}: ${text}`);
+                addMessage('user', `🌐 Yêu cầu dịch sang \${lang}: \${text}`);
                 inputField.value = '';
                 showTyping();
                 fetch('/api/translate', {
@@ -1951,9 +1933,7 @@ ar (العربية)', 'en');
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    addMessage('ai', `🌐 **Dịch sang ${lang}:**
-
-${data.translated}`);
+                    addMessage('ai', `🌐 **Dịch sang \${lang}:**\n\n\${data.translated}`);
                 })
                 .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
             });
@@ -1966,12 +1946,9 @@ ${data.translated}`);
                     showToast('Vui lòng nhập mô tả video!', 'error');
                     return;
                 }
-                const template = prompt('Chọn loại video:
-short (15s)
-medium (30s)
-long (60s)', 'short');
+                const template = prompt('Chọn loại video:\nshort (15s)\nmedium (30s)\nlong (60s)', 'short');
                 if (!template) return;
-                addMessage('user', `🎬 Yêu cầu tạo video (${template}): ${text}`);
+                addMessage('user', `🎬 Yêu cầu tạo video (\${template}): \${text}`);
                 inputField.value = '';
                 showTyping();
                 fetch('/api/generate_video', {
@@ -1986,15 +1963,7 @@ long (60s)', 'short');
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    addMessage('ai', `🎬 **Video đang được tạo:**
-
-📌 Tiêu đề: ${data.title}
-⏱️ Thời lượng: ${data.duration}s
-📐 Độ phân giải: ${data.resolution}
-🎨 Phong cách: ${data.style}
-🔗 Link: ${data.url}
-
-⏳ Trạng thái: ${data.status}`);
+                    addMessage('ai', `🎬 **Video đang được tạo:**\n\n📌 Tiêu đề: \${data.title}\n⏱️ Thời lượng: \${data.duration}s\n📐 Độ phân giải: \${data.resolution}\n🎨 Phong cách: \${data.style}\n🔗 Link: \${data.url}\n\n⏳ Trạng thái: \${data.status}`);
                 })
                 .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
             });
@@ -2024,14 +1993,7 @@ long (60s)', 'short');
                             addMessage('ai', '❌ ' + data.error);
                             return;
                         }
-                        addMessage('ai', `📊 **Phân tích dữ liệu số:**
-
-📌 Số lượng: ${data.count}
-📉 Nhỏ nhất: ${data.min}
-📈 Lớn nhất: ${data.max}
-📊 Trung bình: ${data.mean}
-📏 Trung vị: ${data.median}
-📐 Tổng: ${data.sum}`);
+                        addMessage('ai', `📊 **Phân tích dữ liệu số:**\n\n📌 Số lượng: \${data.count}\n📉 Nhỏ nhất: \${data.min}\n📈 Lớn nhất: \${data.max}\n📊 Trung bình: \${data.mean}\n📏 Trung vị: \${data.median}\n📐 Tổng: \${data.sum}`);
                     })
                     .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
                 } else {
@@ -2050,13 +2012,7 @@ long (60s)', 'short');
                             addMessage('ai', '❌ ' + data.error);
                             return;
                         }
-                        addMessage('ai', `📊 **Phân tích văn bản:**
-
-📌 Số từ: ${data.word_count}
-📝 Số câu: ${data.sentence_count}
-📏 Độ dài trung bình từ: ${data.avg_word_length}
-🔤 Số từ độc nhất: ${data.unique_words}
-📖 Độ dễ đọc: ${data.readability}`);
+                        addMessage('ai', `📊 **Phân tích văn bản:**\n\n📌 Số từ: \${data.word_count}\n📝 Số câu: \${data.sentence_count}\n📏 Độ dài trung bình từ: \${data.avg_word_length}\n🔤 Số từ độc nhất: \${data.unique_words}\n📖 Độ dễ đọc: \${data.readability}`);
                     })
                     .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
                 }
@@ -2070,14 +2026,12 @@ long (60s)', 'short');
                     showToast('Vui lòng nhập mô tả bài hát!', 'error');
                     return;
                 }
-                const style = prompt('Chọn thể loại:
-pop, rock, jazz, edm, classical, rap, ballad, v_pop, k_pop', 'pop');
+                const style = prompt('Chọn thể loại:\npop, rock, jazz, edm, classical, rap, ballad, v_pop, k_pop', 'pop');
                 if (!style) return;
-                const mood = prompt('Chọn tâm trạng:
-happy, sad, romantic, epic, neutral', 'happy');
+                const mood = prompt('Chọn tâm trạng:\nhappy, sad, romantic, epic, neutral', 'happy');
                 if (!mood) return;
                 const duration = parseInt(prompt('Chọn độ dài (giây, tối đa 420 - 7 phút):', '60')) || 60;
-                addMessage('user', `🎵 Yêu cầu tạo nhạc (${style}, ${mood}, ${duration}s): ${text}`);
+                addMessage('user', `🎵 Yêu cầu tạo nhạc (\${style}, \${mood}, \${duration}s): \${text}`);
                 inputField.value = '';
                 showTyping();
                 fetch('/api/generate_music', {
@@ -2097,23 +2051,13 @@ happy, sad, romantic, epic, neutral', 'happy');
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    let html = `🎵 **Bài hát đã được tạo!**
-
-`;
-                    html += `📌 Thời lượng: ${data.duration} giây
-`;
-                    html += `🎤 Thể loại: ${data.style}
-`;
-                    html += `🎭 Tâm trạng: ${data.mood}
-`;
-                    html += `📦 Số đoạn ghép: ${data.num_segments || 1}
-
-`;
-                    html += `📝 Lời bài hát:
-${data.lyrics}
-
-`;
-                    html += `🔊 Tải nhạc: <a href="${data.download_url}" download style="color:var(--accent-primary);text-decoration:underline;">${data.music_file}</a>`;
+                    let html = `🎵 **Bài hát đã được tạo!**\n\n`;
+                    html += `📌 Thời lượng: \${data.duration} giây\n`;
+                    html += `🎤 Thể loại: \${data.style}\n`;
+                    html += `🎭 Tâm trạng: \${data.mood}\n`;
+                    html += `📦 Số đoạn ghép: \${data.num_segments || 1}\n\n`;
+                    html += `📝 Lời bài hát:\n\${data.lyrics}\n\n`;
+                    html += `🔊 Tải nhạc: <a href="\${data.download_url}" download style="color:var(--accent-primary);text-decoration:underline;">\${data.music_file}</a>`;
                     addMessage('ai', html);
                 })
                 .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
@@ -2143,3 +2087,4 @@ ${data.lyrics}
         console.log('🚀 T.VỸ-AI-SUPREME v11.0 UI Upgraded & Fully Functional!');
     </script>
 </body>
+</html>
