@@ -3,381 +3,843 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>T.VỸ-AI-SUPREME</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/assets/css/main.css" />
+    <title>T.VỸ-AI-SUPREME v11.0</title>
     
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+
     <style>
-        /* ===== STYLE BỔ SUNG ===== */
-        .upgrade-card {
-            background: var(--color-bg);
-            border-radius: 8px;
-            padding: 16px 20px;
-            margin-bottom: 12px;
-            border: 1px solid var(--color-border);
+        /* ===== MODERN DESIGN SYSTEM & VARIABLES ===== */
+        :root {
+            /* Palette - Dark Mode Default */
+            --bg-body: #090a0f;
+            --bg-sidebar: #0f111a;
+            --bg-card: rgba(22, 25, 38, 0.7);
+            --bg-glass: rgba(255, 255, 255, 0.03);
+            --bg-glass-hover: rgba(255, 255, 255, 0.07);
+            --bg-input: rgba(18, 21, 33, 0.8);
+            
+            --text-main: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --accent-primary: #6366f1;
+            --accent-hover: #4f46e5;
+            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+            --accent-gradient-subtle: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15));
+            
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(99, 102, 241, 0.3);
+            
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.4);
+            --shadow-glow: 0 0 25px rgba(99, 102, 241, 0.25);
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 18px;
+            --radius-xl: 24px;
+            --radius-full: 9999px;
+            
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Light Mode Palette Override */
+        [data-theme="light"] {
+            --bg-body: #f8fafc;
+            --bg-sidebar: #ffffff;
+            --bg-card: #ffffff;
+            --bg-glass: rgba(0, 0, 0, 0.02);
+            --bg-glass-hover: rgba(0, 0, 0, 0.05);
+            --bg-input: #ffffff;
+            
+            --text-main: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            
+            --border-color: #e2e8f0;
+            --border-highlight: rgba(99, 102, 241, 0.4);
+            --shadow-lg: 0 10px 25px rgba(15, 23, 42, 0.08);
+        }
+
+        /* ===== RESET & GLOBAL STYLING ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-main);
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            transition: 0.3s;
+            transition: background-color 0.3s, color 0.3s;
         }
-        .upgrade-card:hover {
-            border-color: var(--color-primary);
-            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
-        }
-        .upgrade-card .upgrade-btn {
-            padding: 6px 16px;
-            border: none;
-            border-radius: 20px;
-            background: var(--color-primary);
-            color: #fff;
-            font-weight: 600;
-            font-size: 12px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        .upgrade-card .upgrade-btn:hover {
-            opacity: 0.85;
-            transform: scale(1.02);
-        }
-        .upgrade-card .upgrade-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .momo-btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            margin-bottom: 6px;
-            transition: 0.3s;
-            color: #fff;
-        }
-        .momo-btn:hover {
-            opacity: 0.9;
-            transform: scale(1.01);
-        }
-        .momo-btn.pro { background: #a83279; }
-        .momo-btn.plus { background: #8b5cf6; }
-        .momo-btn.pro3 { background: #ef4444; }
-        .toast-message {
-            position: fixed;
-            bottom: 100px;
-            right: 20px;
-            background: var(--color-bg-secondary);
-            color: var(--color-text);
-            padding: 12px 20px;
-            border-radius: 8px;
-            border: 1px solid var(--color-border);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            z-index: 999;
-            animation: slideIn 0.3s ease;
-            max-width: 350px;
-        }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .toast-message.success { border-left: 4px solid #22c55e; }
-        .toast-message.error { border-left: 4px solid #ef4444; }
-        .toast-message.info { border-left: 4px solid #3b82f6; }
-        .toast-message.warning { border-left: 4px solid #f59e0b; }
 
-        .history-item {
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.25);
+            border-radius: var(--radius-full);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.4);
+        }
+
+        /* ===== LAYOUT & APP CONTAINER ===== */
+        .app-container {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--color-border);
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .history-item:hover {
-            background: var(--color-bg);
-        }
-        .history-item .delete-btn {
-            background: none;
-            border: none;
-            color: #ef4444;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .history-item .delete-btn:hover {
-            opacity: 0.7;
-        }
-
-        .typing-indicator {
-            display: none;
-            padding: 10px 16px;
-            background: var(--color-bg-secondary);
-            border-radius: 12px;
-            border: 1px solid var(--color-border);
-            margin-bottom: 12px;
-            max-width: 60px;
-        }
-        .typing-indicator span {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: var(--color-primary);
-            border-radius: 50%;
-            margin: 0 3px;
-            animation: dotBounce 1.4s infinite;
-        }
-        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes dotBounce {
-            0%, 60%, 100% { transform: translateY(0); }
-            30% { transform: translateY(-8px); }
-        }
-
-        .search-result {
-            position: fixed;
-            bottom: 90px;
-            right: 20px;
-            background: var(--color-bg-secondary);
-            padding: 8px 16px;
-            border-radius: 8px;
-            border: 1px solid var(--color-border);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            font-size: 13px;
-            z-index: 999;
-            display: none;
-        }
-        .search-result.show { display: block; }
-
-        .toolbar {
-            display: flex;
-            gap: 8px;
-            padding: 8px 16px;
-            background: var(--color-bg-secondary);
-            border-top: 1px solid var(--color-border);
-            flex-wrap: wrap;
-            border-bottom: 1px solid var(--color-border);
-            align-items: center;
-        }
-        .toolbar .menu-wrapper {
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg-body);
             position: relative;
         }
-        .toolbar .menu-btn {
-            padding: 6px 14px;
-            background: var(--color-primary);
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 18px;
-            font-weight: 700;
-            transition: 0.3s;
-        }
-        .toolbar .menu-btn:hover {
-            opacity: 0.85;
-            transform: scale(1.02);
-        }
-        .toolbar .dropdown-menu {
-            display: none;
-            position: absolute;
-            bottom: calc(100% + 8px);
-            left: 0;
-            background: var(--color-bg-secondary);
-            border: 1px solid var(--color-border);
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            padding: 6px 0;
-            min-width: 180px;
-            z-index: 100;
-        }
-        .toolbar .dropdown-menu.show {
-            display: block;
-        }
-        .toolbar .dropdown-menu button {
-            display: block;
-            width: 100%;
-            padding: 8px 16px;
-            background: none;
-            border: none;
-            text-align: left;
-            font-size: 13px;
-            color: var(--color-text);
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .toolbar .dropdown-menu button:hover {
-            background: var(--color-bg);
-        }
-        .toolbar .dropdown-menu .danger {
-            color: #ef4444;
-        }
-        .toolbar .dropdown-menu hr {
-            border: none;
-            border-top: 1px solid var(--color-border);
-            margin: 4px 0;
-        }
-        .toolbar .menu-hint {
-            font-size: 13px;
-            color: var(--text-muted);
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 16px;
+            z-index: 20;
+            transition: var(--transition);
+            flex-shrink: 0;
         }
 
-        /* ===== DEEP THINK INDICATOR ===== */
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 16px;
+        }
+
+        .sidebar-brand .logo {
+            font-size: 20px;
+            font-weight: 800;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .sidebar-brand .version {
+            font-size: 11px;
+            font-weight: 700;
+            background: var(--accent-gradient-subtle);
+            color: var(--accent-primary);
+            padding: 3px 8px;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--border-highlight);
+        }
+
+        /* Level Selector */
+        .level-selector {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            margin-bottom: 16px;
+            transition: var(--transition);
+        }
+
+        .level-selector:hover {
+            border-color: var(--border-highlight);
+        }
+
+        .level-selector .label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .level-selector select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .level-selector select:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        #usageInfo {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+        }
+
+        /* Navigation Menu */
+        nav {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: left;
+            transition: var(--transition);
+            width: 100%;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-glass-hover);
+            color: var(--text-main);
+        }
+
+        .nav-item.active {
+            background: var(--accent-gradient);
+            color: #ffffff;
+            box-shadow: var(--shadow-glow);
+        }
+
+        /* User Profile Sidebar Widget */
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            margin-top: auto;
+        }
+
+        .user-profile .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 15px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .user-profile .info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .user-profile .name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-profile .status {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* ===== MAIN CONTENT AREA ===== */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            background: var(--bg-body);
+            position: relative;
+        }
+
+        /* Header */
+        .header {
+            height: 70px;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(15, 17, 26, 0.6);
+            backdrop-filter: blur(12px);
+            z-index: 10;
+        }
+
+        .header .title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .level-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+            background: var(--accent-gradient-subtle);
+            color: var(--accent-primary);
+            border: 1px solid var(--border-highlight);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-full);
+            padding: 6px 14px;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .search-box:focus-within {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .search-box input {
+            border: none;
+            background: transparent;
+            color: var(--text-main);
+            font-size: 13px;
+            outline: none;
+            width: 140px;
+        }
+
+        /* Header Buttons */
+        .auth-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-auth {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-full);
+            background: transparent;
+            color: var(--text-main);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-auth:hover {
+            background: var(--bg-glass-hover);
+        }
+
+        .btn-auth.btn-register {
+            background: var(--accent-gradient);
+            border: none;
+            color: #ffffff;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .btn-auth.btn-register:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-info .user-name {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .user-info .user-role {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: var(--radius-full);
+            background: var(--accent-gradient-subtle);
+            color: var(--accent-primary);
+            font-weight: 700;
+        }
+
+        .btn-logout {
+            padding: 6px 12px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-logout:hover {
+            background: #ef4444;
+            color: #ffffff;
+        }
+
+        .btn-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--bg-glass);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 15px;
+        }
+
+        .btn-icon:hover {
+            background: var(--bg-glass-hover);
+            border-color: var(--border-highlight);
+        }
+
+        /* ===== CHAT CONTAINER ===== */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            scroll-behavior: smooth;
+        }
+
+        /* Upgrade Required Banner */
+        .upgrade-required {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.15));
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            border-radius: var(--radius-md);
+            padding: 16px 20px;
+            color: #f59e0b;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .upgrade-required .btn-upgrade {
+            padding: 8px 18px;
+            background: #f59e0b;
+            color: #ffffff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: var(--transition);
+        }
+
+        .upgrade-required .btn-upgrade:hover {
+            opacity: 0.9;
+        }
+
+        /* Deep Think Indicator */
         #deepThinkIndicator {
             display: none;
-            padding: 12px 20px;
-            background: var(--color-bg-secondary);
-            border-radius: 12px;
-            border: 1px solid var(--color-border);
-            margin-bottom: 12px;
+            padding: 14px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-highlight);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-glow);
+            animation: fadeIn 0.3s ease;
         }
+
         .think-dot {
             width: 8px;
             height: 8px;
-            background: var(--color-primary);
+            background: var(--accent-primary);
             border-radius: 50%;
             display: inline-block;
             animation: thinkBounce 1.4s infinite;
         }
         .think-dot:nth-child(2) { animation-delay: 0.2s; }
         .think-dot:nth-child(3) { animation-delay: 0.4s; }
+
         @keyframes thinkBounce {
             0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
-            30% { transform: translateY(-8px); opacity: 1; }
+            30% { transform: translateY(-6px); opacity: 1; }
         }
 
-        /* ===== HEADER AUTH BUTTONS - CHỮ THUẦN, KHÔNG ICON ===== */
-        .header-right {
+        /* Message Bubbles */
+        .message-wrapper {
+            display: flex;
+            width: 100%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .message-wrapper.user {
+            justify-content: flex-end;
+        }
+
+        .message-wrapper.ai {
+            justify-content: flex-start;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 16px 20px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            line-height: 1.6;
+            position: relative;
+            word-wrap: break-word;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .message.user {
+            background: var(--accent-gradient);
+            color: #ffffff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.ai {
+            background: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message .time {
+            display: block;
+            font-size: 10px;
+            margin-top: 8px;
+            opacity: 0.7;
+            text-align: right;
+        }
+
+        /* ===== TOOLBAR ===== */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 24px;
+            background: var(--bg-sidebar);
+            border-top: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .toolbar .menu-wrapper {
+            position: relative;
+        }
+
+        .toolbar .menu-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            color: #ffffff;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .toolbar .menu-btn:hover {
+            transform: scale(1.08);
+        }
+
+        .toolbar .dropdown-menu {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 12px);
+            left: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            padding: 8px;
+            min-width: 220px;
+            z-index: 100;
+            backdrop-filter: blur(16px);
+        }
+
+        .toolbar .dropdown-menu.show {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .toolbar .dropdown-menu button {
             display: flex;
             align-items: center;
             gap: 10px;
-        }
-        .auth-buttons {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-        }
-        .btn-auth {
-            padding: 6px 14px;
-            border: none;
-            border-radius: 6px;
+            width: 100%;
+            padding: 10px 14px;
             background: transparent;
-            color: var(--text-secondary);
-            font-size: 14px;
-            font-weight: 500;
+            border: none;
+            border-radius: var(--radius-sm);
+            color: var(--text-main);
+            font-size: 13px;
+            font-weight: 600;
             cursor: pointer;
-            transition: 0.3s;
-        }
-        .btn-auth:hover {
-            background: var(--bg-input);
-            color: var(--text-primary);
-        }
-        .btn-auth.btn-register {
-            background: var(--color-primary);
-            color: #fff;
-            border-radius: 6px;
-        }
-        .btn-auth.btn-register:hover {
-            opacity: 0.85;
-            background: var(--color-primary);
+            transition: var(--transition);
         }
 
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .toolbar .dropdown-menu button:hover {
+            background: var(--bg-glass-hover);
         }
-        .user-info .user-name {
-            font-weight: 500;
-            font-size: 14px;
-            color: var(--text-primary);
-        }
-        .user-info .user-role {
-            font-size: 11px;
-            padding: 2px 10px;
-            border-radius: 12px;
-            background: var(--color-primary-light);
-            color: var(--color-primary);
-        }
-        .btn-logout {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 13px;
-            color: var(--text-muted);
-            padding: 4px 10px;
-            border-radius: 4px;
-            transition: 0.3s;
-        }
-        .btn-logout:hover {
-            background: #fee2e2;
+
+        .toolbar .dropdown-menu .danger {
             color: #ef4444;
         }
 
-        /* ===== AUTH TABS ===== */
+        .toolbar .dropdown-menu .danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .toolbar .dropdown-menu hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 6px 0;
+        }
+
+        .toolbar .menu-hint {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* ===== INPUT AREA ===== */
+        .input-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 24px;
+            background: var(--bg-sidebar);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 14px 20px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-full);
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .input-area input:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .input-area button {
+            padding: 14px 28px;
+            background: var(--accent-gradient);
+            border: none;
+            border-radius: var(--radius-full);
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .input-area button:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            padding: 10px;
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            background: var(--bg-sidebar);
+            border-top: 1px solid var(--border-color);
+            font-weight: 500;
+        }
+
+        /* ===== MODALS ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 28px;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .modal-header .close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 18px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .modal-header .close-btn:hover {
+            color: var(--text-main);
+        }
+
+        /* Auth Tabs in Modal */
         .auth-tabs {
             display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-            border-bottom: 1px solid var(--color-border);
+            background: var(--bg-input);
+            border-radius: var(--radius-md);
+            padding: 4px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
         }
+
         .auth-tab {
             flex: 1;
             padding: 10px;
-            background: var(--color-bg);
+            border: none;
+            background: transparent;
             color: var(--text-muted);
-            border: none;
-            border-radius: 8px 8px 0 0;
+            font-weight: 700;
+            font-size: 13px;
+            border-radius: var(--radius-sm);
             cursor: pointer;
-            font-weight: 600;
-            font-size: 14px;
-            transition: 0.3s;
+            transition: var(--transition);
         }
+
         .auth-tab.active {
-            background: var(--color-primary);
-            color: #fff;
-        }
-        .auth-tab:hover:not(.active) {
-            background: var(--color-bg-secondary);
+            background: var(--accent-gradient);
+            color: #ffffff;
+            box-shadow: var(--shadow-sm);
         }
 
-        /* ===== UPGRADE REQUIRED ===== */
-        .upgrade-required {
-            padding: 16px 20px;
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            color: #78350f;
-            display: none;
-        }
-        .upgrade-required .btn-upgrade {
-            padding: 8px 20px;
-            background: #f59e0b;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
+        /* Toast Message */
+        .toast-message {
+            position: fixed;
+            bottom: 100px;
+            right: 24px;
+            background: var(--bg-card);
+            color: var(--text-main);
+            padding: 14px 20px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-lg);
+            z-index: 9999;
+            font-size: 13px;
             font-weight: 600;
-            margin-top: 8px;
-            transition: 0.3s;
-        }
-        .upgrade-required .btn-upgrade:hover {
-            opacity: 0.85;
+            animation: slideIn 0.3s ease;
         }
 
-        @media (max-width: 768px) {
-            .auth-buttons .btn-auth {
-                font-size: 12px;
-                padding: 4px 10px;
-            }
-            .user-info .user-name {
-                font-size: 12px;
-            }
-            .header-right .search-box input {
-                width: 100px;
-            }
+        .toast-message.success { border-left: 4px solid #22c55e; }
+        .toast-message.error { border-left: 4px solid #ef4444; }
+        .toast-message.info { border-left: 4px solid #3b82f6; }
+        .toast-message.warning { border-left: 4px solid #f59e0b; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
         }
     </style>
 </head>
@@ -389,7 +851,7 @@
         <!-- ===== SIDEBAR ===== -->
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <div class="logo">T.VỸ.AI</div>
+                <div class="logo"><i class="fa-solid fa-brain"></i> T.VỸ.AI</div>
                 <span class="version">v11.0</span>
             </div>
 
@@ -401,14 +863,14 @@
                     <option value="plus">AI Plus</option>
                     <option value="pro3">AI 3.0 Pro</option>
                 </select>
-                <div id="usageInfo" style="font-size:12px;color:#8a8aaa;margin-top:6px;">Lượt còn lại: --</div>
+                <div id="usageInfo"><i class="fa-solid fa-bolt"></i> Lượt còn lại: --</div>
             </div>
 
             <nav>
-                <button class="nav-item active" data-tab="chat">Trò chuyện</button>
-                <button class="nav-item" data-tab="history">Lịch sử</button>
-                <button class="nav-item" data-tab="upgrade">Nâng cấp</button>
-                <button class="nav-item" data-tab="settings">Cài đặt</button>
+                <button class="nav-item active" data-tab="chat"><i class="fa-solid fa-comments"></i> Trò chuyện</button>
+                <button class="nav-item" data-tab="history"><i class="fa-solid fa-clock-history"></i> Lịch sử</button>
+                <button class="nav-item" data-tab="upgrade"><i class="fa-solid fa-crown"></i> Nâng cấp</button>
+                <button class="nav-item" data-tab="settings"><i class="fa-solid fa-gear"></i> Cài đặt</button>
             </nav>
 
             <div class="user-profile" id="userProfile">
@@ -417,7 +879,7 @@
                     <div class="name" id="userName">Khách</div>
                     <div class="status" id="userStatus">Chế độ khách</div>
                 </div>
-                <button id="logoutBtn" style="display:none;background:none;border:none;color:#8a8aaa;cursor:pointer;font-size:14px;" title="Đăng xuất">🚪</button>
+                <button id="logoutBtn" style="display:none;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;" title="Đăng xuất"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
         </aside>
 
@@ -431,10 +893,10 @@
                 <div class="header-right">
                     <div class="search-box">
                         <input type="text" placeholder="Tìm kiếm..." id="searchInput" />
-                        <button onclick="searchMessages()" style="background:none;border:none;cursor:pointer;font-size:14px;">🔍</button>
+                        <button onclick="searchMessages()"><i class="fa-solid fa-magnifying-glass"></i></button>
                     </div>
                     
-                    <!-- ===== AUTH BUTTONS (CHỮ THUẦN, KHÔNG ICON) ===== -->
+                    <!-- ===== AUTH BUTTONS ===== -->
                     <div class="auth-buttons" id="authButtons">
                         <button class="btn-auth" onclick="openLoginModal()">Đăng nhập</button>
                         <button class="btn-auth btn-register" onclick="openRegisterModal()">Đăng ký</button>
@@ -447,8 +909,8 @@
                         <button class="btn-logout" onclick="logout()">Đăng xuất</button>
                     </div>
                     
-                    <button class="btn-icon" id="themeToggle" title="Chuyển chế độ sáng/tối">🌙</button>
-                    <button class="btn-icon" id="exportBtn" title="Xuất chat" style="display:none;">📤</button>
+                    <button class="btn-icon" id="themeToggle" title="Chuyển chế độ sáng/tối"><i class="fa-solid fa-moon"></i></button>
+                    <button class="btn-icon" id="exportBtn" title="Xuất chat" style="display:none;"><i class="fa-solid fa-file-export"></i></button>
                 </div>
             </header>
 
@@ -457,7 +919,7 @@
                 <!-- ===== UPGRADE REQUIRED ===== -->
                 <div class="upgrade-required" id="upgradeRequired">
                     <strong>🔒 Chức năng này yêu cầu đăng nhập!</strong>
-                    <p style="margin:4px 0;font-size:14px;">Vui lòng đăng nhập hoặc đăng ký tài khoản để sử dụng.</p>
+                    <p style="margin:4px 0;font-size:13px;">Vui lòng đăng nhập hoặc đăng ký tài khoản để sử dụng.</p>
                     <button class="btn-upgrade" onclick="openLoginModal()">Đăng nhập</button>
                     <button class="btn-upgrade" onclick="openRegisterModal()" style="background:#4f6ef7;margin-left:8px;">Đăng ký</button>
                 </div>
@@ -467,8 +929,8 @@
                     <div style="display:flex;align-items:center;gap:12px;">
                         <span style="font-size:20px;">🧠</span>
                         <div>
-                            <div style="font-weight:600;color:var(--text-primary);">Đang suy nghĩ sâu...</div>
-                            <div style="font-size:13px;color:var(--text-muted);" id="thinkStatus">Phân tích vấn đề...</div>
+                            <div style="font-weight:700;color:var(--text-main);">Đang suy nghĩ sâu...</div>
+                            <div style="font-size:12px;color:var(--text-muted);" id="thinkStatus">Phân tích vấn đề...</div>
                         </div>
                         <div style="margin-left:auto;display:flex;gap:4px;">
                             <span class="think-dot"></span>
@@ -507,16 +969,16 @@
             <!-- ===== TOOLBAR ===== -->
             <div class="toolbar">
                 <div class="menu-wrapper">
-                    <button class="menu-btn" id="menuToggle" onclick="toggleMenu()">➕</button>
+                    <button class="menu-btn" id="menuToggle" onclick="toggleMenu()"><i class="fa-solid fa-plus"></i></button>
                     <div class="dropdown-menu" id="functionMenu">
-                        <button onclick="useMultiAI()">🧠 AI Đa luồng</button>
-                        <button onclick="summarizeText()">📝 Tóm tắt</button>
-                        <button onclick="translateText()">🌐 Dịch</button>
-                        <button onclick="generateVideo()">🎬 Tạo video</button>
-                        <button onclick="analyzeData()">📊 Phân tích</button>
-                        <button onclick="generateMusicWithLyrics()">🎵 Tạo nhạc</button>
+                        <button onclick="useMultiAI()"><i class="fa-solid fa-network-wired"></i> AI Đa luồng</button>
+                        <button onclick="summarizeText()"><i class="fa-solid fa-file-contract"></i> Tóm tắt</button>
+                        <button onclick="translateText()"><i class="fa-solid fa-language"></i> Dịch</button>
+                        <button onclick="generateVideo()"><i class="fa-solid fa-film"></i> Tạo video</button>
+                        <button onclick="analyzeData()"><i class="fa-solid fa-chart-pie"></i> Phân tích</button>
+                        <button onclick="generateMusicWithLyrics()"><i class="fa-solid fa-music"></i> Tạo nhạc</button>
                         <hr>
-                        <button class="danger" onclick="clearAllMessages()">🗑️ Xóa chat</button>
+                        <button class="danger" onclick="clearAllMessages()"><i class="fa-solid fa-trash"></i> Xóa chat</button>
                     </div>
                 </div>
                 <span class="menu-hint">Nhấn ➕ để xem các chức năng AI</span>
@@ -553,43 +1015,43 @@
                 <button class="close-btn" onclick="closeModal('upgradeModal')">✕</button>
             </div>
             <div id="upgradeList">
-                <div class="upgrade-card" data-tier="pro">
+                <div class="upgrade-card" data-tier="pro" style="display:flex;justify-content:space-between;align-items:center;padding:12px;margin-bottom:10px;background:var(--bg-glass);border:1px solid var(--border-color);border-radius:var(--radius-md);">
                     <div>
-                        <div style="font-weight:600;">🔵 AI Pro</div>
-                        <div style="font-size:13px;color:#8a8aaa;">Trả lời chi tiết, tìm web</div>
+                        <div style="font-weight:700;">🔵 AI Pro</div>
+                        <div style="font-size:12px;color:var(--text-muted);">Trả lời chi tiết, tìm web</div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <span style="font-weight:700;color:#2d3b8a;">20.000đ/tháng</span>
-                        <button class="upgrade-btn" onclick="upgradeTier('pro')">Nâng cấp</button>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-weight:700;color:var(--accent-primary);">20.000đ/tháng</span>
+                        <button class="btn-auth btn-register" onclick="upgradeTier('pro')">Nâng cấp</button>
                     </div>
                 </div>
-                <div class="upgrade-card" data-tier="plus">
+                <div class="upgrade-card" data-tier="plus" style="display:flex;justify-content:space-between;align-items:center;padding:12px;margin-bottom:10px;background:var(--bg-glass);border:1px solid var(--border-color);border-radius:var(--radius-md);">
                     <div>
-                        <div style="font-weight:600;">🟣 AI Plus</div>
-                        <div style="font-size:13px;color:#8a8aaa;">Phân tích sâu, suy luận logic</div>
+                        <div style="font-weight:700;">🟣 AI Plus</div>
+                        <div style="font-size:12px;color:var(--text-muted);">Phân tích sâu, suy luận logic</div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <span style="font-weight:700;color:#2d3b8a;">50.000đ/tháng</span>
-                        <button class="upgrade-btn" onclick="upgradeTier('plus')">Nâng cấp</button>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-weight:700;color:var(--accent-primary);">50.000đ/tháng</span>
+                        <button class="btn-auth btn-register" onclick="upgradeTier('plus')">Nâng cấp</button>
                     </div>
                 </div>
-                <div class="upgrade-card" data-tier="pro3">
+                <div class="upgrade-card" data-tier="pro3" style="display:flex;justify-content:space-between;align-items:center;padding:12px;margin-bottom:10px;background:var(--bg-glass);border:1px solid var(--border-color);border-radius:var(--radius-md);">
                     <div>
-                        <div style="font-weight:600;">🔴 AI 3.0 Pro</div>
-                        <div style="font-size:13px;color:#8a8aaa;">Siêu thông minh, dự đoán</div>
+                        <div style="font-weight:700;">🔴 AI 3.0 Pro</div>
+                        <div style="font-size:12px;color:var(--text-muted);">Siêu thông minh, dự đoán</div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <span style="font-weight:700;color:#2d3b8a;">100.000đ/tháng</span>
-                        <button class="upgrade-btn" onclick="upgradeTier('pro3')">Nâng cấp</button>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-weight:700;color:var(--accent-primary);">100.000đ/tháng</span>
+                        <button class="btn-auth btn-register" onclick="upgradeTier('pro3')">Nâng cấp</button>
                     </div>
                 </div>
 
-                <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--color-border);">
-                    <p style="font-size:13px;font-weight:600;color:var(--color-text);margin-bottom:8px;">💳 Thanh toán qua MoMo</p>
-                    <button class="momo-btn pro" onclick="upgradeWithMomo('pro')">Nâng cấp Pro - 20.000đ</button>
-                    <button class="momo-btn plus" onclick="upgradeWithMomo('plus')">Nâng cấp Plus - 50.000đ</button>
-                    <button class="momo-btn pro3" onclick="upgradeWithMomo('pro3')">Nâng cấp 3.0 Pro - 100.000đ</button>
-                    <p style="font-size:11px;color:#8a8aaa;margin-top:8px;text-align:center;">🔒 Thanh toán an toàn qua MoMo</p>
+                <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border-color);">
+                    <p style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:8px;">💳 Thanh toán qua MoMo</p>
+                    <button class="momo-btn pro" onclick="upgradeWithMomo('pro')" style="width:100%;padding:10px;margin-bottom:6px;background:#a83279;color:#fff;border:none;border-radius:var(--radius-sm);font-weight:700;cursor:pointer;">Nâng cấp Pro - 20.000đ</button>
+                    <button class="momo-btn plus" onclick="upgradeWithMomo('plus')" style="width:100%;padding:10px;margin-bottom:6px;background:#8b5cf6;color:#fff;border:none;border-radius:var(--radius-sm);font-weight:700;cursor:pointer;">Nâng cấp Plus - 50.000đ</button>
+                    <button class="momo-btn pro3" onclick="upgradeWithMomo('pro3')" style="width:100%;padding:10px;margin-bottom:6px;background:#ef4444;color:#fff;border:none;border-radius:var(--radius-sm);font-weight:700;cursor:pointer;">Nâng cấp 3.0 Pro - 100.000đ</button>
+                    <p style="font-size:11px;color:var(--text-muted);margin-top:8px;text-align:center;">🔒 Thanh toán an toàn qua MoMo</p>
                 </div>
             </div>
         </div>
@@ -602,27 +1064,27 @@
                 <button class="close-btn" onclick="closeModal('settingsModal')">✕</button>
             </div>
             <div>
-                <p style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-border);">
+                <p style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-color);">
                     <span>Chế độ tối</span>
                     <input type="checkbox" id="darkModeToggle" />
                 </p>
-                <p style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-border);">
+                <p style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-color);">
                     <span>Ngôn ngữ</span>
-                    <select id="langSelect">
+                    <select id="langSelect" style="padding:6px 12px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border-color);border-radius:var(--radius-sm);">
                         <option value="vi">Tiếng Việt</option>
                         <option value="en">English</option>
                     </select>
                 </p>
-                <button onclick="saveSettings()" style="margin-top:16px;padding:10px 24px;background:var(--color-primary);color:#fff;border:none;border-radius:8px;cursor:pointer;width:100%;font-weight:600;">Lưu cài đặt</button>
+                <button onclick="saveSettings()" style="margin-top:16px;padding:12px 24px;background:var(--accent-gradient);color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;width:100%;font-weight:700;">Lưu cài đặt</button>
             </div>
         </div>
     </div>
 
     <!-- ===== LOGIN MODAL ===== -->
     <div class="modal-overlay" id="loginModal">
-        <div class="modal-box" style="max-width:420px;">
+        <div class="modal-box">
             <div class="modal-header">
-                <h2>Đăng nhập</h2>
+                <h2>Tài khoản</h2>
                 <button class="close-btn" onclick="closeModal('loginModal')">✕</button>
             </div>
             
@@ -634,43 +1096,43 @@
             
             <!-- Form đăng nhập -->
             <div id="loginForm">
-                <button onclick="loginGoogle()" style="width:100%;padding:12px;background:#fff;border:1px solid var(--color-border);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;margin-bottom:10px;">
-                    <img src="https://www.google.com/favicon.ico" style="width:20px;height:20px;" alt="Google" /> Đăng nhập với Google
+                <button onclick="loginGoogle()" style="width:100%;padding:12px;background:#fff;color:#333;border:1px solid var(--border-color);border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:10px;">
+                    <img src="https://www.google.com/favicon.ico" style="width:18px;height:18px;" alt="Google" /> Đăng nhập với Google
                 </button>
-                <button onclick="loginFacebook()" style="width:100%;padding:12px;background:#1877f2;color:#fff;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;margin-bottom:10px;">
-                    <img src="https://www.facebook.com/favicon.ico" style="width:20px;height:20px;" alt="Facebook" /> Đăng nhập với Facebook
+                <button onclick="loginFacebook()" style="width:100%;padding:12px;background:#1877f2;color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:10px;">
+                    <img src="https://www.facebook.com/favicon.ico" style="width:18px;height:18px;" alt="Facebook" /> Đăng nhập với Facebook
                 </button>
-                <button onclick="loginGitHub()" style="width:100%;padding:12px;background:#24292e;color:#fff;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;margin-bottom:10px;">
-					<img src="https://github.com/favicon.ico" style="width:20px;height:20px;" alt="GitHub" /> Đăng nhập với GitHub
-				</button>
+                <button onclick="loginGitHub()" style="width:100%;padding:12px;background:#24292e;color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:10px;">
+                    <img src="https://github.com/favicon.ico" style="width:18px;height:18px;" alt="GitHub" /> Đăng nhập với GitHub
+                </button>
                 <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;">
-                    Chưa có tài khoản? <span style="color:var(--color-primary);cursor:pointer;" onclick="switchAuthTab('register')">Đăng ký</span>
+                    Chưa có tài khoản? <span style="color:var(--accent-primary);cursor:pointer;" onclick="switchAuthTab('register')">Đăng ký</span>
                 </div>
             </div>
             
             <!-- Form đăng ký -->
             <div id="registerForm" style="display:none;">
-                <button onclick="loginGoogle()" style="width:100%;padding:12px;background:#fff;border:1px solid var(--color-border);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;margin-bottom:10px;">
-                    <img src="https://www.google.com/favicon.ico" style="width:20px;height:20px;" alt="Google" /> Đăng ký với Google
+                <button onclick="loginGoogle()" style="width:100%;padding:12px;background:#fff;color:#333;border:1px solid var(--border-color);border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:10px;">
+                    <img src="https://www.google.com/favicon.ico" style="width:18px;height:18px;" alt="Google" /> Đăng ký với Google
                 </button>
-                <button onclick="loginFacebook()" style="width:100%;padding:12px;background:#1877f2;color:#fff;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;margin-bottom:10px;">
-                    <img src="https://www.facebook.com/favicon.ico" style="width:20px;height:20px;" alt="Facebook" /> Đăng ký với Facebook
+                <button onclick="loginFacebook()" style="width:100%;padding:12px;background:#1877f2;color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:10px;">
+                    <img src="https://www.facebook.com/favicon.ico" style="width:18px;height:18px;" alt="Facebook" /> Đăng ký với Facebook
                 </button>
-                <button onclick="loginGitHub()" style="width:100%;padding:12px;background:#24292e;color:#fff;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:500;margin-bottom:10px;">
-					<img src="https://github.com/favicon.ico" style="width:20px;height:20px;" alt="GitHub" /> Đăng Ký với GitHub
-				</button>
+                <button onclick="loginGitHub()" style="width:100%;padding:12px;background:#24292e;color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:10px;">
+                    <img src="https://github.com/favicon.ico" style="width:18px;height:18px;" alt="GitHub" /> Đăng Ký với GitHub
+                </button>
                 <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;">
-                    Đã có tài khoản? <span style="color:var(--color-primary);cursor:pointer;" onclick="switchAuthTab('login')">Đăng nhập</span>
+                    Đã có tài khoản? <span style="color:var(--accent-primary);cursor:pointer;" onclick="switchAuthTab('login')">Đăng nhập</span>
                 </div>
             </div>
             
-            <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;border-top:1px solid var(--color-border);padding-top:12px;">
-                👑 Admin: <strong style="color:var(--color-primary);">admin.ltvy@gmail.com</strong>
+            <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;border-top:1px solid var(--border-color);padding-top:12px;">
+                👑 Admin: <strong style="color:var(--accent-primary);">admin.ltvy@gmail.com</strong>
             </div>
         </div>
     </div>
 
-    <div class="search-result" id="searchResult">🔍 Tìm thấy 0 kết quả</div>
+    <div class="search-result" id="searchResult" style="position:fixed;bottom:90px;right:20px;background:var(--bg-card);padding:10px 16px;border-radius:var(--radius-md);border:1px solid var(--border-color);font-size:13px;z-index:999;display:none;">🔍 Tìm thấy 0 kết quả</div>
 
     <!-- ============================================================ -->
     <!-- JAVASCRIPT CHÍNH -->
@@ -716,7 +1178,7 @@
         // ===== STATE =====
         let currentConversationId = null;
         let currentLevel = 'pro';
-        let isDark = false;
+        let isDark = true;
         let isLoggedIn = false;
         let userData = null;
         let socket = null;
@@ -734,7 +1196,6 @@
         // AUTH FUNCTIONS
         // ================================================================
 
-        // ===== SWITCH AUTH TAB =====
         function switchAuthTab(tab) {
             const loginTab = document.getElementById('loginTab');
             const registerTab = document.getElementById('registerTab');
@@ -754,7 +1215,6 @@
             }
         }
 
-        // ===== OPEN LOGIN/REGISTER =====
         function openLoginModal() {
             switchAuthTab('login');
             openModal('loginModal');
@@ -765,7 +1225,6 @@
             openModal('loginModal');
         }
 
-        // ===== CHECK LOGIN =====
         function checkLogin() {
             fetch('/api/auth/me')
                 .then(res => res.json())
@@ -811,7 +1270,6 @@
             document.getElementById('upgradeRequired').style.display = 'none';
         }
 
-        // ===== SESSION TIMEOUT =====
         function checkSessionTimeout() {
             if (sessionTimer) clearTimeout(sessionTimer);
             sessionTimer = setTimeout(() => {
@@ -822,7 +1280,6 @@
             }, SESSION_TIMEOUT);
         }
 
-        // Refresh session khi có hoạt động
         document.addEventListener('click', () => {
             if (isLoggedIn) checkSessionTimeout();
         });
@@ -830,7 +1287,6 @@
             if (isLoggedIn) checkSessionTimeout();
         });
 
-        // ===== CHECK IF FUNCTION IS ALLOWED =====
         function requireAuth() {
             if (!isLoggedIn) {
                 document.getElementById('upgradeRequired').style.display = 'block';
@@ -840,9 +1296,6 @@
             return true;
         }
 
-        // ================================================================
-        // TOAST
-        // ================================================================
         function showToast(message, type = 'info') {
             const existing = document.querySelector('.toast-message');
             if (existing) existing.remove();
@@ -859,51 +1312,24 @@
             }, 4000);
         }
 
-        // ================================================================
-        // THEME
-        // ================================================================
         function toggleTheme() {
             isDark = !isDark;
-            const root = document.documentElement;
             if (isDark) {
-                root.style.setProperty('--color-bg', '#1a1a2e');
-                root.style.setProperty('--color-bg-secondary', '#2a2a4e');
-                root.style.setProperty('--color-text', '#f0f0f0');
-                root.style.setProperty('--color-text-secondary', '#b0b0c0');
-                root.style.setProperty('--color-text-muted', '#8888aa');
-                root.style.setProperty('--color-border', '#3a3a5e');
-                root.style.setProperty('--color-primary-light', '#3a3a5e');
-                themeToggle.textContent = '☀️';
+                document.documentElement.removeAttribute('data-theme');
+                themeToggle.innerHTML = '<i class="fa-solid fa-moon"></i>';
             } else {
-                root.style.setProperty('--color-bg', '#f8f9fa');
-                root.style.setProperty('--color-bg-secondary', '#ffffff');
-                root.style.setProperty('--color-text', '#1a1a2e');
-                root.style.setProperty('--color-text-secondary', '#5a5a7a');
-                root.style.setProperty('--color-text-muted', '#8a8aaa');
-                root.style.setProperty('--color-border', '#e4e7ec');
-                root.style.setProperty('--color-primary-light', '#eef2ff');
-                themeToggle.textContent = '🌙';
+                document.documentElement.setAttribute('data-theme', 'light');
+                themeToggle.innerHTML = '<i class="fa-solid fa-sun"></i>';
             }
             localStorage.setItem('tv_theme', isDark ? 'dark' : 'light');
         }
 
-        if (localStorage.getItem('tv_theme') === 'dark') {
-            isDark = true;
-            document.documentElement.style.setProperty('--color-bg', '#1a1a2e');
-            document.documentElement.style.setProperty('--color-bg-secondary', '#2a2a4e');
-            document.documentElement.style.setProperty('--color-text', '#f0f0f0');
-            document.documentElement.style.setProperty('--color-text-secondary', '#b0b0c0');
-            document.documentElement.style.setProperty('--color-text-muted', '#8888aa');
-            document.documentElement.style.setProperty('--color-border', '#3a3a5e');
-            document.documentElement.style.setProperty('--color-primary-light', '#3a3a5e');
-            themeToggle.textContent = '☀️';
+        if (localStorage.getItem('tv_theme') === 'light') {
+            toggleTheme();
         }
 
         themeToggle.addEventListener('click', toggleTheme);
 
-        // ================================================================
-        // TOGGLE MENU
-        // ================================================================
         function toggleMenu() {
             const menu = document.getElementById('functionMenu');
             if (menu) menu.classList.toggle('show');
@@ -919,9 +1345,6 @@
             }
         });
 
-        // ================================================================
-        // DEEP THINK
-        // ================================================================
         function showDeepThink(stage = 0) {
             const indicator = document.getElementById('deepThinkIndicator');
             const status = document.getElementById('thinkStatus');
@@ -943,9 +1366,6 @@
             if (indicator) indicator.style.display = 'none';
         }
 
-        // ================================================================
-        // LOGIN / LOGOUT
-        // ================================================================
         function loginGoogle() {
             const provider = new firebase.auth.GoogleAuthProvider();
             provider.addScope('email');
@@ -1021,9 +1441,6 @@
         }
 
         function loginGitHub() {
-            const clientId = 'YOUR_GITHUB_CLIENT_ID';
-            const redirectUri = window.location.origin + '/auth/github/callback';
-            const scope = 'user:email';
             const url = `https://github.com/login/oauth/authorize?client_id=Ov23liwojcTDuo4p42aG&redirect_uri=https://t-vy-ai-supreme-1.onrender.com/auth/github/callback&scope=user:email`;
             window.open(url, 'github-auth', 'width=600,height=600');
             showToast('⏳ Đang chuyển đến GitHub...', 'info');
@@ -1044,9 +1461,6 @@
                 });
         }
 
-        // ================================================================
-        // MODALS
-        // ================================================================
         function openModal(id) {
             document.getElementById(id).classList.add('active');
         }
@@ -1061,36 +1475,32 @@
             });
         });
 
-        // ================================================================
-        // SOCKET.IO
-        // ================================================================
         function initSocket() {
-            socket = io();
-            socket.on('connect', () => {
-                console.log('✅ Connected to socket');
-                socket.emit('join', { room: 'global' });
-            });
-            socket.on('new_message', (data) => {
-                if (data.message && data.user_id !== userData?.id) {
-                    addMessage('ai', data.message);
-                }
-            });
+            if (typeof io !== 'undefined') {
+                socket = io();
+                socket.on('connect', () => {
+                    console.log('✅ Connected to socket');
+                    socket.emit('join', { room: 'global' });
+                });
+                socket.on('new_message', (data) => {
+                    if (data.message && data.user_id !== userData?.id) {
+                        addMessage('ai', data.message);
+                    }
+                });
+            }
         }
 
-        // ================================================================
-        // USAGE
-        // ================================================================
         function loadUsage() {
             const tier = levelSelect.value;
             fetch(`/api/usage/${tier}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.unlimited) {
-                        usageInfo.textContent = '♾️ Không giới hạn';
+                        usageInfo.innerHTML = '<i class="fa-solid fa-bolt"></i> ♾️ Không giới hạn';
                     } else if (data.remaining <= 0) {
-                        usageInfo.textContent = '⚠️ Hết lượt hôm nay';
+                        usageInfo.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ⚠️ Hết lượt hôm nay';
                     } else {
-                        usageInfo.textContent = `Lượt còn lại: ${data.remaining}/${data.max}`;
+                        usageInfo.innerHTML = `<i class="fa-solid fa-bolt"></i> Lượt còn lại: ${data.remaining}/${data.max}`;
                     }
                 })
                 .catch(() => {});
@@ -1104,9 +1514,6 @@
             loadUsage();
         });
 
-        // ================================================================
-        // NAVIGATION
-        // ================================================================
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', function() {
                 document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -1128,9 +1535,6 @@
             });
         });
 
-        // ================================================================
-        // SEND MESSAGE
-        // ================================================================
         function sendMessage() {
             const text = inputField.value.trim();
             if (!text) return;
@@ -1176,7 +1580,7 @@
                 }
                 if (data.conversation_id) {
                     currentConversationId = data.conversation_id;
-                    exportBtn.style.display = 'inline-block';
+                    exportBtn.style.display = 'flex';
                 }
                 addMessage('ai', data.message || 'Đã xử lý thành công.');
                 loadUsage();
@@ -1204,9 +1608,6 @@
             }
         });
 
-        // ================================================================
-        // ADD MESSAGE
-        // ================================================================
         function addMessage(role, content) {
             const wrapper = document.createElement('div');
             wrapper.className = 'message-wrapper ' + role;
@@ -1220,23 +1621,15 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        // ================================================================
-        // CONVERSATIONS
-        // ================================================================
         function loadConversations() {
             fetch('/conversations')
                 .then(res => res.json())
                 .then(data => {
                     const convs = data.conversations || [];
-                    const badge = document.querySelector('.nav-item[data-tab="history"] .badge');
-                    if (badge) badge.textContent = convs.length;
                 })
                 .catch(() => {});
         }
 
-        // ================================================================
-        // HISTORY
-        // ================================================================
         function loadHistory() {
             const list = document.getElementById('historyList');
             list.innerHTML = 'Đang tải...';
@@ -1250,10 +1643,10 @@
                         return;
                     }
                     list.innerHTML = convs.map(c => `
-                        <div class="history-item" onclick="loadConversation('${c.id}')">
+                        <div class="history-item" onclick="loadConversation('${c.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid var(--border-color);cursor:pointer;">
                             <span>${c.name}</span>
-                            <span style="color:#8a8aaa;font-size:12px;">${new Date(c.updated_at || c.created_at).toLocaleString()}</span>
-                            <button class="delete-btn" onclick="event.stopPropagation();deleteConversation('${c.id}')">✕</button>
+                            <span style="color:var(--text-muted);font-size:12px;">${new Date(c.updated_at || c.created_at).toLocaleString()}</span>
+                            <button class="delete-btn" onclick="event.stopPropagation();deleteConversation('${c.id}')" style="background:none;border:none;color:#ef4444;cursor:pointer;">✕</button>
                         </div>
                     `).join('');
                 })
@@ -1270,7 +1663,7 @@
                         chatContainer.innerHTML = '';
                         c.messages.forEach(m => addMessage(m.role, m.content));
                         closeModal('historyModal');
-                        exportBtn.style.display = 'inline-block';
+                        exportBtn.style.display = 'flex';
                         if (c.level) {
                             levelSelect.value = c.level;
                             const name = LEVEL_NAMES[c.level] || 'AI Pro';
@@ -1301,9 +1694,6 @@
                 });
         }
 
-        // ================================================================
-        // EXPORT CHAT
-        // ================================================================
         exportBtn.addEventListener('click', function() {
             if (!currentConversationId) {
                 showToast('Không có đoạn chat để xuất', 'error');
@@ -1312,14 +1702,11 @@
             window.location.href = `/api/export/${currentConversationId}`;
         });
 
-        // ================================================================
-        // SEARCH MESSAGES
-        // ================================================================
         function searchMessages() {
             const keyword = searchInput.value.trim();
             if (!keyword) {
                 document.querySelectorAll('.message').forEach(el => el.style.background = '');
-                document.getElementById('searchResult').classList.remove('show');
+                document.getElementById('searchResult').style.display = 'none';
                 return;
             }
 
@@ -1328,21 +1715,20 @@
             messages.forEach(msg => {
                 const text = msg.textContent.toLowerCase();
                 if (text.includes(keyword.toLowerCase())) {
-                    msg.style.background = '#fef3c7';
-                    msg.style.transition = 'background 0.3s';
+                    msg.style.boxShadow = '0 0 0 2px #f59e0b';
                     found++;
                     if (found === 1) {
                         msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
                 } else {
-                    msg.style.background = '';
+                    msg.style.boxShadow = '';
                 }
             });
 
             const resultEl = document.getElementById('searchResult');
             resultEl.textContent = `🔍 Tìm thấy ${found} kết quả cho "${keyword}"`;
-            resultEl.classList.add('show');
-            setTimeout(() => resultEl.classList.remove('show'), 4000);
+            resultEl.style.display = 'block';
+            setTimeout(() => resultEl.style.display = 'none', 4000);
         }
 
         searchInput.addEventListener('keydown', function(e) {
@@ -1352,9 +1738,6 @@
             }
         });
 
-        // ================================================================
-        // UPGRADE
-        // ================================================================
         function upgradeTier(tier) {
             if (!isLoggedIn) {
                 showToast('🔒 Vui lòng đăng nhập để nâng cấp.', 'warning');
@@ -1427,9 +1810,6 @@
             .catch(() => showToast('❌ Lỗi kết nối', 'error'));
         }
 
-        // ================================================================
-        // SETTINGS
-        // ================================================================
         function saveSettings() {
             const darkMode = document.getElementById('darkModeToggle').checked;
             const lang = document.getElementById('langSelect').value;
@@ -1441,15 +1821,13 @@
             closeModal('settingsModal');
         }
 
-        // ================================================================
-        // TYPING INDICATOR
-        // ================================================================
         function showTyping() {
             const typing = document.createElement('div');
             typing.className = 'typing-indicator';
             typing.id = 'typingIndicator';
             typing.style.display = 'block';
-            typing.innerHTML = '<span></span><span></span><span></span>';
+            typing.style.padding = '10px';
+            typing.innerHTML = '<span class="think-dot"></span><span class="think-dot"></span><span class="think-dot"></span>';
             chatContainer.appendChild(typing);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
@@ -1458,10 +1836,6 @@
             const el = document.getElementById('typingIndicator');
             if (el) el.remove();
         }
-
-        // ================================================================
-        // TOOLBAR FUNCTIONS (CÓ KIỂM TRA ĐĂNG NHẬP)
-        // ================================================================
 
         function requireAuthAndExecute(callback) {
             if (!isLoggedIn) {
@@ -1495,9 +1869,14 @@
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    let html = '🧠 **Kết quả AI Đa luồng:**\n\n';
+                    let html = '🧠 **Kết quả AI Đa luồng:**
+
+';
                     data.results.forEach(r => {
-                        html += `📌 **${r.model}** (Độ chính xác: ${r.accuracy}%):\n${r.response}\n\n`;
+                        html += `📌 **${r.model}** (Độ chính xác: ${r.accuracy}%):
+${r.response}
+
+`;
                     });
                     html += `🏆 **Kết quả tốt nhất:** ${data.best.model}`;
                     addMessage('ai', html);
@@ -1528,7 +1907,11 @@
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    addMessage('ai', `📝 **Tóm tắt:**\n\n${data.summary}\n\n📊 Độ dài gốc: ${data.original_length} ký tự → ${data.summarized_length} ký tự`);
+                    addMessage('ai', `📝 **Tóm tắt:**
+
+${data.summary}
+
+📊 Độ dài gốc: ${data.original_length} ký tự → ${data.summarized_length} ký tự`);
                 })
                 .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
             });
@@ -1541,7 +1924,17 @@
                     showToast('Vui lòng nhập văn bản cần dịch!', 'error');
                     return;
                 }
-                const lang = prompt('Nhập mã ngôn ngữ đích:\nvi (Tiếng Việt)\nen (English)\nko (한국어)\nja (日本語)\nzh (中文)\nfr (Français)\nde (Deutsch)\nes (Español)\nru (Русский)\nar (العربية)', 'en');
+                const lang = prompt('Nhập mã ngôn ngữ đích:
+vi (Tiếng Việt)
+en (English)
+ko (한국어)
+ja (日本語)
+zh (中文)
+fr (Français)
+de (Deutsch)
+es (Español)
+ru (Русский)
+ar (العربية)', 'en');
                 if (!lang) return;
                 addMessage('user', `🌐 Yêu cầu dịch sang ${lang}: ${text}`);
                 inputField.value = '';
@@ -1558,7 +1951,9 @@
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    addMessage('ai', `🌐 **Dịch sang ${lang}:**\n\n${data.translated}`);
+                    addMessage('ai', `🌐 **Dịch sang ${lang}:**
+
+${data.translated}`);
                 })
                 .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
             });
@@ -1571,7 +1966,10 @@
                     showToast('Vui lòng nhập mô tả video!', 'error');
                     return;
                 }
-                const template = prompt('Chọn loại video:\nshort (15s)\nmedium (30s)\nlong (60s)', 'short');
+                const template = prompt('Chọn loại video:
+short (15s)
+medium (30s)
+long (60s)', 'short');
                 if (!template) return;
                 addMessage('user', `🎬 Yêu cầu tạo video (${template}): ${text}`);
                 inputField.value = '';
@@ -1588,7 +1986,15 @@
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    addMessage('ai', `🎬 **Video đang được tạo:**\n\n📌 Tiêu đề: ${data.title}\n⏱️ Thời lượng: ${data.duration}s\n📐 Độ phân giải: ${data.resolution}\n🎨 Phong cách: ${data.style}\n🔗 Link: ${data.url}\n\n⏳ Trạng thái: ${data.status}`);
+                    addMessage('ai', `🎬 **Video đang được tạo:**
+
+📌 Tiêu đề: ${data.title}
+⏱️ Thời lượng: ${data.duration}s
+📐 Độ phân giải: ${data.resolution}
+🎨 Phong cách: ${data.style}
+🔗 Link: ${data.url}
+
+⏳ Trạng thái: ${data.status}`);
                 })
                 .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
             });
@@ -1618,7 +2024,14 @@
                             addMessage('ai', '❌ ' + data.error);
                             return;
                         }
-                        addMessage('ai', `📊 **Phân tích dữ liệu số:**\n\n📌 Số lượng: ${data.count}\n📉 Nhỏ nhất: ${data.min}\n📈 Lớn nhất: ${data.max}\n📊 Trung bình: ${data.mean}\n📏 Trung vị: ${data.median}\n📐 Tổng: ${data.sum}`);
+                        addMessage('ai', `📊 **Phân tích dữ liệu số:**
+
+📌 Số lượng: ${data.count}
+📉 Nhỏ nhất: ${data.min}
+📈 Lớn nhất: ${data.max}
+📊 Trung bình: ${data.mean}
+📏 Trung vị: ${data.median}
+📐 Tổng: ${data.sum}`);
                     })
                     .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
                 } else {
@@ -1637,7 +2050,13 @@
                             addMessage('ai', '❌ ' + data.error);
                             return;
                         }
-                        addMessage('ai', `📊 **Phân tích văn bản:**\n\n📌 Số từ: ${data.word_count}\n📝 Số câu: ${data.sentence_count}\n📏 Độ dài trung bình từ: ${data.avg_word_length}\n🔤 Số từ độc nhất: ${data.unique_words}\n📖 Độ dễ đọc: ${data.readability}`);
+                        addMessage('ai', `📊 **Phân tích văn bản:**
+
+📌 Số từ: ${data.word_count}
+📝 Số câu: ${data.sentence_count}
+📏 Độ dài trung bình từ: ${data.avg_word_length}
+🔤 Số từ độc nhất: ${data.unique_words}
+📖 Độ dễ đọc: ${data.readability}`);
                     })
                     .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
                 }
@@ -1651,9 +2070,11 @@
                     showToast('Vui lòng nhập mô tả bài hát!', 'error');
                     return;
                 }
-                const style = prompt('Chọn thể loại:\npop, rock, jazz, edm, classical, rap, ballad, v_pop, k_pop', 'pop');
+                const style = prompt('Chọn thể loại:
+pop, rock, jazz, edm, classical, rap, ballad, v_pop, k_pop', 'pop');
                 if (!style) return;
-                const mood = prompt('Chọn tâm trạng:\nhappy, sad, romantic, epic, neutral', 'happy');
+                const mood = prompt('Chọn tâm trạng:
+happy, sad, romantic, epic, neutral', 'happy');
                 if (!mood) return;
                 const duration = parseInt(prompt('Chọn độ dài (giây, tối đa 420 - 7 phút):', '60')) || 60;
                 addMessage('user', `🎵 Yêu cầu tạo nhạc (${style}, ${mood}, ${duration}s): ${text}`);
@@ -1676,13 +2097,23 @@
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    let html = `🎵 **Bài hát đã được tạo!**\n\n`;
-                    html += `📌 Thời lượng: ${data.duration} giây\n`;
-                    html += `🎤 Thể loại: ${data.style}\n`;
-                    html += `🎭 Tâm trạng: ${data.mood}\n`;
-                    html += `📦 Số đoạn ghép: ${data.num_segments || 1}\n\n`;
-                    html += `📝 Lời bài hát:\n${data.lyrics}\n\n`;
-                    html += `🔊 Tải nhạc: <a href="${data.download_url}" download style="color:var(--color-primary);text-decoration:underline;">${data.music_file}</a>`;
+                    let html = `🎵 **Bài hát đã được tạo!**
+
+`;
+                    html += `📌 Thời lượng: ${data.duration} giây
+`;
+                    html += `🎤 Thể loại: ${data.style}
+`;
+                    html += `🎭 Tâm trạng: ${data.mood}
+`;
+                    html += `📦 Số đoạn ghép: ${data.num_segments || 1}
+
+`;
+                    html += `📝 Lời bài hát:
+${data.lyrics}
+
+`;
+                    html += `🔊 Tải nhạc: <a href="${data.download_url}" download style="color:var(--accent-primary);text-decoration:underline;">${data.music_file}</a>`;
                     addMessage('ai', html);
                 })
                 .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
@@ -1703,19 +2134,12 @@
         checkLogin();
         inputField.focus();
 
-        // Auto-refresh usage every 60 seconds
         setInterval(() => {
             if (isLoggedIn) loadUsage();
         }, 60000);
 
-        if (typeof io !== 'undefined') {
-            initSocket();
-        }
+        initSocket();
 
-        console.log('🚀 T.VỸ-AI-SUPREME v11.0 đã sẵn sàng!');
-        console.log('📌 Bản quyền: T.VỸ-VIP-FILE');
-        console.log('🔐 Hệ thống đăng nhập OAuth đã được tích hợp');
-        console.log('👤 Chế độ Khách: các chức năng bị giới hạn');
+        console.log('🚀 T.VỸ-AI-SUPREME v11.0 UI Upgraded & Fully Functional!');
     </script>
 </body>
-</html>
