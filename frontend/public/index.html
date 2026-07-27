@@ -1024,7 +1024,7 @@
             const clientId = 'YOUR_GITHUB_CLIENT_ID';
             const redirectUri = window.location.origin + '/auth/github/callback';
             const scope = 'user:email';
-            const url = `https://github.com/settings/applications/3753778{clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
+            const url = `https://github.com/login/oauth/authorize?client_id=Ov23liwojcTDuo4p42aG&redirect_uri=https://t-vy-ai-supreme-1.onrender.com/auth/github/callback&scope=user:email`;
             window.open(url, 'github-auth', 'width=600,height=600');
             showToast('⏳ Đang chuyển đến GitHub...', 'info');
         }
