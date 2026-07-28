@@ -1,6 +1,6 @@
 """
 ====================================================================
-T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (HOÀN CHỈNH)
+T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (HOÀN CHỈNH & NÂNG CẤP GIAO DIỆN)
 ====================================================================
 Bản quyền: T.VỸ-VIP-FILE
 Phiên bản: 11.0.0
@@ -8,27 +8,28 @@ Phiên bản: 11.0.0
 Tính năng:
 - Chat AI với 4 cấp độ
 - Tạo nhạc (lời + nhạc nền)
-- Đăng nhập Google/Facebook
+- Đăng nhập Google/Facebook/GitHub
 - Nâng cấp gói Pro/Plus/3.0 Pro
 - Thanh toán MoMo
-- Admin Panel
-- Lịch sử chat
-- Export chat
-- Dark/Light mode
+- Admin Panel & Lịch sử Chat / Export
+- Dark/Light mode & Giao diện tối ưu hóa UI/UX
 ====================================================================
 """
 
-from flask import Flask, render_template, request, jsonify, session, send_from_directory
-from flask_cors import CORS
-from flask_socketio import SocketIO, emit, join_room, leave_room
-import json
-import uuid
 import datetime
-import sys
+import json
 import os
 import random
+import sys
 import time
 import requests
+
+from flask import (
+    Flask, jsonify, render_template, request,
+    send_from_directory, session
+)
+from flask_cors import CORS
+from flask_socketio import SocketIO, emit, join_room, leave_room
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -58,7 +59,7 @@ from backend.database.db_handler import (
     get_all_usage_stats, delete_user_by_id, update_user_role, update_subscription,
     init_db
 )
-from backend.api.auth import auth_google, auth_facebook, logout, get_current_user
+from backend.api.auth import auth_google, auth_facebook, auth_github_callback, logout, get_current_user
 from backend.payment.momo import create_payment, handle_ipn, payment_complete
 from config.settings import Config
 from config.levels import LEVEL_CONFIG, get_level_config
@@ -75,116 +76,9 @@ ethics = EthicsGuard()
 # ================================================================
 
 try:
-    import torch
     import scipy.io.wavfile
+    import torch
     from transformers import pipeline
-    
-    class MusicGenerator:
-        def __init__(self):
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            self.synthesiser = None
-            self.model_loaded = False
-            self.model_name = "facebook/musicgen-medium"
-            print(f"🎵 MusicGenerator khởi tạo với device: {self.device}")
-            
-            # Lyrics Generator
-            self.lyric_gen = LyricGenerator()
-
-        def load_model(self):
-            if self.model_loaded:
-                return True
-            try:
-                print(f"🔄 Đang tải model {self.model_name}... (lần đầu mất 2-3 phút)")
-                self.synthesiser = pipeline(
-                    "text-to-audio",
-                    model=self.model_name,
-                    device=0 if self.device.type == 'cuda' else -1
-                )
-                self.model_loaded = True
-                print("✅ Model MusicGen đã tải thành công!")
-                return True
-            except Exception as e:
-                print(f"❌ Lỗi tải model: {e}")
-                return False
-
-        def generate_instrumental(self, prompt, duration=15, style=None, mood=None):
-            if not self.model_loaded:
-                if not self.load_model():
-                    return {"error": "Không thể tải model MusicGen"}
-
-            full_prompt = prompt
-            if style:
-                full_prompt = f"{style} music, {full_prompt}"
-            if mood:
-                full_prompt = f"{mood} mood, {full_prompt}"
-
-            try:
-                if duration > 30:
-                    duration = 30
-                if duration < 5:
-                    duration = 5
-
-                random_seed = random.randint(0, 2**32 - 1)
-                torch.manual_seed(random_seed)
-                if self.device.type == 'cuda':
-                    torch.cuda.manual_seed_all(random_seed)
-
-                result = self.synthesiser(
-                    full_prompt,
-                    forward_params={
-                        "do_sample": True,
-                        "max_length": duration * 50
-                    }
-                )
-
-                timestamp = int(time.time())
-                random_id = random.randint(1000, 9999)
-                filename = f"music_{timestamp}_{random_id}.wav"
-                filepath = os.path.join("static", "music", filename)
-                os.makedirs("static/music", exist_ok=True)
-
-                scipy.io.wavfile.write(
-                    filepath,
-                    rate=result["sampling_rate"],
-                    data=result["audio"]
-                )
-
-                return {
-                    "success": True,
-                    "filepath": filepath,
-                    "filename": filename,
-                    "duration": duration,
-                    "download_url": f"/static/music/{filename}",
-                    "prompt": full_prompt
-                }
-            except Exception as e:
-                return {"error": f"Lỗi tạo nhạc: {str(e)}"}
-
-        def generate_with_lyrics(self, prompt, duration=15, style=None, mood=None):
-            # Tạo lời
-            if not style:
-                style = self.lyric_gen.detect_style(prompt)
-            if not mood:
-                mood = self.lyric_gen.detect_mood(prompt)
-            
-            lyrics = self.lyric_gen.generate_lyrics(prompt, style, mood)
-            
-            # Tạo nhạc nền
-            music_result = self.generate_instrumental(prompt, duration, style, mood)
-            
-            if music_result.get("error"):
-                return music_result
-            
-            return {
-                "success": True,
-                "lyrics": lyrics,
-                "style": style,
-                "mood": mood,
-                "duration": duration,
-                "music_file": music_result.get("filename"),
-                "download_url": music_result.get("download_url"),
-                "prompt": prompt
-            }
 
     class LyricGenerator:
         def __init__(self):
@@ -268,16 +162,111 @@ Outro: Cuộc sống tươi đẹp biết bao"""
         def generate_lyrics(self, prompt, style="pop", mood="happy"):
             topic = self.detect_topic(prompt)
             base_lyrics = self.fallback_lyrics.get(topic, self.fallback_lyrics["cuộc sống"])
-            
-            # Biến tấu theo prompt
             lines = base_lyrics.strip().split("\n")
             modified = []
             for i, line in enumerate(lines):
                 if "Outro" in line and i + 1 < len(lines):
                     lines[i + 1] = f"{lines[i + 1]} ({style}, {mood})"
                 modified.append(lines[i])
-            
             return "\n".join(modified)
+
+    class MusicGenerator:
+        def __init__(self):
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self.synthesiser = None
+            self.model_loaded = False
+            self.model_name = "facebook/musicgen-medium"
+            print(f"🎵 MusicGenerator khởi tạo với device: {self.device}")
+            self.lyric_gen = LyricGenerator()
+
+        def load_model(self):
+            if self.model_loaded:
+                return True
+            try:
+                print(f"🔄 Đang tải model {self.model_name}... (lần đầu mất 2-3 phút)")
+                self.synthesiser = pipeline(
+                    "text-to-audio",
+                    model=self.model_name,
+                    device=0 if self.device.type == 'cuda' else -1
+                )
+                self.model_loaded = True
+                print("✅ Model MusicGen đã tải thành công!")
+                return True
+            except Exception as e:
+                print(f"❌ Lỗi tải model: {e}")
+                return False
+
+        def generate_instrumental(self, prompt, duration=15, style=None, mood=None):
+            if not self.model_loaded:
+                if not self.load_model():
+                    return {"error": "Không thể tải model MusicGen"}
+
+            full_prompt = prompt
+            if style:
+                full_prompt = f"{style} music, {full_prompt}"
+            if mood:
+                full_prompt = f"{mood} mood, {full_prompt}"
+
+            try:
+                duration = min(max(duration, 5), 30)
+                random_seed = random.randint(0, 2**32 - 1)
+                torch.manual_seed(random_seed)
+                if self.device.type == 'cuda':
+                    torch.cuda.manual_seed_all(random_seed)
+
+                result = self.synthesiser(
+                    full_prompt,
+                    forward_params={
+                        "do_sample": True,
+                        "max_length": duration * 50
+                    }
+                )
+
+                timestamp = int(time.time())
+                random_id = random.randint(1000, 9999)
+                filename = f"music_{timestamp}_{random_id}.wav"
+                filepath = os.path.join("static", "music", filename)
+                os.makedirs("static/music", exist_ok=True)
+
+                scipy.io.wavfile.write(
+                    filepath,
+                    rate=result["sampling_rate"],
+                    data=result["audio"]
+                )
+
+                return {
+                    "success": True,
+                    "filepath": filepath,
+                    "filename": filename,
+                    "duration": duration,
+                    "download_url": f"/static/music/{filename}",
+                    "prompt": full_prompt
+                }
+            except Exception as e:
+                return {"error": f"Lỗi tạo nhạc: {str(e)}"}
+
+        def generate_with_lyrics(self, prompt, duration=15, style=None, mood=None):
+            if not style:
+                style = self.lyric_gen.detect_style(prompt)
+            if not mood:
+                mood = self.lyric_gen.detect_mood(prompt)
+
+            lyrics = self.lyric_gen.generate_lyrics(prompt, style, mood)
+            music_result = self.generate_instrumental(prompt, duration, style, mood)
+
+            if music_result.get("error"):
+                return music_result
+
+            return {
+                "success": True,
+                "lyrics": lyrics,
+                "style": style,
+                "mood": mood,
+                "duration": duration,
+                "music_file": music_result.get("filename"),
+                "download_url": music_result.get("download_url"),
+                "prompt": prompt
+            }
 
     music_gen = MusicGenerator()
     MUSIC_AVAILABLE = True
@@ -286,20 +275,24 @@ Outro: Cuộc sống tươi đẹp biết bao"""
 except ImportError as e:
     print(f"⚠️ MusicGenerator không khả dụng: {e}")
     print("📌 Để kích hoạt, chạy: pip install transformers torch scipy")
-    
-    # Fallback: class giả lập
+
+    class LyricGenerator:
+        def detect_topic(self, prompt): return "cuộc sống"
+        def detect_style(self, prompt): return "pop"
+        def detect_mood(self, prompt): return "happy"
+        def generate_lyrics(self, prompt, style="pop", mood="happy"):
+            return f"Verse 1: Bài hát về {prompt}\nChorus: {prompt} - {style} - {mood}"
+
     class MusicGenerator:
         def __init__(self):
             self.model_loaded = False
             self.lyric_gen = LyricGenerator()
-        
+
         def generate_with_lyrics(self, prompt, duration=15, style=None, mood=None):
-            if not style:
-                style = "pop"
-            if not mood:
-                mood = "happy"
+            style = style or "pop"
+            mood = mood or "happy"
             lyrics = f"Verse 1: Bài hát về {prompt}\nChorus: {prompt} - {style} - {mood}"
-            
+
             return {
                 "success": True,
                 "lyrics": lyrics,
@@ -311,22 +304,15 @@ except ImportError as e:
                 "prompt": prompt,
                 "note": "⚠️ Đây là bản demo. Hãy cài transformers để có nhạc thật."
             }
-        
+
         def load_model(self):
             return False
-    
-    class LyricGenerator:
-        def detect_topic(self, prompt): return "cuộc sống"
-        def detect_style(self, prompt): return "pop"
-        def detect_mood(self, prompt): return "happy"
-        def generate_lyrics(self, prompt, style="pop", mood="happy"):
-            return f"Verse 1: Bài hát về {prompt}\nChorus: {prompt} - {style} - {mood}"
-    
+
     music_gen = MusicGenerator()
     MUSIC_AVAILABLE = False
 
 # ================================================================
-# ROUTES
+# ROUTES (GIAO DIỆN & TÀI NGUYÊN TĨNH)
 # ================================================================
 
 @app.route('/')
@@ -365,6 +351,81 @@ def auth_logout():
 def auth_me():
     return get_current_user()
 
+@app.route('/auth/github/callback')
+def github_callback_route():
+    code = request.args.get('code')
+    if not code:
+        return """
+        <html>
+        <head><title>Lỗi</title></head>
+        <body style="font-family:Arial;text-align:center;padding:50px;">
+            <h2>❌ Lỗi xác thực</h2>
+            <p>Không tìm thấy mã xác thực từ GitHub.</p>
+            <p><a href="/">Quay lại trang chủ</a></p>
+        </body>
+        </html>
+        """, 400
+
+    result = auth_github_callback(code)
+
+    if result.get("error"):
+        return f"""
+        <html>
+        <head><title>Lỗi</title></head>
+        <body style="font-family:Arial;text-align:center;padding:50px;">
+            <h2>❌ Đăng nhập thất bại</h2>
+            <p>{result['error']}</p>
+            <p><a href="/">Quay lại trang chủ</a></p>
+        </body>
+        </html>
+        """, 400
+
+    if result.get("success"):
+        session['user_id'] = result['user_id']
+        session['user_email'] = result['email']
+        session['user_name'] = result['name']
+
+        return """
+        <html>
+        <head>
+            <title>Đăng nhập thành công</title>
+            <style>
+                body {{ font-family: Arial; text-align: center; padding: 50px; background: #0a0a0f; color: #fff; }}
+                .success {{ color: #22c55e; font-size: 48px; }}
+                .btn {{ display: inline-block; padding: 10px 24px; background: #6c5ce7; color: #fff; text-decoration: none; border-radius: 8px; margin-top: 20px; }}
+            </style>
+        </head>
+        <body>
+            <div class="success">✅</div>
+            <h2>Đăng nhập thành công!</h2>
+            <p>Chào mừng <strong>{}</strong>!</p>
+            <p>Đang chuyển hướng...</p>
+            <a href="/" class="btn">Về trang chủ</a>
+            <script>
+                setTimeout(() => {{
+                    if (window.opener) {{
+                        window.opener.location.reload();
+                        window.close();
+                    }} else {{
+                        window.location.href = '/';
+                    }}
+                }}, 1500);
+            </script>
+        </body>
+        </html>
+        """.format(result['name'])
+
+    return """
+    <html>
+    <head><title>Lỗi</title></head>
+    <body style="font-family:Arial;text-align:center;padding:50px;">
+        <h2>❌ Đăng nhập thất bại</h2>
+        <p>Đã xảy ra lỗi không xác định.</p>
+        <p><a href="/">Quay lại trang chủ</a></p>
+    </body>
+    </html>
+    """, 400
+
 # ================================================================
 # CHAT ROUTES
 # ================================================================
@@ -399,7 +460,7 @@ def chat():
         log_usage(user_id, level)
 
     if not conv_id:
-        conv_id = str(uuid.uuid4())
+        conv_id = str(uuid.uuid4()) if 'uuid' in globals() else str(time.time())
         name = message[:30] + ("..." if len(message) > 30 else "")
         messages = []
     else:
@@ -471,97 +532,12 @@ def delete_conversation(conv_id):
     delete_conversation_by_id(conv_id, user_id)
     return jsonify({"success": True})
 
-# ===== THÊM VÀO APP.PY (SAU CÁC ROUTE KHÁC) =====
-
-from backend.api.auth import auth_github_callback
-
-# ===== GITHUB OAUTH CALLBACK =====
-@app.route('/auth/github/callback')
-def github_callback_route():
-    """Xử lý callback từ GitHub OAuth"""
-    code = request.args.get('code')
-    
-    if not code:
-        return """
-        <html>
-        <head><title>Lỗi</title></head>
-        <body style="font-family:Arial;text-align:center;padding:50px;">
-            <h2>❌ Lỗi xác thực</h2>
-            <p>Không tìm thấy mã xác thực từ GitHub.</p>
-            <p><a href="/">Quay lại trang chủ</a></p>
-        </body>
-        </html>
-        """, 400
-    
-    result = auth_github_callback(code)
-    
-    if result.get("error"):
-        return f"""
-        <html>
-        <head><title>Lỗi</title></head>
-        <body style="font-family:Arial;text-align:center;padding:50px;">
-            <h2>❌ Đăng nhập thất bại</h2>
-            <p>{result['error']}</p>
-            <p><a href="/">Quay lại trang chủ</a></p>
-        </body>
-        </html>
-        """, 400
-    
-    if result.get("success"):
-        # Lưu session
-        session['user_id'] = result['user_id']
-        session['user_email'] = result['email']
-        session['user_name'] = result['name']
-        
-        # Đóng popup và reload trang chính
-        return """
-        <html>
-        <head>
-            <title>Đăng nhập thành công</title>
-            <style>
-                body { font-family: Arial; text-align: center; padding: 50px; background: #0a0a0f; color: #fff; }
-                .success { color: #22c55e; font-size: 48px; }
-                .btn { display: inline-block; padding: 10px 24px; background: #6c5ce7; color: #fff; text-decoration: none; border-radius: 8px; margin-top: 20px; }
-            </style>
-        </head>
-        <body>
-            <div class="success">✅</div>
-            <h2>Đăng nhập thành công!</h2>
-            <p>Chào mừng <strong>{}</strong>!</p>
-            <p>Đang chuyển hướng...</p>
-            <a href="/" class="btn">Về trang chủ</a>
-            <script>
-                setTimeout(() => {
-                    if (window.opener) {
-                        window.opener.location.reload();
-                        window.close();
-                    } else {
-                        window.location.href = '/';
-                    }
-                }, 1500);
-            </script>
-        </body>
-        </html>
-        """.format(result['name'])
-    
-    return """
-    <html>
-    <head><title>Lỗi</title></head>
-    <body style="font-family:Arial;text-align:center;padding:50px;">
-        <h2>❌ Đăng nhập thất bại</h2>
-        <p>Đã xảy ra lỗi không xác định.</p>
-        <p><a href="/">Quay lại trang chủ</a></p>
-    </body>
-    </html>
-    """, 400
-
 # ================================================================
 # MUSIC ROUTES
 # ================================================================
 
 @app.route('/api/generate_music', methods=['POST'])
 def generate_music_api():
-    """Tạo bài hát hoàn chỉnh (lời + nhạc) - tối đa 7 phút"""
     data = request.get_json()
     prompt = data.get('prompt', '')
     duration = data.get('duration', 60)
@@ -575,16 +551,11 @@ def generate_music_api():
     if not user_id:
         return jsonify({"error": "Vui lòng đăng nhập"}), 401
 
-    # Giới hạn duration tối đa 420 giây (7 phút)
-    if duration > 420:
-        duration = 420
-    if duration < 10:
-        duration = 10
+    duration = min(max(duration, 10), 420)
 
-    # ===== KIỂM TRA LƯỢT DÙNG =====
     user = get_user_by_id(user_id)
     if user['role'] != 'admin':
-        max_music_uses = 20  # ← THÊM DÒNG NÀY
+        max_music_uses = 20
         used = get_usage_count(user_id, 'music')
         if used >= max_music_uses:
             return jsonify({
@@ -603,7 +574,6 @@ def generate_music_api():
 
 @app.route('/api/generate_lyrics', methods=['POST'])
 def generate_lyrics_api():
-    """Chỉ tạo lời bài hát (không nhạc)"""
     data = request.get_json()
     prompt = data.get('prompt', '')
     style = data.get('style', None)
@@ -613,11 +583,9 @@ def generate_lyrics_api():
         return jsonify({"error": "Vui lòng nhập chủ đề"}), 400
 
     lyric_gen = LyricGenerator()
-    if not style:
-        style = lyric_gen.detect_style(prompt)
-    if not mood:
-        mood = lyric_gen.detect_mood(prompt)
-    
+    style = style or lyric_gen.detect_style(prompt)
+    mood = mood or lyric_gen.detect_mood(prompt)
+
     lyrics = lyric_gen.generate_lyrics(prompt, style, mood)
     return jsonify({
         "success": True,
@@ -629,11 +597,10 @@ def generate_lyrics_api():
 
 @app.route('/api/music/status')
 def music_status_api():
-    """Kiểm tra trạng thái model MusicGen"""
     return jsonify({
         "available": MUSIC_AVAILABLE,
-        "model_loaded": music_gen.model_loaded if hasattr(music_gen, 'model_loaded') else False,
-        "device": str(music_gen.device) if hasattr(music_gen, 'device') else "N/A"
+        "model_loaded": getattr(music_gen, 'model_loaded', False),
+        "device": str(getattr(music_gen, 'device', 'N/A'))
     })
 
 @app.route('/api/music/styles')
@@ -665,9 +632,8 @@ def get_usage(tier):
     if user['role'] == 'admin':
         return jsonify({"remaining": 999999, "used": 0, "max": 999999, "unlimited": True})
 
-    # Cho phép xem usage của 'music'
     if tier == 'music':
-        max_uses = 3
+        max_uses = 20
         used = get_usage_count(user_id, 'music')
         return jsonify({
             "remaining": max_uses - used,
@@ -676,17 +642,11 @@ def get_usage(tier):
             "unlimited": False
         })
 
-    max_uses = {
-        'basic': 999999,
-        'pro': 5,
-        'plus': 2,
-        'pro3': 0
-    }.get(tier, 0)
-
+    max_uses = {'basic': 999999, 'pro': 5, 'plus': 2, 'pro3': 0}.get(tier, 0)
     used = get_usage_count(user_id, tier)
 
     return jsonify({
-        "remaining": max_uses - used if max_uses > 0 else 0,
+        "remaining": max(0, max_uses - used) if max_uses > 0 else 0,
         "used": used,
         "max": max_uses,
         "unlimited": max_uses == 999999
@@ -888,7 +848,6 @@ def handle_send_message(data):
 # ================================================================
 
 if __name__ == '__main__':
-    # Tạo thư mục static/music
     os.makedirs("static/music", exist_ok=True)
 
     print("""

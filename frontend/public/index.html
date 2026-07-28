@@ -1325,7 +1325,7 @@
             .catch(error => console.error('Persistence error:', error));
 
         // ================================================================
-        // DOM
+        // DOM ELEMENTS
         // ================================================================
         const chatContainer = document.getElementById('chatContainer');
         const inputField = document.getElementById('inputField');
@@ -1454,15 +1454,6 @@
             if (isLoggedIn) checkSessionTimeout();
         });
 
-        function requireAuth() {
-            if (!isLoggedIn) {
-                document.getElementById('upgradeRequired').style.display = 'block';
-                document.getElementById('upgradeRequired').scrollIntoView({ behavior: 'smooth', block: 'center' });
-                return false;
-            }
-            return true;
-        }
-
         function showToast(message, type = 'info') {
             const existing = document.querySelector('.toast-message');
             if (existing) existing.remove();
@@ -1481,13 +1472,22 @@
 
         function toggleTheme() {
             isDark = !isDark;
+            const darkIcon = '<i class="fa-solid fa-moon"></i>';
+            const lightIcon = '<i class="fa-solid fa-sun"></i>';
+            
             if (isDark) {
                 document.documentElement.removeAttribute('data-theme');
-                themeToggle.innerHTML = '<i class="fa-solid fa-moon"></i>';
+                themeToggle.innerHTML = darkIcon;
             } else {
                 document.documentElement.setAttribute('data-theme', 'light');
-                themeToggle.innerHTML = '<i class="fa-solid fa-sun"></i>';
+                themeToggle.innerHTML = lightIcon;
             }
+            
+            const darkModeCheckbox = document.getElementById('darkModeToggle');
+            if (darkModeCheckbox) {
+                darkModeCheckbox.checked = isDark;
+            }
+            
             localStorage.setItem('tv_theme', isDark ? 'dark' : 'light');
         }
 
@@ -1614,7 +1614,7 @@
         }
 
         function logout() {
-            if (!confirm('Đăng xuất?')) return;
+            if (!confirm('Bạn có chắc chắn muốn đăng xuất?')) return;
 
             firebase.auth().signOut()
                 .then(() => {
@@ -1627,6 +1627,8 @@
                     showToast('❌ Lỗi đăng xuất: ' + error.message, 'error');
                 });
         }
+
+        logoutBtn.addEventListener('click', logout);
 
         function openModal(id) {
             document.getElementById(id).classList.add('active');
@@ -1690,6 +1692,8 @@
                     openModal('historyModal');
                     loadHistory();
                 } else if (tab === 'settings') {
+                    const darkModeToggle = document.getElementById('darkModeToggle');
+                    if (darkModeToggle) darkModeToggle.checked = isDark;
                     openModal('settingsModal');
                 } else if (tab === 'upgrade') {
                     openModal('upgradeModal');
@@ -1718,7 +1722,6 @@
                 return;
             }
 
-            // Hide Hero Banner if active
             const hero = document.getElementById('welcomeHero');
             if (hero) hero.style.display = 'none';
 
