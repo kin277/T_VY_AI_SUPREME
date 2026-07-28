@@ -1,88 +1,129 @@
 """
 ====================================================================
-AI ENGINE - TÍCH HỢP GROQ API (TỰ ĐỘNG CHUYỂN MODEL KHI BỊ RATE LIMIT)
+AI ENGINE SUPREME v13.0 ULTIMATE
+- Smart Intent Detection (Code/Math vs Creative)
+- Multi-Model 3-Layer Fallback Chain
+- Smart Context Trimming (Không bao giờ mất ngữ cảnh)
+- Enhanced Code & Markdown Formatting
 ====================================================================
 """
 
 import os
+import re
 import requests
 import time
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 class ClaudeEngine:
     def __init__(self):
-        # Model chính (70B) và Model dự phòng tốc độ cao (8B)
-        self.primary_model = "llama-3.3-70b-versatile"
-        self.fallback_model = "llama-3.1-8b-instant"
+        # Danh sách chuỗi Model dự phòng xếp theo độ mạnh cho từng gói
+        self.model_tiers = {
+            "pro3": ["deepseek-r1-distill-llama-70b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+            "plus": ["llama-3.3-70b-versatile", "mixtral-8x7b-32768", "llama-3.1-8b-instant"],
+            "pro":  ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+            "basic": ["llama-3.1-8b-instant"]
+        }
         self.url = "https://api.groq.com/openai/v1/chat/completions"
 
-    def process(self, query: str, context: str = "", complexity: str = "Trung bình") -> Dict[str, Any]:
+    def _detect_intent(self, query: str) -> float:
+        """Tự động điều chỉnh độ sáng tạo/chính xác dựa trên nội dung câu hỏi"""
+        keywords = ["python", "javascript", "html", "css", "code", "lập trình", "toán", "phương trình", "tính", "lỗi", "fix", "sql", "json", "api", "bug"]
+        query_lower = query.lower()
+        if any(kw in query_lower for kw in keywords):
+            return 0.2  # Thấp để đạt độ chính xác cao nhất cho Code & Toán
+        return 0.7      # Bình thường cho giao tiếp tự nhiên
+
+    def process(self, query: str, context: str = "", complexity: str = "pro") -> Dict[str, Any]:
         api_key = (
             os.getenv("GROQ_API_KEY") 
             or os.getenv("ANTHROPIC_API_KEY")
         )
 
         if not api_key:
-            return {"error": "Thiếu GROQ_API_KEY. Vui lòng kiểm tra lại cấu hình trên Render."}
+            return {"error": "Thiếu GROQ_API_KEY trên Render. Vui lòng kiểm tra lại Environment Variables."}
 
         api_key = api_key.strip()
 
-        try:
-            if complexity in ["basic", "pro", "Trung bình"]:
-                behavior = "Trả lời TRỰC TIẾP, chính xác, ngắn gọn và đi thẳng vào vấn đề."
-            elif complexity in ["plus", "Phức tạp"]:
-                behavior = "Phân tích kỹ lưỡng, chia nhỏ các ý và giải thích chi tiết."
-            elif complexity == "pro3":
-                behavior = "Phân tích ở cấp độ chuyên gia cao cấp, lập luận chặt chẽ và sâu sắc."
-            else:
-                behavior = "Trả lời tự nhiên, thân thiện và chính xác."
+        # 1. Chọn chuỗi Model & nhiệt độ theo cấp độ yêu cầu
+        models_to_try = self.model_tiers.get(complexity, self.model_tiers["pro"])
+        temperature = self._detect_intent(query)
 
-            system_prompt = (
-                f"Bạn là T.VỸ-AI-SUPREME, trợ lý AI thông minh bằng tiếng Việt.\n"
-                f"CHỈ THỊ PHONG CÁCH: {behavior}"
+        # 2. Định hình tính cách & phong cách trả lời cho AI
+        if complexity == "pro3":
+            behavior = (
+                "Bạn là T.VỸ-AI-SUPREME phiên bản Chuyên gia Cấp cao (Level 3.0 Pro).\n"
+                "- Suy luận logic chặt chẽ, phân tích bản chất vấn đề.\n"
+                "- Với CODE: Viết code sạch, tối ưu, dễ đọc, kèm giải thích chi tiết và comment cụ thể.\n"
+                "- Với TOÁN/LOGIC: Trình bày từng bước giải thích rõ ràng."
+            )
+        elif complexity in ["plus", "Phức tạp"]:
+            behavior = (
+                "Bạn là T.VỸ-AI-SUPREME phiên bản Plus.\n"
+                "- Trả lời chi tiết, mạch lạc, chia rõ các mục bằng Bullet Points và Bolding."
+            )
+        else:
+            behavior = (
+                "Bạn là T.VỸ-AI-SUPREME.\n"
+                "- Trả lời TRỰC TIẾP, chính xác, ngắn gọn, đi thẳng vào trọng tâm vấn đề."
             )
 
-            messages = [{"role": "system", "content": system_prompt}]
+        system_prompt = (
+            f"{behavior}\n"
+            f"YÊU CẦU ĐỊNH DẠNG: Trả lời bằng tiếng Việt tự nhiên, trình bày chuẩn Markdown đẹp mắt."
+        )
 
-            if context:
-                # Cắt ngắn context tối đa 1200 ký tự để tiết kiệm token
-                messages.append({"role": "user", "content": f"Ngữ cảnh trước đó:\n{context[:1200]}"})
-                messages.append({"role": "assistant", "content": "Đã ghi nhận ngữ cảnh."})
+        messages = [{"role": "system", "content": system_prompt}]
 
-            messages.append({"role": "user", "content": query})
+        # 3. Quản lý ngữ cảnh thông minh (giữ lại 2000 ký tự gần nhất)
+        if context:
+            clean_context = context.strip()
+            if len(clean_context) > 2000:
+                clean_context = "..." + clean_context[-2000:]
+            messages.append({"role": "user", "content": f"Lịch sử hội thoại trước đó:\n{clean_context}"})
+            messages.append({"role": "assistant", "content": "Đã ghi nhớ ngữ cảnh."})
 
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
+        messages.append({"role": "user", "content": query})
 
-            # Lần 1: Gọi Model chính (Llama 3.3 70B)
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+
+        # 4. Chạy qua chuỗi Model dự phòng (Fallback Chain)
+        last_error = ""
+        for model_name in models_to_try:
             payload = {
-                "model": self.primary_model,
+                "model": model_name,
                 "messages": messages,
-                "temperature": 0.7,
-                "max_tokens": 2048
+                "temperature": temperature,
+                "max_tokens": 4096
             }
 
-            response = requests.post(self.url, headers=headers, json=payload, timeout=30)
+            try:
+                response = requests.post(self.url, headers=headers, json=payload, timeout=35)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    content_text = data["choices"][0]["message"]["content"]
 
-            # Lần 2: Nếu bị quá tải Rate Limit (429), tự động dùng Model dự phòng 8B Instant
-            if response.status_code == 429:
-                payload["model"] = self.fallback_model
-                time.sleep(1)  # Chờ 1s
-                response = requests.post(self.url, headers=headers, json=payload, timeout=30)
+                    # Lọc sạch thẻ tư duy nội bộ <think> của DeepSeek-R1
+                    content_text = re.sub(r'<think>.*?</think>', '', content_text, flags=re.DOTALL).strip()
 
-            if response.status_code != 200:
-                return {"error": f"Lỗi Groq API ({response.status_code}): {response.text}"}
+                    return {
+                        "success": True,
+                        "response": content_text,
+                        "model": model_name
+                    }
+                elif response.status_code in [429, 500, 503]:
+                    # Nấc dự phòng: Nếu model bận/rate limit -> thử model tiếp theo
+                    last_error = f"Model {model_name} bận ({response.status_code})"
+                    time.sleep(0.5)
+                    continue
+                else:
+                    return {"error": f"Lỗi Groq API ({response.status_code}): {response.text}"}
 
-            data = response.json()
-            content_text = data["choices"][0]["message"]["content"]
+            except Exception as e:
+                last_error = str(e)
+                continue
 
-            return {
-                "success": True,
-                "response": content_text,
-                "model": payload["model"]
-            }
-
-        except Exception as e:
-            return {"error": f"Lỗi kết nối AI Engine: {str(e)}"}
+        return {"error": f"Tất cả các Model AI đều đang bận. Lỗi gần nhất: {last_error}"}
