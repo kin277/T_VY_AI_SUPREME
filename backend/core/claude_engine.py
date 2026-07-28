@@ -3,7 +3,7 @@
 CLAUDE ENGINE - TÍCH HỢP ANTHROPIC CLAUDE API
 ====================================================================
 Bản quyền: T.VỸ-VIP-FILE
-Phiên bản: 1.0.0
+Phiên bản: 1.0.1
 ====================================================================
 """
 
@@ -11,18 +11,28 @@ import os
 import anthropic
 from typing import Dict, Any, Optional
 
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-
 class ClaudeEngine:
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-        self.model = "claude-3-5-sonnet-20241022"  # Model mới nhất
+        # Đọc API key động bên trong __init__ để nhận diện chính xác từ Render Environment
+        self.api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if self.api_key:
+            self.client = anthropic.Anthropic(api_key=self.api_key)
+        else:
+            self.client = None
+            
+        self.model = "claude-3-5-sonnet-20241022" 
         self.max_tokens = 4096
         
     def process(self, query: str, context: str = "", complexity: str = "Trung bình") -> Dict[str, Any]:
         """Gọi Claude API để xử lý câu hỏi dựa theo độ phức tạp"""
-        if not ANTHROPIC_API_KEY:
-            return {"error": "Thiếu ANTHROPIC_API_KEY. Vui lòng thêm vào file .env"}
+        # Thử đọc lại nếu lúc khởi tạo chưa có
+        if not self.client:
+            self.api_key = os.getenv("ANTHROPIC_API_KEY", "")
+            if self.api_key:
+                self.client = anthropic.Anthropic(api_key=self.api_key)
+
+        if not self.client or not self.api_key:
+            return {"error": "Thiếu ANTHROPIC_API_KEY trên Render. Vui lòng kiểm tra lại tab Environment."}
         
         try:
             # QUY ĐỊNH CÁCH XỬ LÝ THEO ĐỘ PHỨC TẠP
@@ -76,4 +86,4 @@ CHỈ THỊ QUAN TRỌNG: {behavior}"""
                 }
             }
         except Exception as e:
-            return {"error": str(e)}
+            return {"error": f"Lỗi Claude API: {str(e)}"}
