@@ -363,6 +363,21 @@
             z-index: 10;
         }
 
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mobile-toggle {
+            display: none;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 18px;
+            cursor: pointer;
+        }
+
         .header .title {
             font-size: 15px;
             font-weight: 700;
@@ -1002,6 +1017,33 @@
             from { opacity: 0; transform: translateX(30px); }
             to { opacity: 1; transform: translateX(0); }
         }
+
+        /* Responsive Layout Optimization */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                left: -280px;
+                top: 0;
+                bottom: 0;
+                height: 100vh;
+                box-shadow: var(--shadow-lg);
+            }
+            .sidebar.mobile-active {
+                left: 0;
+            }
+            .mobile-toggle {
+                display: block;
+            }
+            .suggestion-cards {
+                grid-template-columns: 1fr;
+            }
+            .search-box input {
+                width: 80px;
+            }
+            .message {
+                max-width: 88%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1010,7 +1052,7 @@
     <div class="app-container">
 
         <!-- ===== SIDEBAR ===== -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="appSidebar">
             <div class="sidebar-brand">
                 <div class="logo"><i class="fa-solid fa-brain"></i> T.VỸ.AI</div>
                 <span class="version">v11.0</span>
@@ -1056,7 +1098,8 @@
         <!-- ===== MAIN ===== -->
         <main class="main">
             <header class="header">
-                <div>
+                <div class="header-left">
+                    <button class="mobile-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
                     <span class="title">Trò chuyện với <span id="chatName">AI Pro</span></span>
                     <span class="level-badge" id="levelBadge">AI Pro</span>
                 </div>
@@ -1319,10 +1362,12 @@
             measurementId: "G-9J6X4WL6WS"
         };
 
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-            .catch(error => console.error('Persistence error:', error));
+        if (typeof firebase !== 'undefined') {
+            firebase.initializeApp(firebaseConfig);
+            const auth = firebase.auth();
+            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+                .catch(error => console.error('Persistence error:', error));
+        }
 
         // ================================================================
         // DOM ELEMENTS
@@ -1360,9 +1405,22 @@
         };
 
         // ================================================================
+        // UI HELPERS
+        // ================================================================
+        function toggleSidebar() {
+            const sidebar = document.getElementById('appSidebar');
+            if (sidebar) sidebar.classList.toggle('mobile-active');
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        // ================================================================
         // AUTH FUNCTIONS
         // ================================================================
-
         function switchAuthTab(tab) {
             const loginTab = document.getElementById('loginTab');
             const registerTab = document.getElementById('registerTab');
@@ -1534,6 +1592,7 @@
         }
 
         function loginGoogle() {
+            if (typeof firebase === 'undefined') return;
             const provider = new firebase.auth.GoogleAuthProvider();
             provider.addScope('email');
             provider.addScope('profile');
@@ -1573,6 +1632,7 @@
         }
 
         function loginFacebook() {
+            if (typeof firebase === 'undefined') return;
             const provider = new firebase.auth.FacebookAuthProvider();
             provider.addScope('email');
             provider.addScope('public_profile');
@@ -1616,16 +1676,17 @@
         function logout() {
             if (!confirm('Bạn có chắc chắn muốn đăng xuất?')) return;
 
-            firebase.auth().signOut()
-                .then(() => {
-                    return fetch('/api/auth/logout', { method: 'POST' });
-                })
-                .then(() => {
-                    location.reload();
-                })
-                .catch(error => {
-                    showToast('❌ Lỗi đăng xuất: ' + error.message, 'error');
-                });
+            const logoutLocal = () => {
+                fetch('/api/auth/logout', { method: 'POST' })
+                    .then(() => location.reload())
+                    .catch(() => location.reload());
+            };
+
+            if (typeof firebase !== 'undefined' && firebase.auth().currentUser) {
+                firebase.auth().signOut().then(logoutLocal).catch(logoutLocal);
+            } else {
+                logoutLocal();
+            }
         }
 
         logoutBtn.addEventListener('click', logout);
@@ -1797,11 +1858,13 @@
 
             const avatar = document.createElement('div');
             avatar.className = 'message-avatar';
-            avatar.innerHTML = role === 'user' ? (userData?.username ? userData.username.charAt(0).toUpperCase() : 'U') : '<i class="fa-solid fa-robot"></i>';
+            avatar.innerHTML = role === 'user' ? (userData?.username ? escapeHTML(userData.username.charAt(0).toUpperCase()) : 'U') : '<i class="fa-solid fa-robot"></i>';
 
             const msgDiv = document.createElement('div');
             msgDiv.className = 'message ' + role;
-            msgDiv.innerHTML = content + `<span class="time">${new Date().toLocaleTimeString()}</span>`;
+            
+            // Render text hoặc HTML nội dung một cách an toàn
+            msgDiv.innerHTML = escapeHTML(content).replace(/\n/g, '<br>') + `<span class="time">${new Date().toLocaleTimeString()}</span>`;
 
             wrapper.appendChild(avatar);
             wrapper.appendChild(msgDiv);
@@ -1821,7 +1884,7 @@
                         } else {
                             sidebarList.innerHTML = convs.slice(0, 10).map(c => `
                                 <div onclick="loadConversation('${c.id}')" style="padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-secondary);transition:var(--transition);" onmouseover="this.style.background='var(--bg-glass-hover)'" onmouseout="this.style.background='transparent'">
-                                    <i class="fa-regular fa-message" style="margin-right:6px;"></i> ${c.name}
+                                    <i class="fa-regular fa-message" style="margin-right:6px;"></i> ${escapeHTML(c.name)}
                                 </div>
                             `).join('');
                         }
@@ -1844,7 +1907,7 @@
                     }
                     list.innerHTML = convs.map(c => `
                         <div class="history-item" onclick="loadConversation('${c.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid var(--border-color);cursor:pointer;">
-                            <span>${c.name}</span>
+                            <span>${escapeHTML(c.name)}</span>
                             <span style="color:var(--text-muted);font-size:12px;">${new Date(c.updated_at || c.created_at).toLocaleString()}</span>
                             <button class="delete-btn" onclick="event.stopPropagation();deleteConversation('${c.id}')" style="background:none;border:none;color:#ef4444;cursor:pointer;">✕</button>
                         </div>
@@ -1874,6 +1937,9 @@
                         }
                         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
                         document.querySelector('.nav-item[data-tab="chat"]').classList.add('active');
+                        
+                        const sidebar = document.getElementById('appSidebar');
+                        if (sidebar) sidebar.classList.remove('mobile-active');
                     }
                 });
         }
@@ -2065,11 +2131,11 @@
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    let html = '🧠 **Kết quả AI Đa luồng:**\n\n';
+                    let html = '🧠 Kết quả AI Đa luồng:\n\n';
                     data.results.forEach(r => {
-                        html += `📌 **${r.model}** (Độ chính xác: ${r.accuracy}%):\n${r.response}\n\n`;
+                        html += `📌 ${r.model} (Độ chính xác: ${r.accuracy}%):\n${r.response}\n\n`;
                     });
-                    html += `🏆 **Kết quả tốt nhất:** ${data.best.model}`;
+                    html += `🏆 Kết quả tốt nhất: ${data.best.model}`;
                     addMessage('ai', html);
                 })
                 .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
@@ -2098,7 +2164,7 @@
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    addMessage('ai', `📝 **Tóm tắt:**\n\n${data.summary}\n\n📊 Độ dài gốc: ${data.original_length} ký tự → ${data.summarized_length} ký tự`);
+                    addMessage('ai', `📝 Tóm tắt:\n\n${data.summary}\n\n📊 Độ dài gốc: ${data.original_length} ký tự → ${data.summarized_length} ký tự`);
                 })
                 .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
             });
@@ -2128,7 +2194,7 @@
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    addMessage('ai', `🌐 **Dịch sang ${lang}:**\n\n${data.translated}`);
+                    addMessage('ai', `🌐 Dịch sang ${lang}:\n\n${data.translated}`);
                 })
                 .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
             });
@@ -2158,7 +2224,7 @@
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    addMessage('ai', `🎬 **Video đang được tạo:**\n\n📌 Tiêu đề: ${data.title}\n⏱️ Thời lượng: ${data.duration}s\n📐 Độ phân giải: ${data.resolution}\n🎨 Phong cách: ${data.style}\n🔗 Link: ${data.url}\n\n⏳ Trạng thái: ${data.status}`);
+                    addMessage('ai', `🎬 Video đang được tạo:\n\n📌 Tiêu đề: ${data.title}\n⏱️ Thời lượng: ${data.duration}s\n📐 Độ phân giải: ${data.resolution}\n🎨 Phong cách: ${data.style}\n🔗 Link: ${data.url}\n\n⏳ Trạng thái: ${data.status}`);
                 })
                 .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
             });
@@ -2188,7 +2254,7 @@
                             addMessage('ai', '❌ ' + data.error);
                             return;
                         }
-                        addMessage('ai', `📊 **Phân tích dữ liệu số:**\n\n📌 Số lượng: ${data.count}\n📉 Nhỏ nhất: ${data.min}\n📈 Lớn nhất: ${data.max}\n📊 Trung bình: ${data.mean}\n📏 Trung vị: ${data.median}\n📐 Tổng: ${data.sum}`);
+                        addMessage('ai', `📊 Phân tích dữ liệu số:\n\n📌 Số lượng: ${data.count}\n📉 Nhỏ nhất: ${data.min}\n📈 Lớn nhất: ${data.max}\n📊 Trung bình: ${data.mean}\n📏 Trung vị: ${data.median}\n📐 Tổng: ${data.sum}`);
                     })
                     .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
                 } else {
@@ -2207,7 +2273,7 @@
                             addMessage('ai', '❌ ' + data.error);
                             return;
                         }
-                        addMessage('ai', `📊 **Phân tích văn bản:**\n\n📌 Số từ: ${data.word_count}\n📝 Số câu: ${data.sentence_count}\n📏 Độ dài trung bình từ: ${data.avg_word_length}\n🔤 Số từ độc nhất: ${data.unique_words}\n📖 Độ dễ đọc: ${data.readability}`);
+                        addMessage('ai', `📊 Phân tích văn bản:\n\n📌 Số từ: ${data.word_count}\n📝 Số câu: ${data.sentence_count}\n📏 Độ dài trung bình từ: ${data.avg_word_length}\n🔤 Số từ độc nhất: ${data.unique_words}\n📖 Độ dễ đọc: ${data.readability}`);
                     })
                     .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
                 }
@@ -2246,13 +2312,13 @@
                         addMessage('ai', '❌ ' + data.error);
                         return;
                     }
-                    let html = `🎵 **Bài hát đã được tạo!**\n\n`;
+                    let html = `🎵 Bài hát đã được tạo!\n\n`;
                     html += `📌 Thời lượng: ${data.duration} giây\n`;
                     html += `🎤 Thể loại: ${data.style}\n`;
                     html += `🎭 Tâm trạng: ${data.mood}\n`;
                     html += `📦 Số đoạn ghép: ${data.num_segments || 1}\n\n`;
                     html += `📝 Lời bài hát:\n${data.lyrics}\n\n`;
-                    html += `🔊 Tải nhạc: <a href="${data.download_url}" download style="color:var(--accent-primary);text-decoration:underline;">${data.music_file}</a>`;
+                    html += `🔊 File nhạc: ${data.music_file}`;
                     addMessage('ai', html);
                 })
                 .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
