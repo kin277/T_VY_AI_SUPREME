@@ -22,6 +22,7 @@ from typing import Dict, Any, Optional, List
 from collections import defaultdict
 
 from .ethics_guard import EthicsGuard
+from .claude_engine import ClaudeEngine
 from config.levels import LEVEL_CONFIG
 
 
@@ -34,6 +35,7 @@ class AIEngine:
         self.ethics = EthicsGuard()
         self.user_id = None
         self.thinking_steps = []  # Lưu các bước suy nghĩ
+        self.claude_engine = ClaudeEngine()
 
         # Cấu hình theo cấp độ
         self.config = {
@@ -521,6 +523,16 @@ Ví dụ: "dịch sang en Xin chào thế giới"
         complexity = self._assess_complexity(query)
         approach = self._decide_approach(query)
 
+        # --- THÊM ĐOẠN GỌI CLAUDE ENGINE NÀY ĐỂ LẤY KẾT QUẢ THỰC TẾ ---
+        context_str = self._get_context_summary()
+        claude_result = self.claude_engine.process(query, context=context_str, complexity=complexity)
+        
+        if "error" in claude_result:
+            ai_text = f"⚠️ Lỗi kết nối Claude API: {claude_result['error']}"
+        else:
+            ai_text = claude_result.get("response", "Không có phản hồi từ AI.")
+        # -----------------------------------------------------------------
+
         # Xử lý theo từng loại độ phức tạp
         if complexity == "Trung bình":
             action_text = "Dưới đây là câu trả lời trực tiếp cho câu hỏi của bạn:"
@@ -546,7 +558,7 @@ Ví dụ: "dịch sang en Xin chào thế giới"
 
 📝 **{action_text}**
 
-[Nội dung câu trả lời sẽ được mô hình AI xử lý...]
+{ai_text}  
 
 {follow_up_text}
 """
