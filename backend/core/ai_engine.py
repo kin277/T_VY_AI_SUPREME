@@ -558,7 +558,11 @@ Ví dụ: "dịch sang en Xin chào thế giới"
 
 📝 **{action_text}**
 
+
 {ai_text}  
+
+{ai_text}  
+
 
 {follow_up_text}
 """
