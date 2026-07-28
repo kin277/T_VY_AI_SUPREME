@@ -1,35 +1,24 @@
 """
 ====================================================================
-CLAUDE ENGINE - TÍCH HỢP ANTHROPIC CLAUDE API
+CLAUDE ENGINE - TÍCH HỢP ANTHROPIC CLAUDE API (DIRECT REST)
 ====================================================================
 """
 
 import os
-import anthropic
+import requests
 from typing import Dict, Any
 
 class ClaudeEngine:
     def __init__(self):
-        # Lấy trực tiếp API key
-        self.api_key = os.getenv("ANTHROPIC_API_KEY", "")
-        if self.api_key:
-            self.client = anthropic.Anthropic(api_key=self.api_key)
-        else:
-            self.client = None
-            
-        # Sử dụng chuẩn model ổn định
         self.model = "claude-3-5-sonnet-20241022"
         self.max_tokens = 4096
+        self.url = "https://api.anthropic.com/v1/messages"
         
     def process(self, query: str, context: str = "", complexity: str = "Trung bình") -> Dict[str, Any]:
-        # Tự động reload key nếu chưa có
-        if not self.client:
-            self.api_key = os.getenv("ANTHROPIC_API_KEY", "")
-            if self.api_key:
-                self.client = anthropic.Anthropic(api_key=self.api_key)
-
-        if not self.client or not self.api_key:
-            return {"error": "Lỗi: Chưa cấu hình ANTHROPIC_API_KEY trong Environment của Render."}
+        # Đọc trực tiếp API key động từ môi trường mỗi lần gọi
+        api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+        if not api_key:
+            return {"error": "Thiếu ANTHROPIC_API_KEY trên Render. Vui lòng kiểm tra lại tab Environment."}
         
         try:
             if complexity == "Trung bình":
@@ -48,21 +37,34 @@ class ClaudeEngine:
             
             messages.append({"role": "user", "content": query})
             
-            # Gọi API
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=self.max_tokens,
-                system=system_prompt,
-                messages=messages
-            )
+            # Cấu hình Header chuẩn cho Anthropic REST API
+            headers = {
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json"
+            }
+            
+            payload = {
+                "model": self.model,
+                "max_tokens": self.max_tokens,
+                "system": system_prompt,
+                "messages": messages
+            }
+            
+            # Gọi trực tiếp qua thư viện requests (ổn định tuyệt đối trên Render)
+            response = requests.post(self.url, headers=headers, json=payload, timeout=45)
+            
+            if response.status_code != 200:
+                return {"error": f"Lỗi từ Anthropic API ({response.status_code}): {response.text}"}
+            
+            data = response.json()
+            content_text = data.get("content", [{}])[0].get("text", "Không nhận được phản hồi từ AI.")
             
             return {
                 "success": True,
-                "response": response.content[0].text,
+                "response": content_text,
                 "model": self.model
             }
+            
         except Exception as e:
-            # Trả về nguyên văn lỗi từ Anthropic để dễ nhận biết
-            error_msg = str(e)
-            print(f"ANHROPI_EXCEPTION: {error_msg}")
-            return {"error": f"Lỗi Claude API chi tiết: {error_msg}"}
+            return {"error": f"Lỗi kết nối HTTP trực tiếp: {str(e)}"}

@@ -12,3 +12,4 @@ scipy
 anthropic
 flask
 flask-socketio
+requests
