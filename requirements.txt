@@ -6,3 +6,5 @@ requests==2.31.0
 gunicorn==21.2.0
 eventlet==0.33.3
 anthropic==0.40.0
+google-auth
+scipy
