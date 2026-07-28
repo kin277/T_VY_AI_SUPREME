@@ -433,7 +433,7 @@ def github_callback_route():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    data = request.get_json()
+    data = request.get_json() or {}
     message = data.get('message', '')
     conv_id = data.get('conversation_id', None)
     level = data.get('level', 'pro')
@@ -450,6 +450,7 @@ def chat():
         session.clear()
         return jsonify({"error": "User không tồn tại"}), 401
 
+    # Kiểm tra giới hạn sử dụng
     if user['role'] != 'admin':
         max_uses = {'basic': 999999, 'pro': 5, 'plus': 2, 'pro3': 0}.get(level, 0)
         used = get_usage_count(user_id, level)
@@ -460,55 +461,70 @@ def chat():
             }), 429
         log_usage(user_id, level)
 
+    messages = []
     if not conv_id:
-        conv_id = str(time.time())
+        conv_id = str(int(time.time() * 1000))
         name = message[:30] + ("..." if len(message) > 30 else "")
-        messages = []
     else:
         conv = get_conversation_by_id(conv_id, user_id)
         if not conv:
             return jsonify({"error": "Không tìm thấy đoạn chat"}), 404
         
-        # Lấy lịch sử tin nhắn
-        messages = conv.get('messages', [])
+        name = conv.get('name', message[:30])
+        raw_messages = conv.get('messages', [])
         
-        # 🟢 ÉP KIỂU AN TOÀN: Nếu messages là chuỗi JSON từ DB, chuyển thành List
-        if isinstance(messages, str):
+        # 🟢 GIẢI MÃ AN TOÀN: Ép chuỗi JSON từ DB về dạng List của Python
+        if isinstance(raw_messages, str):
             try:
-                messages = json.loads(messages)
+                messages = json.loads(raw_messages)
             except Exception:
                 messages = []
-        elif not isinstance(messages, list):
+        elif isinstance(raw_messages, list):
+            messages = raw_messages
+        else:
             messages = []
 
+    # 🟢 TẠO NGỮ CẢNH: Gom lịch sử chat cũ gửi cho AI nhớ
+    context_parts = []
+    for msg in messages:
+        role = "Người dùng" if msg.get("role") == "user" else "AI"
+        context_parts.append(f"{role}: {msg.get('content', '')}")
+    context_str = "\n".join(context_parts)
+
+    # Thêm câu hỏi mới của người dùng
     messages.append({
         "role": "user",
         "content": message,
         "time": datetime.datetime.now().isoformat()
     })
 
-    # Gọi trực tiếp Claude Engine với query và cấp độ tương ứng
-    result = ai_engine.process(query=message, complexity=level)
+    # Gọi AI Engine kèm ngữ cảnh lịch sử
+    result = ai_engine.process(query=message, context=context_str, complexity=level)
     
     if result.get("error"):
-        ai_response = f"⚠️ Lỗi kết nối Claude API: {result['error']}"
+        ai_response = f"⚠️ Lỗi kết nối AI: {result['error']}"
     else:
         ai_response = result.get("response", "Đã xử lý thành công.")
 
+    # Thêm phản hồi của AI vào lịch sử
     messages.append({
         "role": "ai",
         "content": ai_response,
         "time": datetime.datetime.now().isoformat()
     })
 
+    # Lưu lại lịch sử hội thoại
     save_conversation(user_id, conv_id, name, messages, level)
     convs = get_conversations_by_user(user_id)
 
-    socketio.emit('new_message', {
-        'user_id': user_id,
-        'conversation_id': conv_id,
-        'message': ai_response
-    }, room='global')
+    try:
+        socketio.emit('new_message', {
+            'user_id': user_id,
+            'conversation_id': conv_id,
+            'message': ai_response
+        }, room='global')
+    except Exception:
+        pass
 
     return jsonify({
         "type": "chat",
