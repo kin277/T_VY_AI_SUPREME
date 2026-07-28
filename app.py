@@ -461,14 +461,25 @@ def chat():
         log_usage(user_id, level)
 
     if not conv_id:
-        conv_id = str(uuid.uuid4()) if 'uuid' in globals() else str(time.time())
+        conv_id = str(time.time())
         name = message[:30] + ("..." if len(message) > 30 else "")
         messages = []
     else:
         conv = get_conversation_by_id(conv_id, user_id)
         if not conv:
             return jsonify({"error": "Không tìm thấy đoạn chat"}), 404
-        messages = conv['messages']
+        
+        # Lấy lịch sử tin nhắn
+        messages = conv.get('messages', [])
+        
+        # 🟢 ÉP KIỂU AN TOÀN: Nếu messages là chuỗi JSON từ DB, chuyển thành List
+        if isinstance(messages, str):
+            try:
+                messages = json.loads(messages)
+            except Exception:
+                messages = []
+        elif not isinstance(messages, list):
+            messages = []
 
     messages.append({
         "role": "user",
@@ -847,6 +858,14 @@ def handle_send_message(data):
     message = data.get('message')
     if room and message:
         emit('new_message', message, room=room)
+        
+@app.errorhandler(500)
+def handle_500_error(e):
+    return jsonify({"error": f"Lỗi nội bộ Server (500): {str(e)}"}), 500
+
+@app.errorhandler(404)
+def handle_404_error(e):
+    return jsonify({"error": "Đường dẫn không tồn tại (404)"}), 404
 
 # ================================================================
 # MAIN
