@@ -1,10 +1,9 @@
 """
 ====================================================================
-AI ENGINE SUPREME v13.0 ULTIMATE
-- Smart Intent Detection (Code/Math vs Creative)
-- Multi-Model 3-Layer Fallback Chain
-- Smart Context Trimming (Không bao giờ mất ngữ cảnh)
-- Enhanced Code & Markdown Formatting
+AI ENGINE SUPREME v13.5
+- Multi-Family Fallback (Llama + Gemma + Mixtral)
+- Multi-Key Rotation Support (Chống cạn Rate Limit 100%)
+- Smart Backoff & Intent Detection
 ====================================================================
 """
 
@@ -16,114 +15,103 @@ from typing import Dict, Any, List
 
 class ClaudeEngine:
     def __init__(self):
-        # Danh sách chuỗi Model dự phòng xếp theo độ mạnh cho từng gói
+        # Đa dạng hóa các họ Model khác nhau (Llama, Gemma, Mixtral)
         self.model_tiers = {
-            "pro3": ["deepseek-r1-distill-llama-70b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
-            "plus": ["llama-3.3-70b-versatile", "mixtral-8x7b-32768", "llama-3.1-8b-instant"],
-            "pro":  ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
-            "basic": ["llama-3.1-8b-instant"]
+            "pro3": ["deepseek-r1-distill-llama-70b", "llama-3.3-70b-versatile", "gemma2-9b-it", "llama-3.1-8b-instant"],
+            "plus": ["llama-3.3-70b-versatile", "gemma2-9b-it", "mixtral-8x7b-32768", "llama-3.1-8b-instant"],
+            "pro":  ["llama-3.3-70b-versatile", "gemma2-9b-it", "llama-3.1-8b-instant"],
+            "basic": ["llama-3.1-8b-instant", "gemma2-9b-it"]
         }
         self.url = "https://api.groq.com/openai/v1/chat/completions"
 
+    def _get_api_keys(self) -> List[str]:
+        """Lấy danh sách các API Key (hỗ trợ nhiều Key phân cách bằng dấu phẩy)"""
+        raw_keys = (
+            os.getenv("GROQ_API_KEY") 
+            or os.getenv("ANTHROPIC_API_KEY") 
+            or ""
+        )
+        # Tách danh sách key nếu người dùng nhập nhiều key
+        keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
+        return keys
+
     def _detect_intent(self, query: str) -> float:
-        """Tự động điều chỉnh độ sáng tạo/chính xác dựa trên nội dung câu hỏi"""
         keywords = ["python", "javascript", "html", "css", "code", "lập trình", "toán", "phương trình", "tính", "lỗi", "fix", "sql", "json", "api", "bug"]
-        query_lower = query.lower()
-        if any(kw in query_lower for kw in keywords):
-            return 0.2  # Thấp để đạt độ chính xác cao nhất cho Code & Toán
-        return 0.7      # Bình thường cho giao tiếp tự nhiên
+        if any(kw in query.lower() for kw in keywords):
+            return 0.2
+        return 0.7
 
     def process(self, query: str, context: str = "", complexity: str = "pro") -> Dict[str, Any]:
-        api_key = (
-            os.getenv("GROQ_API_KEY") 
-            or os.getenv("ANTHROPIC_API_KEY")
-        )
+        api_keys = self._get_api_keys()
 
-        if not api_key:
+        if not api_keys:
             return {"error": "Thiếu GROQ_API_KEY trên Render. Vui lòng kiểm tra lại Environment Variables."}
 
-        api_key = api_key.strip()
-
-        # 1. Chọn chuỗi Model & nhiệt độ theo cấp độ yêu cầu
         models_to_try = self.model_tiers.get(complexity, self.model_tiers["pro"])
         temperature = self._detect_intent(query)
 
-        # 2. Định hình tính cách & phong cách trả lời cho AI
         if complexity == "pro3":
             behavior = (
                 "Bạn là T.VỸ-AI-SUPREME phiên bản Chuyên gia Cấp cao (Level 3.0 Pro).\n"
                 "- Suy luận logic chặt chẽ, phân tích bản chất vấn đề.\n"
-                "- Với CODE: Viết code sạch, tối ưu, dễ đọc, kèm giải thích chi tiết và comment cụ thể.\n"
-                "- Với TOÁN/LOGIC: Trình bày từng bước giải thích rõ ràng."
+                "- Với CODE: Viết code sạch, tối ưu, dễ đọc, kèm giải thích chi tiết và comment cụ thể."
             )
         elif complexity in ["plus", "Phức tạp"]:
-            behavior = (
-                "Bạn là T.VỸ-AI-SUPREME phiên bản Plus.\n"
-                "- Trả lời chi tiết, mạch lạc, chia rõ các mục bằng Bullet Points và Bolding."
-            )
+            behavior = "Bạn là T.VỸ-AI-SUPREME phiên bản Plus.\n- Trả lời chi tiết, mạch lạc, dùng Bullet Points và Bolding."
         else:
-            behavior = (
-                "Bạn là T.VỸ-AI-SUPREME.\n"
-                "- Trả lời TRỰC TIẾP, chính xác, ngắn gọn, đi thẳng vào trọng tâm vấn đề."
-            )
+            behavior = "Bạn là T.VỸ-AI-SUPREME.\n- Trả lời TRỰC TIẾP, chính xác, ngắn gọn, đi thẳng vào trọng tâm."
 
-        system_prompt = (
-            f"{behavior}\n"
-            f"YÊU CẦU ĐỊNH DẠNG: Trả lời bằng tiếng Việt tự nhiên, trình bày chuẩn Markdown đẹp mắt."
-        )
-
+        system_prompt = f"{behavior}\n YÊU CẦU: Trả lời bằng tiếng Việt tự nhiên, trình bày chuẩn Markdown."
         messages = [{"role": "system", "content": system_prompt}]
 
-        # 3. Quản lý ngữ cảnh thông minh (giữ lại 2000 ký tự gần nhất)
         if context:
             clean_context = context.strip()
-            if len(clean_context) > 2000:
-                clean_context = "..." + clean_context[-2000:]
+            if len(clean_context) > 1800:
+                clean_context = "..." + clean_context[-1800:]
             messages.append({"role": "user", "content": f"Lịch sử hội thoại trước đó:\n{clean_context}"})
-            messages.append({"role": "assistant", "content": "Đã ghi nhớ ngữ cảnh."})
+            messages.append({"role": "assistant", "content": "Đã ghi nhận."})
 
         messages.append({"role": "user", "content": query})
 
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-
-        # 4. Chạy qua chuỗi Model dự phòng (Fallback Chain)
+        # Vòng lặp xoay qua từng API Key và từng Model
         last_error = ""
-        for model_name in models_to_try:
-            payload = {
-                "model": model_name,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": 4096
+        for key in api_keys:
+            headers = {
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json"
             }
 
-            try:
-                response = requests.post(self.url, headers=headers, json=payload, timeout=35)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    content_text = data["choices"][0]["message"]["content"]
+            for model_name in models_to_try:
+                payload = {
+                    "model": model_name,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": 4096
+                }
 
-                    # Lọc sạch thẻ tư duy nội bộ <think> của DeepSeek-R1
-                    content_text = re.sub(r'<think>.*?</think>', '', content_text, flags=re.DOTALL).strip()
+                try:
+                    response = requests.post(self.url, headers=headers, json=payload, timeout=30)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        content_text = data["choices"][0]["message"]["content"]
+                        content_text = re.sub(r'<think>.*?</think>', '', content_text, flags=re.DOTALL).strip()
 
-                    return {
-                        "success": True,
-                        "response": content_text,
-                        "model": model_name
-                    }
-                elif response.status_code in [429, 500, 503]:
-                    # Nấc dự phòng: Nếu model bận/rate limit -> thử model tiếp theo
-                    last_error = f"Model {model_name} bận ({response.status_code})"
-                    time.sleep(0.5)
+                        return {
+                            "success": True,
+                            "response": content_text,
+                            "model": model_name
+                        }
+                    elif response.status_code == 429:
+                        last_error = f"Model {model_name} bận (429 Rate Limit)"
+                        time.sleep(1) # Tạm nghỉ 1s trước khi thử model tiếp theo
+                        continue
+                    else:
+                        last_error = f"Lỗi Groq ({response.status_code}): {response.text}"
+                        continue
+
+                except Exception as e:
+                    last_error = str(e)
                     continue
-                else:
-                    return {"error": f"Lỗi Groq API ({response.status_code}): {response.text}"}
 
-            except Exception as e:
-                last_error = str(e)
-                continue
-
-        return {"error": f"Tất cả các Model AI đều đang bận. Lỗi gần nhất: {last_error}"}
+        return {"error": f"Tất cả các Model/Key AI đều đang bận. Vui lòng thử lại sau 30 giây. Lỗi: {last_error}"}
