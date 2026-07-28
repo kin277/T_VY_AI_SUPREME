@@ -23,8 +23,6 @@ import random
 import sys
 import time
 import requests
-import eventlet
-eventlet.monkey_patch()
 
 from flask import (
     Flask, jsonify, render_template, request,
@@ -49,7 +47,8 @@ app.secret_key = "T_VY_VIP_FILE_2025"
 app.config['DEBUG'] = False
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB
 CORS(app, supports_credentials=True)
-socketio = SocketIO(app, cors_allowed_origins="*")
+# Sử dụng async_mode='threading' để tránh xung đột DNS khi gọi API ngoài qua requests
+socketio = SocketIO(app, async_mode='threading', cors_allowed_origins="*")
 
 # ===== IMPORT MODULES =====
 from backend.core.ai_engine import AIEngine
@@ -70,8 +69,8 @@ from config.levels import LEVEL_CONFIG, get_level_config
 init_db()
 
 # ===== KHỞI TẠO AI =====
-ai_engine = AIEngine(level="pro")
-ethics = EthicsGuard()
+from backend.core.claude_engine import ClaudeEngine
+ai_engine = ClaudeEngine()
 
 # ================================================================
 # MUSIC GENERATOR (TÍCH HỢP MUSICGEN + LYRICS)
@@ -477,9 +476,13 @@ def chat():
         "time": datetime.datetime.now().isoformat()
     })
 
-    ai_engine.level = level
-    result = ai_engine.process(message)
-    ai_response = result.get("message", "Đã xử lý thành công.")
+    # Gọi trực tiếp Claude Engine với query và cấp độ tương ứng
+    result = ai_engine.process(query=message, complexity=level)
+    
+    if result.get("error"):
+        ai_response = f"⚠️ Lỗi kết nối Claude API: {result['error']}"
+    else:
+        ai_response = result.get("response", "Đã xử lý thành công.")
 
     messages.append({
         "role": "ai",
