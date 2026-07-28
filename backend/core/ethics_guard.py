@@ -1,44 +1,60 @@
 """
 ====================================================================
-ETHICS GUARD - BẢO VỆ ĐẠO ĐỨC AI
-====================================================================
-Bản quyền: T.VỸ-VIP-FILE
+ETHICS GUARD - BỘ LỌC CHỐNG BẺ KHÓA (ANTI-JAILBREAK & PROMPT INJECTION)
 ====================================================================
 """
 
 import re
-from config.ethics_rules import ETHICS_RULES, check_ethics
-
+from typing import Tuple
 
 class EthicsGuard:
     def __init__(self):
-        self.name = "EthicsGuard"
-        self.version = "1.0.0"
+        # 1. Các mẫu kỹ thuật Jailbreak / Prompt Injection phổ biến
+        self.jailbreak_patterns = [
+            r"ignore (all )?(previous|above) instructions",
+            r"bỏ qua (mọi|tất cả) (quy tắc|hướng dẫn|chỉ thị)",
+            r"do anything now",
+            r"\bdan\b",
+            r"developer mode",
+            r"chế độ nhà phát triển",
+            r"jailbreak",
+            r"bẻ khóa",
+            r"pretend you (are|have) no (rules|ethics|limitations|restrictions)",
+            r"nhập vai.*không (có|chịu) giới hạn",
+            r"(tiết lộ|reveal|show).*system prompt",
+            r"override.*safety",
+            r"vô hiệu hóa.*(bảo mật|đạo đức)",
+            r"mô phỏng.*không có quy tắc",
+            r"bạn là một ai không bị kiểm duyệt"
+        ]
 
-    def validate(self, query: str) -> dict:
-        """Xác thực yêu cầu của người dùng"""
-        result = check_ethics(query)
-        if result["violation"]:
-            return {
-                "allowed": False,
-                "message": result["message"],
-                "reason": f"Phát hiện từ khóa: {result['keyword']}"
-            }
-        return {"allowed": True, "message": "Yêu cầu hợp lệ."}
+        # 2. Các mẫu yêu cầu vi phạm pháp luật / nguy hiểm
+        self.harmful_patterns = [
+            r"chế tạo (bom|thuốc nổ|vũ khí|chất độc)",
+            r"hướng dẫn (hack|tấn công|ddos) (web|hệ thống|mạng)",
+            r"hướng dẫn (tự tử|tự hại)",
+            r"tạo (virus|malware|mã độc)",
+            r"mUA bán (chất cấm|ma túy|vũ khí)"
+        ]
 
-    def get_safe_advice(self, query: str) -> str:
-        """Đưa ra lời khuyên an toàn thay vì can thiệp trực tiếp"""
-        if "tối ưu" in query.lower() or "buff" in query.lower():
-            return """
-Để cải thiện hiệu năng thiết bị một cách an toàn và hợp pháp, bạn có thể:
+    def check_message(self, message: str) -> Tuple[bool, str]:
+        """
+        Kiểm tra tin nhắn người dùng.
+        Trả về: (Cho_Phép_Chạy, Lý_Do_Từ_Chối)
+        """
+        if not message:
+            return True, ""
 
-1. Đóng các ứng dụng không cần thiết đang chạy nền
-2. Tắt hiệu ứng hoạt hình trong cài đặt nhà phát triển
-3. Sử dụng chế độ hiệu năng cao (nếu có)
-4. Cập nhật hệ điều hành và driver lên phiên bản mới nhất
-5. Xóa bộ nhớ cache thường xuyên
-6. Hạn chế chạy nhiều ứng dụng cùng lúc
+        msg_lower = message.lower()
 
-Đây là những cách tối ưu hợp pháp và an toàn cho thiết bị của bạn.
-"""
-        return None
+        # Kiểm tra mẫu Jailbreak
+        for pattern in self.jailbreak_patterns:
+            if re.search(pattern, msg_lower):
+                return False, "🛡️ **Cảnh báo Hệ thống:** Lệnh bị từ chối do phát hiện dấu hiệu thử nghiệm bẻ khóa AI (Jailbreak / Prompt Injection)."
+
+        # Kiểm tra nội dung nguy hại
+        for pattern in self.harmful_patterns:
+            if re.search(pattern, msg_lower):
+                return False, "⚠️ **Cảnh báo Đạo đức:** Yêu cầu bị từ chối do vi phạm tiêu chuẩn an toàn và đạo đức hệ thống."
+
+        return True, ""
