@@ -156,16 +156,27 @@ class AIEngine:
         return False
 
     def _assess_complexity(self, query: str) -> str:
-        """Đánh giá độ phức tạp của câu hỏi"""
-        word_count = len(query.split())
-        if word_count <= 5:
-            return "Đơn giản"
-        elif word_count <= 15:
-            return "Trung bình"
-        elif word_count <= 30:
-            return "Phức tạp"
-        else:
-            return "Rất phức tạp (cần phân tích sâu)"
+        """Đánh giá bản chất câu hỏi dựa trên ngữ nghĩa và độ phức tạp"""
+        q = query.lower()
+        
+        # 1. Các dấu hiệu câu hỏi CHUNG CHUNG / MƠ HỒ
+        vague_keywords = [
+            "là gì", "thế nào", "tất cả", "tổng quan", "chia sẻ đi", 
+            "tư vấn đi", "nói về", "giới thiệu", "gì đó", "sao đây"
+        ]
+        if any(k in q for k in vague_keywords) and len(q.split()) <= 6:
+            return "Chung chung"
+
+        # 2. Các dấu hiệu câu hỏi PHỨC TẠP / KHÓ (Cần suy nghĩ sâu)
+        complex_keywords = [
+            "tại sao", "giải thích chi tiết", "phân tích", "so sánh", "ưu nhược điểm",
+            "tối ưu", "xây dựng hệ thống", "thuật toán", "kiến trúc", "nguyên lý"
+        ]
+        if any(k in q for k in complex_keywords) or len(q.split()) > 20:
+            return "Phức tạp (Cần suy nghĩ)"
+
+        # 3. Còn lại rơi vào Trung bình / Đơn giản
+        return "Trung bình"
 
     def _decide_approach(self, query: str) -> str:
         """Quyết định cách tiếp cận trả lời"""
@@ -505,33 +516,39 @@ Ví dụ: "dịch sang en Xin chào thế giới"
         return summary
 
     def _generate_intelligent_response(self, query: str, context: str) -> str:
-        """Tạo câu trả lời thông minh dựa trên ngữ cảnh"""
+        """Tạo câu trả lời dựa trên kết quả phân tích độ phức tạp"""
         topics = ', '.join(self._detect_topics(query)) or "Đa dạng"
         complexity = self._assess_complexity(query)
         approach = self._decide_approach(query)
 
+        # Xử lý theo từng loại độ phức tạp
+        if complexity == "Trung bình":
+            action_text = "Dưới đây là câu trả lời trực tiếp cho câu hỏi của bạn:"
+            follow_up_text = ""
+        elif complexity == "Phức tạp (Cần suy nghĩ)":
+            action_text = "Đây là một câu hỏi chuyên sâu. Hệ thống đã suy nghĩ kỹ và đưa ra phân tích chi tiết:"
+            follow_up_text = "\n💡 Bạn có thể yêu cầu tôi đi sâu hơn vào từng bước ở trên nếu cần."
+        else: # Chung chung
+            action_text = "Câu hỏi của bạn khá rộng. Tôi xin trả lời bao quát như sau:"
+            follow_up_text = "\n💡 Để tôi trả lời chính xác hơn, bạn có thể cho tôi biết thêm chi tiết về trường hợp cụ thể của bạn không?"
+
         response = f"""
 🤖 **T.VỸ-AI-SUPREME trả lời:**
 
-📌 **Câu hỏi của bạn:** "{query}"
+📌 **Câu hỏi:** "{query}"
 
 {context if context else ""}
 
-🔍 **Phân tích nhanh:**
+🔍 **Phân tích:**
 - 📚 Chủ đề: {topics}
-- 📊 Độ phức tạp: {complexity}
+- 📊 Đánh giá: {complexity}
 - 💡 Cách tiếp cận: {approach}
 
-📝 **Câu trả lời chi tiết:**
+📝 **{action_text}**
 
-Tôi đã phân tích kỹ câu hỏi của bạn. Dựa trên kiến thức và kinh nghiệm, đây là câu trả lời tốt nhất tôi có thể đưa ra.
+[Nội dung câu trả lời sẽ được mô hình AI xử lý...]
 
-Để tôi có thể hỗ trợ bạn tốt hơn, bạn có thể:
-1. 📌 Cung cấp thêm thông tin chi tiết
-2. 🎯 Đặt câu hỏi cụ thể hơn
-3. 🔬 Yêu cầu tôi đi sâu vào một khía cạnh cụ thể
-
-💡 Tôi luôn sẵn sàng giúp đỡ bạn!
+{follow_up_text}
 """
         return response
 

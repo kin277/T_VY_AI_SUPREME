@@ -19,19 +19,37 @@ class ClaudeEngine:
         self.model = "claude-3-5-sonnet-20241022"  # Model mới nhất
         self.max_tokens = 4096
         
-    def process(self, query: str, context: str = "") -> Dict[str, Any]:
-        """Gọi Claude API để xử lý câu hỏi"""
+    def process(self, query: str, context: str = "", complexity: str = "Trung bình") -> Dict[str, Any]:
+        """Gọi Claude API để xử lý câu hỏi dựa theo độ phức tạp"""
         if not ANTHROPIC_API_KEY:
             return {"error": "Thiếu ANTHROPIC_API_KEY. Vui lòng thêm vào file .env"}
         
         try:
-            # Xây dựng system prompt
-            system_prompt = """Bạn là T.VỸ-AI-SUPREME, một trợ lý AI thông minh, 
-            trung thực và hữu ích. Bạn luôn trả lời bằng tiếng Việt (trừ khi được yêu cầu khác).
-            Bạn có khả năng suy nghĩ sâu, phân tích vấn đề và đưa ra câu trả lời chi tiết, có cấu trúc.
-            Bạn không can thiệp vào game, không hack, không tạo công cụ gian lận."""
+            # QUY ĐỊNH CÁCH XỬ LÝ THEO ĐỘ PHỨC TẠP
+            if complexity == "Trung bình":
+                behavior = (
+                    "Câu hỏi có độ phức tạp trung bình/đơn giản. "
+                    "Hãy trả lời TRỰC TIẾP, chính xác, ngắn gọn và đi thẳng vào vấn đề."
+                )
+            elif "Phức tạp" in complexity:
+                behavior = (
+                    "Câu hỏi khó và mang tính phân tích sâu. "
+                    "Hãy suy nghĩ từng bước (Chain of Thought), phân tích kỹ lưỡng, chia nhỏ các ý và đưa ra lời giải thích chi tiết."
+                )
+            else: # Chung chung
+                behavior = (
+                    "Câu hỏi khá chung chung hoặc tổng quát. "
+                    "Hãy trả lời tóm tắt những ý chính nhất, sau đó BẮT BUỘC phải đặt lại 1-2 câu hỏi gợi mở để người dùng làm rõ ngữ cảnh."
+                )
+
+            # Xây dựng System Prompt động
+            system_prompt = f"""Bạn là T.VỸ-AI-SUPREME, một trợ lý AI thông minh, trung thực và hữu ích.
+Bạn luôn trả lời bằng tiếng Việt.
+Bạn không can thiệp vào game, không hack, không tạo công cụ gian lận.
+
+CHỈ THỊ QUAN TRỌNG: {behavior}"""
             
-            # Xây dựng messages
+            # Xây dựng tin nhắn
             messages = []
             if context:
                 messages.append({"role": "user", "content": f"Ngữ cảnh trước đó:\n{context}"})
@@ -51,6 +69,7 @@ class ClaudeEngine:
                 "success": True,
                 "response": response.content[0].text,
                 "model": self.model,
+                "complexity": complexity,
                 "usage": {
                     "input_tokens": response.usage.input_tokens,
                     "output_tokens": response.usage.output_tokens
