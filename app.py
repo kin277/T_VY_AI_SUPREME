@@ -23,6 +23,7 @@ import random
 import sys
 import time
 import requests
+import eventlet
 eventlet.monkey_patch()
 
 from flask import (
