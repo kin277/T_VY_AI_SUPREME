@@ -1,6 +1,6 @@
 // ================================================================
 // T.VỸ-AI-SUPREME - MAIN JS (FULL INTEGRATED & UPGRADED INTELLIGENCE)
-// Dựa trên nền tảng gốc[cite: 10] với hệ thống nhận dạng thông minh & tổng hợp web toàn diện cho mọi cấp độ AI
+// Dựa trên nền tảng gốc với hệ thống nhận dạng thông minh & tổng hợp web toàn diện cho mọi cấp độ AI
 // ================================================================
 
 // ===== DOM ELEMENTS =====
@@ -19,7 +19,7 @@ const userAvatar = document.getElementById('userAvatar');
 const userName = document.getElementById('userName');
 const userStatus = document.getElementById('userStatus');
 
-// ===== DOM BỔ SUNG CHO UPLOAD FILE & SIDEBAR[cite: 10] =====
+// ===== DOM BỔ SUNG CHO UPLOAD FILE & SIDEBAR =====
 const fileInput = document.getElementById('fileInput');
 const uploadBtn = document.getElementById('uploadBtn');
 const sidebar = document.getElementById('sidebar') || document.querySelector('.sidebar');
@@ -33,7 +33,7 @@ let isLoggedIn = false;
 let userData = null;
 let socket = null;
 let sessionTimer = null;
-const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 giờ[cite: 10]
+const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 giờ
 
 const LEVEL_NAMES = {
     basic: 'AI Thường',
@@ -43,7 +43,7 @@ const LEVEL_NAMES = {
 };
 
 // ================================================================
-// TOGGLE SIDEBAR (CHỨC NĂNG ĐÓNG MỞ THANH BÊN)[cite: 10]
+// TOGGLE SIDEBAR (CHỨC NĂNG ĐÓNG MỞ THANH BÊN)
 // ================================================================
 function toggleSidebar() {
     if (sidebar) {
@@ -58,7 +58,7 @@ if (sidebarToggle) {
 }
 
 // ================================================================
-// MERMAID DIAGRAM INITIALIZATION[cite: 10]
+// MERMAID DIAGRAM INITIALIZATION
 // ================================================================
 if (typeof mermaid !== 'undefined') {
     mermaid.initialize({
@@ -92,7 +92,7 @@ function renderMermaidInContainer(container) {
 }
 
 // ================================================================
-// AUTH FUNCTIONS[cite: 10]
+// AUTH FUNCTIONS
 // ================================================================
 function switchAuthTab(tab) {
     const loginTab = document.getElementById('loginTab');
@@ -205,7 +205,7 @@ function requireAuth() {
 }
 
 // ================================================================
-// TOAST & THEME[cite: 10]
+// TOAST & THEME
 // ================================================================
 function showToast(message, type = 'info') {
     const existing = document.querySelector('.toast-message');
@@ -276,9 +276,8 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// Đã vô hiệu hóa hiển thị dòng suy nghĩ rườm rà, trả kết quả trực tiếp ngay lập tức
 function showDeepThink(stage = 0) {
-    // Giữ lại hàm rỗng để tránh lỗi gọi ở các module khác nếu có
+    // Giữ lại hàm rỗng để tránh lỗi gọi ở các module khác
 }
 
 function hideDeepThink() {
@@ -286,7 +285,7 @@ function hideDeepThink() {
 }
 
 // ================================================================
-// LOGIN / LOGOUT OAUTH[cite: 10]
+// LOGIN / LOGOUT OAUTH
 // ================================================================
 function loginGoogle() {
     if (typeof firebase === 'undefined') return;
@@ -412,7 +411,7 @@ function logout() {
 }
 
 // ================================================================
-// MODALS & SOCKET.IO[cite: 10]
+// MODALS & SOCKET.IO
 // ================================================================
 function openModal(id) { document.getElementById(id)?.classList.add('active'); }
 function closeModal(id) { document.getElementById(id)?.classList.remove('active'); }
@@ -438,7 +437,7 @@ function initSocket() {
 }
 
 // ================================================================
-// USAGE & NAVIGATION[cite: 10]
+// USAGE & NAVIGATION
 // ================================================================
 function loadUsage() {
     if (!levelSelect || !usageInfo) return;
@@ -489,7 +488,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 // ================================================================
-// ADD MESSAGE & MERMAID PARSER[cite: 10]
+// ADD MESSAGE & MERMAID PARSER
 // ================================================================
 function addMessage(role, content) {
     if (!chatContainer) return;
@@ -516,7 +515,7 @@ function addMessage(role, content) {
 }
 
 // ================================================================
-// UPLOAD & PHÂN TÍCH FILE[cite: 10]
+// UPLOAD & PHÂN TÍCH FILE
 // ================================================================
 function triggerFileUpload() {
     requireAuthAndExecute(() => {
@@ -594,7 +593,7 @@ if (fileInput) {
 }
 
 // ================================================================
-// SEND MESSAGE (TRẢ KẾT QUẢ TRỰC TIẾP, ĐẦY ĐỦ, KHÔNG CẮT BỚT MÃ CODE)
+// SEND MESSAGE (NÂNG CẤP TẬP TRUNG 100% VÀO BÀI TOÁN - TẠO CODE ĐẦY ĐỦ, CHUẨN XÁC)
 // ================================================================
 function sendMessage() {
     if (!inputField) return;
@@ -616,7 +615,8 @@ function sendMessage() {
 
     const level = levelSelect ? levelSelect.value : 'pro';
 
-    const isCodeRequest = /code|viết chương trình|script|function|class|html|css|javascript|python|java|c\+\+|sql|sửa lỗi|debug|tạo ứng dụng|shader/i.test(text);
+    // Nhận dạng chính xác yêu cầu lập trình / tạo code / viết file
+    const isCodeRequest = /code|viết chương trình|script|function|class|html|css|javascript|python|java|c\+\+|c#|sql|sửa lỗi|debug|tạo ứng dụng|shader|tạo file|file/i.test(text);
     const isComplexQuery = text.length > 50 || /phân tích|so sánh|giải thích chi tiết|tổng hợp|nghiên cứu|chiến lược|tối ưu hóa/i.test(text);
     const requiresWebSynthesis = isCodeRequest || isComplexQuery;
 
@@ -632,7 +632,15 @@ function sendMessage() {
             intent_recognition: true,
             web_synthesis: requiresWebSynthesis,
             comprehensive_answer: true,
-            full_code: true // Đảm bảo trả về code đầy đủ không bị cắt bớt
+            full_code: true, // Trả về code đầy đủ không cắt bớt
+            
+            // ===== NÂNG CẤP CHỨC NĂNG TẬP TRUNG 100% VÀO BÀI TOÁN =====
+            strict_code_focus: isCodeRequest, // Yêu cầu backend tập trung 100% vào bài toán
+            no_ai_self_description: true,    // Tuyệt đối không viết mô tả tự xưng của AI
+            direct_output_only: true,        // Trả kết quả trực tiếp không dài dòng
+            auto_format_language: true,      // Tự động áp dụng chuẩn cú pháp & ngôn ngữ
+            ethical_safety_check: true,      // Đảm bảo tuân thủ tiêu chuẩn an toàn
+            untruncated_code: true           // Không rút gọn hay bỏ bớt bất kỳ đoạn code nào
         })
     })
     .then(res => res.json())
@@ -677,7 +685,7 @@ if (inputField) {
 }
 
 // ================================================================
-// CONVERSATIONS & HISTORY[cite: 10]
+// CONVERSATIONS & HISTORY
 // ================================================================
 function loadConversations() {
     fetch('/conversations')
@@ -757,7 +765,7 @@ function deleteConversation(id) {
 }
 
 // ================================================================
-// EXPORT & SEARCH[cite: 10]
+// EXPORT & SEARCH
 // ================================================================
 if (exportBtn) {
     exportBtn.addEventListener('click', function() {
@@ -812,7 +820,7 @@ if (searchInput) {
 }
 
 // ================================================================
-// UPGRADE & PAYMENT[cite: 10]
+// UPGRADE & PAYMENT
 // ================================================================
 function upgradeTier(tier) {
     if (!isLoggedIn) {
@@ -877,7 +885,7 @@ function upgradeWithMomo(tier) {
 }
 
 // ================================================================
-// SETTINGS & TYPING[cite: 10]
+// SETTINGS & TYPING
 // ================================================================
 function saveSettings() {
     const darkMode = document.getElementById('darkModeToggle')?.checked;
@@ -907,7 +915,7 @@ function hideTyping() {
 }
 
 // ================================================================
-// TOOLBAR FUNCTIONS[cite: 10]
+// TOOLBAR FUNCTIONS
 // ================================================================
 function requireAuthAndExecute(callback) {
     if (!isLoggedIn) {
@@ -1148,7 +1156,7 @@ function clearAllMessages() {
 }
 
 // ================================================================
-// INIT[cite: 10]
+// INIT
 // ================================================================
 checkLogin();
 if (inputField) inputField.focus();
@@ -1161,5 +1169,5 @@ if (typeof io !== 'undefined') {
     initSocket();
 }
 
-console.log('🚀 T.VỸ-AI-SUPREME v13.5: Đã tối ưu ẩn dòng suy nghĩ & trả về code hoàn chỉnh ngay lập tức!');
+console.log('🚀 T.VỸ-AI-SUPREME v14.0: Đã nâng cấp chế độ xuất code tập trung 100%, không văn bản rườm rà & đầy đủ 100%!');
 console.log('📌 Bản quyền: T.VỸ-VIP-FILE');
