@@ -1848,15 +1848,15 @@
             const registerForm = document.getElementById('registerForm');
             
             if (tab === 'login') {
-                loginTab.classList.add('active');
-                registerTab.classList.remove('active');
-                loginForm.style.display = 'block';
-                registerForm.style.display = 'none';
+                if (loginTab) loginTab.classList.add('active');
+                if (registerTab) registerTab.classList.remove('active');
+                if (loginForm) loginForm.style.display = 'block';
+                if (registerForm) registerForm.style.display = 'none';
             } else {
-                registerTab.classList.add('active');
-                loginTab.classList.remove('active');
-                registerForm.style.display = 'block';
-                loginForm.style.display = 'none';
+                if (registerTab) registerTab.classList.add('active');
+                if (loginTab) loginTab.classList.remove('active');
+                if (registerForm) registerForm.style.display = 'block';
+                if (loginForm) loginForm.style.display = 'none';
             }
         }
 
@@ -1892,27 +1892,37 @@
 
         function showGuestMode() {
             isLoggedIn = false;
-            document.getElementById('authButtons').style.display = 'flex';
-            document.getElementById('userInfo').style.display = 'none';
-            userName.textContent = 'Khách';
-            userAvatar.textContent = '👤';
-            userStatus.textContent = 'Chế độ khách';
-            logoutBtn.style.display = 'none';
-            document.getElementById('upgradeRequired').style.display = 'none';
+            const authBtns = document.getElementById('authButtons');
+            const userInfo = document.getElementById('userInfo');
+            const upgradeReq = document.getElementById('upgradeRequired');
+
+            if (authBtns) authBtns.style.display = 'flex';
+            if (userInfo) userInfo.style.display = 'none';
+            if (userName) userName.textContent = 'Khách';
+            if (userAvatar) userAvatar.textContent = '👤';
+            if (userStatus) userStatus.textContent = 'Chế độ khách';
+            if (logoutBtn) logoutBtn.style.display = 'none';
+            if (upgradeReq) upgradeReq.style.display = 'none';
             showToast('🔓 Bạn đang sử dụng chế độ Khách. Một số chức năng bị giới hạn.', 'info');
         }
 
         function showUserMode(user) {
             isLoggedIn = true;
-            document.getElementById('authButtons').style.display = 'none';
-            document.getElementById('userInfo').style.display = 'flex';
-            document.getElementById('headerUserName').textContent = user.username || 'User';
-            document.getElementById('headerUserRole').textContent = user.role === 'admin' ? 'Admin' : 'User';
-            userName.textContent = user.username || 'User';
-            userAvatar.textContent = (user.username || 'U').charAt(0).toUpperCase();
-            userStatus.textContent = user.role === 'admin' ? '👑 Admin' : 'Đã đăng nhập';
-            logoutBtn.style.display = 'block';
-            document.getElementById('upgradeRequired').style.display = 'none';
+            const authBtns = document.getElementById('authButtons');
+            const userInfo = document.getElementById('userInfo');
+            const headerUserName = document.getElementById('headerUserName');
+            const headerUserRole = document.getElementById('headerUserRole');
+            const upgradeReq = document.getElementById('upgradeRequired');
+
+            if (authBtns) authBtns.style.display = 'none';
+            if (userInfo) userInfo.style.display = 'flex';
+            if (headerUserName) headerUserName.textContent = user.username || 'User';
+            if (headerUserRole) headerUserRole.textContent = user.role === 'admin' ? 'Admin' : 'User';
+            if (userName) userName.textContent = user.username || 'User';
+            if (userAvatar) userAvatar.textContent = (user.username || 'U').charAt(0).toUpperCase();
+            if (userStatus) userStatus.textContent = user.role === 'admin' ? '👑 Admin' : 'Đã đăng nhập';
+            if (logoutBtn) logoutBtn.style.display = 'block';
+            if (upgradeReq) upgradeReq.style.display = 'none';
         }
 
         function checkSessionTimeout() {
@@ -2609,12 +2619,16 @@
 
         function requireAuthAndExecute(callback) {
             if (!isLoggedIn) {
-                document.getElementById('upgradeRequired').style.display = 'block';
-                document.getElementById('upgradeRequired').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const upgradeReq = document.getElementById('upgradeRequired');
+                if (upgradeReq) {
+                    upgradeReq.style.display = 'block';
+                    upgradeReq.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
                 showToast('🔒 Vui lòng đăng nhập để sử dụng chức năng này.', 'warning');
-                return;
+                return false;
             }
             callback();
+            return true;
         }
 
         function useMultiAI() {

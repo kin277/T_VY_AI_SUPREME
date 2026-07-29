@@ -1,14 +1,117 @@
 """
 ====================================================================
-AUTH - XÁC THỰC OAuth 2.0 (Google, Facebook, GitHub)
+AUTH - XÁC THỰC OAuth 2.0 (Google, Facebook, GitHub) & LOCAL AUTH
 ====================================================================
 """
 
 import os
 import requests
 from flask import request, jsonify, session
+from werkzeug.security import generate_password_hash, check_password_hash
 from backend.database.db_handler import get_user_by_email, create_user, update_user_role, get_user_by_id
 from config.settings import ADMIN_EMAIL
+
+# ================================================================
+# LOCAL AUTH (TÀI KHOẢN CỤC BỘ: EMAIL & MẬT KHẨU)
+# ================================================================
+
+def register_local():
+    """Xử lý Đăng ký tài khoản cục bộ"""
+    try:
+        data = request.get_json() or {}
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        password = data.get('password', '')
+
+        if not email or not password:
+            return jsonify({"error": "Vui lòng nhập đầy đủ Email và Mật khẩu"}), 400
+
+        if len(password) < 6:
+            return jsonify({"error": "Mật khẩu phải có ít nhất 6 ký tự"}), 400
+
+        existing_user = get_user_by_email(email)
+        if existing_user:
+            return jsonify({"error": "Email này đã được đăng ký"}), 400
+
+        password_hash = generate_password_hash(password)
+        name = username if username else email.split('@')[0]
+
+        user_id = create_user(
+            username=name,
+            email=email,
+            password_hash=password_hash,
+            provider='local',
+            provider_id=email
+        )
+
+        role = 'user'
+        if email == ADMIN_EMAIL:
+            update_user_role(user_id, 'admin')
+            role = 'admin'
+
+        session['user_id'] = user_id
+        session['user_email'] = email
+        session['user_name'] = name
+
+        return jsonify({
+            "success": True,
+            "message": "Đăng ký tài khoản thành công!",
+            "user": {
+                "id": user_id,
+                "email": email,
+                "name": name,
+                "role": role
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def login_local():
+    """Xử lý Đăng nhập tài khoản cục bộ"""
+    try:
+        data = request.get_json() or {}
+        email = data.get('email', '').strip()
+        password = data.get('password', '')
+
+        if not email or not password:
+            return jsonify({"error": "Vui lòng nhập đầy đủ Email và Mật khẩu"}), 400
+
+        user = get_user_by_email(email)
+        if not user:
+            return jsonify({"error": "Tài khoản hoặc mật khẩu không chính xác"}), 401
+
+        user_dict = dict(user)
+        stored_hash = user_dict.get('password_hash') or user_dict.get('password')
+
+        if not stored_hash or not check_password_hash(stored_hash, password):
+            return jsonify({"error": "Tài khoản hoặc mật khẩu không chính xác"}), 401
+
+        user_id = user_dict['id']
+        name = user_dict.get('username') or email.split('@')[0]
+        role = user_dict.get('role', 'user')
+
+        if email == ADMIN_EMAIL and role != 'admin':
+            update_user_role(user_id, 'admin')
+            role = 'admin'
+
+        session['user_id'] = user_id
+        session['user_email'] = email
+        session['user_name'] = name
+
+        return jsonify({
+            "success": True,
+            "message": "Đăng nhập thành công!",
+            "user": {
+                "id": user_id,
+                "email": email,
+                "name": name,
+                "role": role
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 # ================================================================
 # GOOGLE AUTH
