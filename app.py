@@ -17,6 +17,7 @@ import re
 import sys
 import time
 import traceback
+import requests  # <-- Đã thêm thư viện requests để gọi API Gemini
 from io import BytesIO
 from pathlib import Path
 
@@ -489,7 +490,7 @@ def github_callback_route():
     return "❌ Lỗi hệ thống", 400
 
 # ================================================================
-# CHAT ROUTES (NÂNG CẤP TỰ ĐỘNG ĐUÔI FILE & CONTINUATION LOOP)
+# CHAT ROUTES (TÍCH HỢP GEMINI CHUẨN BẢO MẬT BACKEND)
 # ================================================================
 
 @app.route('/chat', methods=['POST'])
@@ -568,8 +569,56 @@ def chat():
                 f"\"Vì dự án khá dài nên không thể chỉ bằng 1 dòng tin nhắn là xong được. Bạn có muốn tiếp tục không?\""
             )
 
-        # Gọi AI Engine
-        if 'ai_engine' in globals():
+        # 🚀 GỌI AI ENGINE (ƯU TIÊN GEMINI TỪ BIẾN MÔI TRƯỜNG)
+        api_key = os.environ.get('GEMINI_API_KEY')
+        ai_response = ""
+
+        if api_key:
+            try:
+                # Cấu hình gọi thẳng tới Google Gemini (1.5 Flash)
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+                headers = {'Content-Type': 'application/json'}
+                
+                # Gộp lịch sử ngữ cảnh + Câu hỏi mới nhất
+                gemini_prompt = f"{context_str}\n\n[Người dùng]: {enhanced_query}"
+                
+                parts = []
+                
+                # Nâng cấp: Xử lý hình ảnh (Vision) truyền thẳng vào Gemini nếu người dùng đính kèm ảnh
+                if image_base64:
+                    try:
+                        mime_type = image_base64.split(';')[0].split(':')[1]
+                        raw_b64 = image_base64.split(',')[1]
+                        parts.append({
+                            "inline_data": {
+                                "mime_type": mime_type,
+                                "data": raw_b64
+                            }
+                        })
+                    except Exception as e:
+                        logger.error(f"Lỗi phân tích hình ảnh cho Gemini: {e}")
+                
+                # Thêm văn bản câu hỏi vào
+                parts.append({"text": gemini_prompt})
+                
+                payload = {
+                    "contents": [{"parts": parts}]
+                }
+                
+                resp = requests.post(url, json=payload, headers=headers)
+                
+                if resp.status_code == 200:
+                    ai_response = resp.json()['candidates'][0]['content']['parts'][0]['text']
+                else:
+                    logger.error(f"Lỗi Gemini: {resp.text}")
+                    ai_response = f"⚠️ Lỗi từ máy chủ Google Gemini: {resp.status_code}"
+                    
+            except Exception as e:
+                logger.error(f"Lỗi Exception Gemini: {traceback.format_exc()}")
+                ai_response = f"⚠️ Lỗi kết nối đến Google Gemini: {str(e)}"
+                
+        # Nếu không cài GEMINI_API_KEY, tự động lùi về mô hình cũ (ClaudeEngine)
+        elif 'ai_engine' in globals():
             result = ai_engine.process(
                 query=enhanced_query,
                 context=context_str,
@@ -579,7 +628,7 @@ def chat():
             )
             ai_response = result.get("response", "Đã xử lý xong.") if not result.get("error") else f"⚠️ Lỗi kết nối AI Engine: {result['error']}"
         else:
-            ai_response = f"Mô hình T.VỸ AI [{level.upper()}] đã xử lý thành công câu hỏi: '{message}'"
+            ai_response = f"⚠️ Máy chủ chưa được cấu hình GEMINI_API_KEY ở Environment Variables."
 
         messages.append({
             "role": "ai",
@@ -1047,7 +1096,7 @@ if __name__ == '__main__':
 ║  Bản quyền: T.VỸ-VIP-FILE                                           ║
 ║  🚀 Tự động nhận diện đuôi file (.glsl, .vsh, .fsh, .py, .js,...)     ║
 ║  📦 Tự động phân chia dự án lớn thành 4-5 file/lượt & Vòng lặp Tiếp tục║
-║  🖼️ Giữ nguyên đầy đủ Vision, Audio TTS, Music AI, MoMo & Admin API   ║
+║  🖼️ TÍCH HỢP GEMINI API TRỰC TIẾP TỪ BACKEND (SIÊU BẢO MẬT)          ║
 ╚═══════════════════════════════════════════════════════════════════════╝
     """)
     socketio.run(app, debug=app.config['DEBUG'], host=host, port=port, allow_unsafe_werkzeug=True)
