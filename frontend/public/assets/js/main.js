@@ -1,8 +1,8 @@
 // ================================================================
-// T.VỸ-AI-SUPREME - MAIN JS (HOÀN CHỈNH)
+// T.VỸ-AI-SUPREME - MAIN JS (FULL INTEGRATED: MERMAID & FILE UPLOAD)
 // ================================================================
 
-// ===== DOM =====
+// ===== DOM ELEMENTS =====
 const chatContainer = document.getElementById('chatContainer');
 const inputField = document.getElementById('inputField');
 const sendBtn = document.getElementById('sendBtn');
@@ -17,6 +17,10 @@ const exportBtn = document.getElementById('exportBtn');
 const userAvatar = document.getElementById('userAvatar');
 const userName = document.getElementById('userName');
 const userStatus = document.getElementById('userStatus');
+
+// ===== DOM BỔ SUNG CHO UPLOAD FILE =====
+const fileInput = document.getElementById('fileInput');
+const uploadBtn = document.getElementById('uploadBtn');
 
 // ===== STATE =====
 let currentConversationId = null;
@@ -36,10 +40,43 @@ const LEVEL_NAMES = {
 };
 
 // ================================================================
+// MERMAID DIAGRAM INITIALIZATION
+// ================================================================
+if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({
+        startOnLoad: false,
+        theme: isDark ? 'dark' : 'default',
+        securityLevel: 'loose'
+    });
+}
+
+function renderMermaidInContainer(container) {
+    if (typeof mermaid === 'undefined') return;
+    const mermaidBlocks = container.querySelectorAll('.mermaid-code');
+    mermaidBlocks.forEach((block, idx) => {
+        const code = block.textContent.trim();
+        const id = `mermaid-svg-${Date.now()}-${Math.floor(Math.random() * 1000)}-${idx}`;
+        const renderDiv = document.createElement('div');
+        renderDiv.className = 'mermaid';
+        renderDiv.id = id;
+
+        try {
+            mermaid.render(id + '-svg', code, (svgCode) => {
+                renderDiv.innerHTML = svgCode;
+                if (block.parentNode) {
+                    block.parentNode.replaceChild(renderDiv, block);
+                }
+            });
+        } catch (err) {
+            console.error('Lỗi Render Mermaid Diagram:', err);
+        }
+    });
+}
+
+// ================================================================
 // AUTH FUNCTIONS
 // ================================================================
 
-// ===== SWITCH AUTH TAB =====
 function switchAuthTab(tab) {
     const loginTab = document.getElementById('loginTab');
     const registerTab = document.getElementById('registerTab');
@@ -47,19 +84,18 @@ function switchAuthTab(tab) {
     const registerForm = document.getElementById('registerForm');
     
     if (tab === 'login') {
-        loginTab.classList.add('active');
-        registerTab.classList.remove('active');
-        loginForm.style.display = 'block';
-        registerForm.style.display = 'none';
+        if (loginTab) loginTab.classList.add('active');
+        if (registerTab) registerTab.classList.remove('active');
+        if (loginForm) loginForm.style.display = 'block';
+        if (registerForm) registerForm.style.display = 'none';
     } else {
-        registerTab.classList.add('active');
-        loginTab.classList.remove('active');
-        registerForm.style.display = 'block';
-        loginForm.style.display = 'none';
+        if (registerTab) registerTab.classList.add('active');
+        if (loginTab) loginTab.classList.remove('active');
+        if (registerForm) registerForm.style.display = 'block';
+        if (loginForm) loginForm.style.display = 'none';
     }
 }
 
-// ===== OPEN LOGIN/REGISTER =====
 function openLoginModal() {
     switchAuthTab('login');
     openModal('loginModal');
@@ -70,7 +106,6 @@ function openRegisterModal() {
     openModal('loginModal');
 }
 
-// ===== CHECK LOGIN =====
 function checkLogin() {
     fetch('/api/auth/me')
         .then(res => res.json())
@@ -93,30 +128,40 @@ function checkLogin() {
 
 function showGuestMode() {
     isLoggedIn = false;
-    document.getElementById('authButtons').style.display = 'flex';
-    document.getElementById('userInfo').style.display = 'none';
-    userName.textContent = 'Khách';
-    userAvatar.textContent = '👤';
-    userStatus.textContent = 'Chế độ khách';
-    logoutBtn.style.display = 'none';
-    document.getElementById('upgradeRequired').style.display = 'none';
+    const authBtns = document.getElementById('authButtons');
+    const userInfo = document.getElementById('userInfo');
+    const upgradeReq = document.getElementById('upgradeRequired');
+
+    if (authBtns) authBtns.style.display = 'flex';
+    if (userInfo) userInfo.style.display = 'none';
+    if (userName) userName.textContent = 'Khách';
+    if (userAvatar) userAvatar.textContent = '👤';
+    if (userStatus) userStatus.textContent = 'Chế độ khách';
+    if (logoutBtn) logoutBtn.style.display = 'none';
+    if (upgradeReq) upgradeReq.style.display = 'none';
+    
     showToast('🔓 Bạn đang sử dụng chế độ Khách. Một số chức năng bị giới hạn.', 'info');
 }
 
 function showUserMode(user) {
     isLoggedIn = true;
-    document.getElementById('authButtons').style.display = 'none';
-    document.getElementById('userInfo').style.display = 'flex';
-    document.getElementById('headerUserName').textContent = user.username || 'User';
-    document.getElementById('headerUserRole').textContent = user.role === 'admin' ? 'Admin' : 'User';
-    userName.textContent = user.username || 'User';
-    userAvatar.textContent = (user.username || 'U').charAt(0).toUpperCase();
-    userStatus.textContent = user.role === 'admin' ? '👑 Admin' : 'Đã đăng nhập';
-    logoutBtn.style.display = 'block';
-    document.getElementById('upgradeRequired').style.display = 'none';
+    const authBtns = document.getElementById('authButtons');
+    const userInfo = document.getElementById('userInfo');
+    const headerUserName = document.getElementById('headerUserName');
+    const headerUserRole = document.getElementById('headerUserRole');
+    const upgradeReq = document.getElementById('upgradeRequired');
+
+    if (authBtns) authBtns.style.display = 'none';
+    if (userInfo) userInfo.style.display = 'flex';
+    if (headerUserName) headerUserName.textContent = user.username || 'User';
+    if (headerUserRole) headerUserRole.textContent = user.role === 'admin' ? 'Admin' : 'User';
+    if (userName) userName.textContent = user.username || 'User';
+    if (userAvatar) userAvatar.textContent = (user.username || 'U').charAt(0).toUpperCase();
+    if (userStatus) userStatus.textContent = user.role === 'admin' ? '👑 Admin' : 'Đã đăng nhập';
+    if (logoutBtn) logoutBtn.style.display = 'block';
+    if (upgradeReq) upgradeReq.style.display = 'none';
 }
 
-// ===== SESSION TIMEOUT =====
 function checkSessionTimeout() {
     if (sessionTimer) clearTimeout(sessionTimer);
     sessionTimer = setTimeout(() => {
@@ -127,26 +172,23 @@ function checkSessionTimeout() {
     }, SESSION_TIMEOUT);
 }
 
-// Refresh session khi có hoạt động
-document.addEventListener('click', () => {
-    if (isLoggedIn) checkSessionTimeout();
-});
-document.addEventListener('keydown', () => {
-    if (isLoggedIn) checkSessionTimeout();
-});
+document.addEventListener('click', () => { if (isLoggedIn) checkSessionTimeout(); });
+document.addEventListener('keydown', () => { if (isLoggedIn) checkSessionTimeout(); });
 
-// ===== CHECK IF FUNCTION IS ALLOWED =====
 function requireAuth() {
     if (!isLoggedIn) {
-        document.getElementById('upgradeRequired').style.display = 'block';
-        document.getElementById('upgradeRequired').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const upgradeReq = document.getElementById('upgradeRequired');
+        if (upgradeReq) {
+            upgradeReq.style.display = 'block';
+            upgradeReq.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
         return false;
     }
     return true;
 }
 
 // ================================================================
-// TOAST
+// TOAST & THEME
 // ================================================================
 function showToast(message, type = 'info') {
     const existing = document.querySelector('.toast-message');
@@ -164,9 +206,6 @@ function showToast(message, type = 'info') {
     }, 4000);
 }
 
-// ================================================================
-// THEME
-// ================================================================
 function toggleTheme() {
     isDark = !isDark;
     const root = document.documentElement;
@@ -178,7 +217,7 @@ function toggleTheme() {
         root.style.setProperty('--color-text-muted', '#8888aa');
         root.style.setProperty('--color-border', '#3a3a5e');
         root.style.setProperty('--color-primary-light', '#3a3a5e');
-        themeToggle.textContent = '☀️';
+        if (themeToggle) themeToggle.textContent = '☀️';
     } else {
         root.style.setProperty('--color-bg', '#f8f9fa');
         root.style.setProperty('--color-bg-secondary', '#ffffff');
@@ -187,27 +226,23 @@ function toggleTheme() {
         root.style.setProperty('--color-text-muted', '#8a8aaa');
         root.style.setProperty('--color-border', '#e4e7ec');
         root.style.setProperty('--color-primary-light', '#eef2ff');
-        themeToggle.textContent = '🌙';
+        if (themeToggle) themeToggle.textContent = '🌙';
     }
     localStorage.setItem('tv_theme', isDark ? 'dark' : 'light');
+
+    if (typeof mermaid !== 'undefined') {
+        mermaid.initialize({ theme: isDark ? 'dark' : 'default' });
+    }
 }
 
 if (localStorage.getItem('tv_theme') === 'dark') {
-    isDark = true;
-    document.documentElement.style.setProperty('--color-bg', '#1a1a2e');
-    document.documentElement.style.setProperty('--color-bg-secondary', '#2a2a4e');
-    document.documentElement.style.setProperty('--color-text', '#f0f0f0');
-    document.documentElement.style.setProperty('--color-text-secondary', '#b0b0c0');
-    document.documentElement.style.setProperty('--color-text-muted', '#8888aa');
-    document.documentElement.style.setProperty('--color-border', '#3a3a5e');
-    document.documentElement.style.setProperty('--color-primary-light', '#3a3a5e');
-    themeToggle.textContent = '☀️';
+    toggleTheme();
 }
 
-themeToggle.addEventListener('click', toggleTheme);
+if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 
 // ================================================================
-// TOGGLE MENU
+// TOGGLE MENU & DEEP THINK
 // ================================================================
 function toggleMenu() {
     const menu = document.getElementById('functionMenu');
@@ -224,18 +259,15 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// ================================================================
-// DEEP THINK
-// ================================================================
 function showDeepThink(stage = 0) {
     const indicator = document.getElementById('deepThinkIndicator');
     const status = document.getElementById('thinkStatus');
     if (!indicator || !status) return;
 
     const stages = [
-        "🔍 Đang phân tích câu hỏi...",
-        "📚 Tìm kiếm kiến thức liên quan...",
-        "🧠 Xây dựng lập luận...",
+        "🔍 Đang phân tích dữ liệu...",
+        "📚 Tìm kiếm thông tin liên quan...",
+        "🧠 Xây dựng cấu trúc & sơ đồ...",
         "✍️ Tổng hợp câu trả lời..."
     ];
 
@@ -249,9 +281,10 @@ function hideDeepThink() {
 }
 
 // ================================================================
-// LOGIN / LOGOUT
+// LOGIN / LOGOUT OAUTH
 // ================================================================
 function loginGoogle() {
+    if (typeof firebase === 'undefined') return;
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.addScope('email');
     provider.addScope('profile');
@@ -291,6 +324,7 @@ function loginGoogle() {
 }
 
 function loginFacebook() {
+    if (typeof firebase === 'undefined') return;
     const provider = new firebase.auth.FacebookAuthProvider();
     provider.addScope('email');
     provider.addScope('public_profile');
@@ -325,14 +359,12 @@ function loginFacebook() {
         });
 }
 
-// ===== GITHUB LOGIN =====
 function loginGitHub() {
     const clientId = 'Ov23liwojcTDuo4p42aG';
     const redirectUri = window.location.origin + '/auth/github/callback';
     const scope = 'user:email';
     const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
     
-    // Mở popup
     const width = 600;
     const height = 600;
     const left = (window.screen.width - width) / 2;
@@ -345,18 +377,14 @@ function loginGitHub() {
     
     showToast('⏳ Đang chuyển đến GitHub...', 'info');
     
-    // Kiểm tra popup đóng
     const checkPopup = setInterval(() => {
         if (popup && popup.closed) {
             clearInterval(checkPopup);
-            // Reload trang sau khi popup đóng
             setTimeout(() => {
                 fetch('/api/auth/me')
                     .then(res => res.json())
                     .then(data => {
-                        if (!data.error) {
-                            location.reload();
-                        }
+                        if (!data.error) location.reload();
                     });
             }, 500);
         }
@@ -366,28 +394,23 @@ function loginGitHub() {
 function logout() {
     if (!confirm('Đăng xuất?')) return;
 
-    firebase.auth().signOut()
-        .then(() => {
-            return fetch('/api/auth/logout', { method: 'POST' });
-        })
-        .then(() => {
-            location.reload();
-        })
+    const signOutPromise = (typeof firebase !== 'undefined' && firebase.auth)
+        ? firebase.auth().signOut()
+        : Promise.resolve();
+
+    signOutPromise
+        .then(() => fetch('/api/auth/logout', { method: 'POST' }))
+        .then(() => location.reload())
         .catch(error => {
             showToast('❌ Lỗi đăng xuất: ' + error.message, 'error');
         });
 }
 
 // ================================================================
-// MODALS
+// MODALS & SOCKET.IO
 // ================================================================
-function openModal(id) {
-    document.getElementById(id).classList.add('active');
-}
-
-function closeModal(id) {
-    document.getElementById(id).classList.remove('active');
-}
+function openModal(id) { document.getElementById(id)?.classList.add('active'); }
+function closeModal(id) { document.getElementById(id)?.classList.remove('active'); }
 
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', function(e) {
@@ -395,10 +418,8 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
     });
 });
 
-// ================================================================
-// SOCKET.IO
-// ================================================================
 function initSocket() {
+    if (typeof io === 'undefined') return;
     socket = io();
     socket.on('connect', () => {
         console.log('✅ Connected to socket');
@@ -412,9 +433,10 @@ function initSocket() {
 }
 
 // ================================================================
-// USAGE
+// USAGE & NAVIGATION
 // ================================================================
 function loadUsage() {
+    if (!levelSelect || !usageInfo) return;
     const tier = levelSelect.value;
     fetch(`/api/usage/${tier}`)
         .then(res => res.json())
@@ -430,17 +452,16 @@ function loadUsage() {
         .catch(() => {});
 }
 
-levelSelect.addEventListener('change', function() {
-    currentLevel = this.value;
-    const name = LEVEL_NAMES[currentLevel] || 'AI Pro';
-    levelBadge.textContent = name;
-    chatName.textContent = name;
-    loadUsage();
-});
+if (levelSelect) {
+    levelSelect.addEventListener('change', function() {
+        currentLevel = this.value;
+        const name = LEVEL_NAMES[currentLevel] || 'AI Pro';
+        if (levelBadge) levelBadge.textContent = name;
+        if (chatName) chatName.textContent = name;
+        loadUsage();
+    });
+}
 
-// ================================================================
-// NAVIGATION
-// ================================================================
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', function() {
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -457,29 +478,142 @@ document.querySelectorAll('.nav-item').forEach(item => {
             closeModal('historyModal');
             closeModal('settingsModal');
             closeModal('upgradeModal');
-            inputField.focus();
+            if (inputField) inputField.focus();
         }
     });
 });
 
 // ================================================================
+// ADD MESSAGE & MERMAID PARSER
+// ================================================================
+function addMessage(role, content) {
+    if (!chatContainer) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'message-wrapper ' + role;
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message ' + role;
+
+    // Phát hiện khối mã ```mermaid ... ``` để biến đổi thành thẻ render
+    let formattedContent = content;
+    const mermaidRegex = /```mermaid\s*([\s\S]*?)\s*```/g;
+    formattedContent = formattedContent.replace(mermaidRegex, (match, code) => {
+        return `<pre class="mermaid-code">${code}</pre>`;
+    });
+
+    msgDiv.innerHTML = formattedContent + `<span class="time">${new Date().toLocaleTimeString()}</span>`;
+
+    wrapper.appendChild(msgDiv);
+    chatContainer.appendChild(wrapper);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    // Gọi hàm render Mermaid Diagram nếu có trong nội dung
+    renderMermaidInContainer(msgDiv);
+}
+
+// ================================================================
+// UPLOAD & PHÂN TÍCH FILE (PDF, DOCX, TXT)
+// ================================================================
+function triggerFileUpload() {
+    requireAuthAndExecute(() => {
+        if (fileInput) {
+            fileInput.click();
+        } else {
+            showToast('❌ Không tìm thấy phần tử upload file!', 'error');
+        }
+    });
+}
+
+if (uploadBtn) {
+    uploadBtn.addEventListener('click', triggerFileUpload);
+}
+
+if (fileInput) {
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const allowedExts = ['.pdf', '.docx', '.txt'];
+        const fileName = file.name.toLowerCase();
+        const isValid = allowedExts.some(ext => fileName.endsWith(ext));
+
+        if (!isValid) {
+            showToast('❌ Chỉ hỗ trợ định dạng PDF, DOCX và TXT!', 'error');
+            fileInput.value = '';
+            return;
+        }
+
+        if (file.size > 15 * 1024 * 1024) { // Tối đa 15MB
+            showToast('❌ Dung lượng file vượt quá 15MB!', 'error');
+            fileInput.value = '';
+            return;
+        }
+
+        addMessage('user', `📁 **Đã gửi tài liệu:** ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('conversation_id', currentConversationId || '');
+        formData.append('level', levelSelect ? levelSelect.value : 'pro');
+
+        showTyping();
+        showDeepThink(0);
+
+        fetch('/api/upload_and_analyze', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            hideTyping();
+            hideDeepThink();
+            fileInput.value = '';
+
+            if (data.error) {
+                addMessage('ai', '❌ Lỗi phân tích file: ' + data.error);
+                return;
+            }
+
+            if (data.conversation_id) {
+                currentConversationId = data.conversation_id;
+                if (exportBtn) exportBtn.style.display = 'inline-block';
+            }
+
+            addMessage('ai', `📑 **Kết quả phân tích tài liệu (${file.name}):**\n\n${data.analysis || data.summary || data.message}`);
+            loadUsage();
+        })
+        .catch(err => {
+            hideTyping();
+            hideDeepThink();
+            fileInput.value = '';
+            addMessage('ai', '❌ Lỗi tải hoặc phân tích file: ' + err.message);
+        });
+    });
+}
+
+// ================================================================
 // SEND MESSAGE
 // ================================================================
 function sendMessage() {
+    if (!inputField) return;
     const text = inputField.value.trim();
     if (!text) return;
 
     if (!isLoggedIn) {
         showToast('🔒 Vui lòng đăng nhập để sử dụng chức năng này.', 'warning');
-        document.getElementById('upgradeRequired').style.display = 'block';
-        document.getElementById('upgradeRequired').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const upgradeReq = document.getElementById('upgradeRequired');
+        if (upgradeReq) {
+            upgradeReq.style.display = 'block';
+            upgradeReq.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
         return;
     }
 
     addMessage('user', text);
     inputField.value = '';
 
-    const level = levelSelect.value;
+    const level = levelSelect ? levelSelect.value : 'pro';
 
     showTyping();
     showDeepThink(0);
@@ -510,7 +644,7 @@ function sendMessage() {
         }
         if (data.conversation_id) {
             currentConversationId = data.conversation_id;
-            exportBtn.style.display = 'inline-block';
+            if (exportBtn) exportBtn.style.display = 'inline-block';
         }
         addMessage('ai', data.message || 'Đã xử lý thành công.');
         loadUsage();
@@ -519,7 +653,7 @@ function sendMessage() {
                 .then(r => r.json())
                 .then(d => {
                     const conv = d.conversations?.find(c => c.id === data.conversation_id);
-                    if (conv) chatName.textContent = conv.name || 'AI Pro';
+                    if (conv && chatName) chatName.textContent = conv.name || 'AI Pro';
                 });
         }
     })
@@ -530,32 +664,18 @@ function sendMessage() {
     });
 }
 
-sendBtn.addEventListener('click', sendMessage);
-inputField.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        sendMessage();
-    }
-});
-
-// ================================================================
-// ADD MESSAGE
-// ================================================================
-function addMessage(role, content) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'message-wrapper ' + role;
-
-    const msgDiv = document.createElement('div');
-    msgDiv.className = 'message ' + role;
-    msgDiv.innerHTML = content + `<span class="time">${new Date().toLocaleTimeString()}</span>`;
-
-    wrapper.appendChild(msgDiv);
-    chatContainer.appendChild(wrapper);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+if (inputField) {
+    inputField.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
 }
 
 // ================================================================
-// CONVERSATIONS
+// CONVERSATIONS & HISTORY
 // ================================================================
 function loadConversations() {
     fetch('/conversations')
@@ -568,11 +688,9 @@ function loadConversations() {
         .catch(() => {});
 }
 
-// ================================================================
-// HISTORY
-// ================================================================
 function loadHistory() {
     const list = document.getElementById('historyList');
+    if (!list) return;
     list.innerHTML = 'Đang tải...';
 
     fetch('/conversations')
@@ -601,20 +719,21 @@ function loadConversation(id) {
             if (data.conversation) {
                 const c = data.conversation;
                 currentConversationId = c.id;
-                chatContainer.innerHTML = '';
+                if (chatContainer) chatContainer.innerHTML = '';
                 c.messages.forEach(m => addMessage(m.role, m.content));
                 closeModal('historyModal');
-                exportBtn.style.display = 'inline-block';
-                if (c.level) {
+                if (exportBtn) exportBtn.style.display = 'inline-block';
+                if (c.level && levelSelect) {
                     levelSelect.value = c.level;
                     const name = LEVEL_NAMES[c.level] || 'AI Pro';
-                    levelBadge.textContent = name;
-                    chatName.textContent = c.name || name;
+                    if (levelBadge) levelBadge.textContent = name;
+                    if (chatName) chatName.textContent = c.name || name;
                     currentLevel = c.level;
                     loadUsage();
                 }
                 document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-                document.querySelector('.nav-item[data-tab="chat"]').classList.add('active');
+                const chatTab = document.querySelector('.nav-item[data-tab="chat"]');
+                if (chatTab) chatTab.classList.add('active');
             }
         });
 }
@@ -625,10 +744,10 @@ function deleteConversation(id) {
         .then(() => {
             if (id === currentConversationId) {
                 currentConversationId = null;
-                chatContainer.innerHTML = '';
-                exportBtn.style.display = 'none';
+                if (chatContainer) chatContainer.innerHTML = '';
+                if (exportBtn) exportBtn.style.display = 'none';
                 addMessage('ai', 'Đoạn chat mới đã được tạo. Hãy bắt đầu trò chuyện!');
-                chatName.textContent = 'AI Pro';
+                if (chatName) chatName.textContent = 'AI Pro';
             }
             loadHistory();
             loadConversations();
@@ -636,24 +755,24 @@ function deleteConversation(id) {
 }
 
 // ================================================================
-// EXPORT CHAT
+// EXPORT & SEARCH
 // ================================================================
-exportBtn.addEventListener('click', function() {
-    if (!currentConversationId) {
-        showToast('Không có đoạn chat để xuất', 'error');
-        return;
-    }
-    window.location.href = `/api/export/${currentConversationId}`;
-});
+if (exportBtn) {
+    exportBtn.addEventListener('click', function() {
+        if (!currentConversationId) {
+            showToast('Không có đoạn chat để xuất', 'error');
+            return;
+        }
+        window.location.href = `/api/export/${currentConversationId}`;
+    });
+}
 
-// ================================================================
-// SEARCH MESSAGES
-// ================================================================
 function searchMessages() {
+    if (!searchInput) return;
     const keyword = searchInput.value.trim();
     if (!keyword) {
         document.querySelectorAll('.message').forEach(el => el.style.background = '');
-        document.getElementById('searchResult').classList.remove('show');
+        document.getElementById('searchResult')?.classList.remove('show');
         return;
     }
 
@@ -674,20 +793,24 @@ function searchMessages() {
     });
 
     const resultEl = document.getElementById('searchResult');
-    resultEl.textContent = `🔍 Tìm thấy ${found} kết quả cho "${keyword}"`;
-    resultEl.classList.add('show');
-    setTimeout(() => resultEl.classList.remove('show'), 4000);
+    if (resultEl) {
+        resultEl.textContent = `🔍 Tìm thấy ${found} kết quả cho "${keyword}"`;
+        resultEl.classList.add('show');
+        setTimeout(() => resultEl.classList.remove('show'), 4000);
+    }
 }
 
-searchInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        searchMessages();
-    }
-});
+if (searchInput) {
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchMessages();
+        }
+    });
+}
 
 // ================================================================
-// UPGRADE
+// UPGRADE & PAYMENT
 // ================================================================
 function upgradeTier(tier) {
     if (!isLoggedIn) {
@@ -696,12 +819,7 @@ function upgradeTier(tier) {
         return;
     }
 
-    const tierNames = {
-        'pro': 'Pro',
-        'plus': 'Plus',
-        'pro3': '3.0 Pro'
-    };
-
+    const tierNames = { 'pro': 'Pro', 'plus': 'Plus', 'pro3': '3.0 Pro' };
     if (!confirm(`Xác nhận nâng cấp lên gói ${tierNames[tier]}?`)) return;
 
     fetch('/api/upgrade', {
@@ -713,10 +831,10 @@ function upgradeTier(tier) {
     .then(data => {
         if (data.success) {
             showToast('✅ ' + data.message, 'success');
-            levelSelect.value = tier;
+            if (levelSelect) levelSelect.value = tier;
             const name = LEVEL_NAMES[tier] || 'AI Pro';
-            levelBadge.textContent = name;
-            chatName.textContent = name;
+            if (levelBadge) levelBadge.textContent = name;
+            if (chatName) chatName.textContent = name;
             currentLevel = tier;
             loadUsage();
             closeModal('upgradeModal');
@@ -734,12 +852,7 @@ function upgradeWithMomo(tier) {
         return;
     }
 
-    const tierNames = {
-        'pro': 'Pro',
-        'plus': 'Plus',
-        'pro3': '3.0 Pro'
-    };
-
+    const tierNames = { 'pro': 'Pro', 'plus': 'Plus', 'pro3': '3.0 Pro' };
     if (!confirm(`Xác nhận nâng cấp lên gói ${tierNames[tier]} qua MoMo?`)) return;
 
     fetch('/api/payment/create', {
@@ -762,23 +875,21 @@ function upgradeWithMomo(tier) {
 }
 
 // ================================================================
-// SETTINGS
+// SETTINGS & TYPING
 // ================================================================
 function saveSettings() {
-    const darkMode = document.getElementById('darkModeToggle').checked;
-    const lang = document.getElementById('langSelect').value;
+    const darkMode = document.getElementById('darkModeToggle')?.checked;
+    const lang = document.getElementById('langSelect')?.value;
 
-    if (darkMode !== isDark) toggleTheme();
-    localStorage.setItem('tv_lang', lang);
+    if (darkMode !== undefined && darkMode !== isDark) toggleTheme();
+    if (lang) localStorage.setItem('tv_lang', lang);
 
     showToast('✅ Cài đặt đã được lưu!', 'success');
     closeModal('settingsModal');
 }
 
-// ================================================================
-// TYPING INDICATOR
-// ================================================================
 function showTyping() {
+    if (!chatContainer) return;
     const typing = document.createElement('div');
     typing.className = 'typing-indicator';
     typing.id = 'typingIndicator';
@@ -794,13 +905,15 @@ function hideTyping() {
 }
 
 // ================================================================
-// TOOLBAR FUNCTIONS (CÓ KIỂM TRA ĐĂNG NHẬP)
+// TOOLBAR FUNCTIONS
 // ================================================================
-
 function requireAuthAndExecute(callback) {
     if (!isLoggedIn) {
-        document.getElementById('upgradeRequired').style.display = 'block';
-        document.getElementById('upgradeRequired').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const upgradeReq = document.getElementById('upgradeRequired');
+        if (upgradeReq) {
+            upgradeReq.style.display = 'block';
+            upgradeReq.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
         showToast('🔒 Vui lòng đăng nhập để sử dụng chức năng này.', 'warning');
         return;
     }
@@ -809,7 +922,7 @@ function requireAuthAndExecute(callback) {
 
 function useMultiAI() {
     requireAuthAndExecute(() => {
-        const text = inputField.value.trim();
+        const text = inputField ? inputField.value.trim() : '';
         if (!text) {
             showToast('Vui lòng nhập câu hỏi!', 'error');
             return;
@@ -842,7 +955,7 @@ function useMultiAI() {
 
 function summarizeText() {
     requireAuthAndExecute(() => {
-        const text = inputField.value.trim();
+        const text = inputField ? inputField.value.trim() : '';
         if (!text) {
             showToast('Vui lòng nhập văn bản cần tóm tắt!', 'error');
             return;
@@ -870,7 +983,7 @@ function summarizeText() {
 
 function translateText() {
     requireAuthAndExecute(() => {
-        const text = inputField.value.trim();
+        const text = inputField ? inputField.value.trim() : '';
         if (!text) {
             showToast('Vui lòng nhập văn bản cần dịch!', 'error');
             return;
@@ -900,7 +1013,7 @@ function translateText() {
 
 function generateVideo() {
     requireAuthAndExecute(() => {
-        const text = inputField.value.trim();
+        const text = inputField ? inputField.value.trim() : '';
         if (!text) {
             showToast('Vui lòng nhập mô tả video!', 'error');
             return;
@@ -930,7 +1043,7 @@ function generateVideo() {
 
 function analyzeData() {
     requireAuthAndExecute(() => {
-        const text = inputField.value.trim();
+        const text = inputField ? inputField.value.trim() : '';
         if (!text) {
             showToast('Vui lòng nhập văn bản hoặc số cần phân tích!', 'error');
             return;
@@ -980,7 +1093,7 @@ function analyzeData() {
 
 function generateMusicWithLyrics() {
     requireAuthAndExecute(() => {
-        const text = inputField.value.trim();
+        const text = inputField ? inputField.value.trim() : '';
         if (!text) {
             showToast('Vui lòng nhập mô tả bài hát!', 'error');
             return;
@@ -1025,19 +1138,19 @@ function generateMusicWithLyrics() {
 
 function clearAllMessages() {
     if (!confirm('Xóa toàn bộ tin nhắn trong chat hiện tại?')) return;
-    chatContainer.innerHTML = '';
+    if (chatContainer) chatContainer.innerHTML = '';
     addMessage('ai', '🗑️ Chat đã được xóa. Hãy bắt đầu trò chuyện mới!');
     currentConversationId = null;
-    exportBtn.style.display = 'none';
+    if (exportBtn) exportBtn.style.display = 'none';
 }
 
 // ================================================================
 // INIT
 // ================================================================
 checkLogin();
-inputField.focus();
+if (inputField) inputField.focus();
 
-// Auto-refresh usage every 60 seconds
+// Tự động làm mới dữ liệu lượt dùng mỗi 60 giây
 setInterval(() => {
     if (isLoggedIn) loadUsage();
 }, 60000);
@@ -1046,7 +1159,5 @@ if (typeof io !== 'undefined') {
     initSocket();
 }
 
-console.log('🚀 T.VỸ-AI-SUPREME v11.0 đã sẵn sàng!');
+console.log('🚀 T.VỸ-AI-SUPREME v12.0: Đã tích hợp Mermaid Diagram & Upload File!');
 console.log('📌 Bản quyền: T.VỸ-VIP-FILE');
-console.log('🔐 Hệ thống đăng nhập OAuth đã được tích hợp');
-console.log('👤 Chế độ Khách: các chức năng bị giới hạn');

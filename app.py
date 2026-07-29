@@ -564,6 +564,33 @@ def delete_conversation(conv_id):
     delete_conversation_by_id(conv_id, user_id)
     return jsonify({"success": True})
 
+from backend.core.document_parser import DocumentParser
+
+@app.route('/upload_doc', methods=['POST'])
+def upload_doc():
+    if 'file' not in request.files:
+        return jsonify({"error": "Không tìm thấy file"}), 400
+        
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "Tên file rỗng"}), 400
+        
+    try:
+        file_bytes = file.read()
+        extracted_text = DocumentParser.parse_file(file.filename, file_bytes)
+        
+        # Cắt tối đa 6000 ký tự đầu tiên để tránh bị quá tải Token
+        if len(extracted_text) > 6000:
+            extracted_text = extracted_text[:6000] + "\n\n[... Đã tự động cắt bớt phần còn lại của tài liệu để tiết kiệm bộ nhớ ...]"
+            
+        return jsonify({
+            "success": True,
+            "filename": file.filename,
+            "content": extracted_text
+        })
+    except Exception as e:
+        return jsonify({"error": f"Lỗi xử lý file: {str(e)}"}), 500
+
 # ================================================================
 # MUSIC ROUTES
 # ================================================================

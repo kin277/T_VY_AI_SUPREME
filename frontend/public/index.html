@@ -16,6 +16,18 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
 
+    <!-- Mermaid.js Render Sơ Đồ Trực Quan -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            mermaid.initialize({ 
+                startOnLoad: false, 
+                theme: 'dark',
+                securityLevel: 'loose' 
+            });
+        });
+    </script>
+
     <style>
         /* ===== MODERN DESIGN SYSTEM & VARIABLES ===== */
         :root {
@@ -723,13 +735,13 @@
             position: relative;
             word-wrap: break-word;
             box-shadow: var(--shadow-sm);
-            white-space: pre-wrap;
         }
 
         .message.user {
             background: var(--accent-gradient);
             color: #ffffff;
             border-top-right-radius: 4px;
+            white-space: pre-wrap;
         }
 
         .message.ai {
@@ -747,11 +759,23 @@
             text-align: right;
         }
 
+        /* Mermaid Container Styling */
+        .mermaid {
+            background: var(--bg-glass);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            margin: 12px 0;
+            overflow-x: auto;
+            display: flex;
+            justify-content: center;
+        }
+
         /* ===== TOOLBAR ===== */
         .toolbar {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             padding: 8px 24px;
             background: transparent;
             position: relative;
@@ -840,6 +864,38 @@
         .input-wrapper {
             padding: 0 24px 20px 24px;
             background: transparent;
+        }
+
+        .file-preview-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .file-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-highlight);
+            padding: 6px 12px;
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            color: var(--text-main);
+            animation: fadeIn 0.2s ease;
+        }
+
+        .file-badge .remove-file {
+            cursor: pointer;
+            color: #ef4444;
+            font-weight: bold;
+            font-size: 13px;
+            transition: var(--transition);
+        }
+
+        .file-badge .remove-file:hover {
+            opacity: 0.8;
         }
 
         .input-area {
@@ -1160,9 +1216,9 @@
                     <p>Hệ thống AI thế hệ mới nâng cao năng suất, sáng tạo nội dung, lập trình và hỗ trợ công việc đa nhiệm vượt trội.</p>
                     
                     <div class="suggestion-cards">
-                        <div class="suggestion-card" onclick="setInputAndSend('Lập trình một ứng dụng web cơ bản bằng HTML/CSS JS')">
-                            <div class="title"><i class="fa-solid fa-code" style="color:#6366f1;"></i> Viết mã nguồn</div>
-                            <div class="desc">Tạo ứng dụng web cơ bản đầy đủ tính năng</div>
+                        <div class="suggestion-card" onclick="setInputAndSend('Vẽ sơ đồ quy trình xử lý đơn hàng bằng Mermaid JS')">
+                            <div class="title"><i class="fa-solid fa-diagram-project" style="color:#6366f1;"></i> Vẽ sơ đồ Mermaid</div>
+                            <div class="desc">Tạo sơ đồ luồng/quy trình trực quan</div>
                         </div>
                         <div class="suggestion-card" onclick="setInputAndSend('Sáng tạo kịch bản video ngắn thu hút về trí tuệ nhân tạo')">
                             <div class="title"><i class="fa-solid fa-pen-nib" style="color:#a855f7;"></i> Sáng tạo nội dung</div>
@@ -1190,10 +1246,17 @@
                         <button class="danger" onclick="clearAllMessages()"><i class="fa-solid fa-trash"></i> Xóa toàn bộ chat</button>
                     </div>
                 </div>
+
+                <!-- NÚT UPLOAD FILE TRÊN TOOLBAR -->
+                <button class="menu-btn" onclick="document.getElementById('fileUploadInput').click()">
+                    <i class="fa-solid fa-paperclip" style="color:var(--accent-primary);"></i> Tải file
+                </button>
+                <input type="file" id="fileUploadInput" style="display:none" onchange="handleFileUpload(event)" multiple />
             </div>
 
             <!-- Input Area -->
             <div class="input-wrapper">
+                <div id="filePreviewArea" class="file-preview-area"></div>
                 <div class="input-area">
                     <input type="text" id="inputField" placeholder="Hỏi T.VỸ-AI bất kỳ điều gì..." />
                     <button class="send-btn" id="sendBtn" title="Gửi tin nhắn"><i class="fa-solid fa-paper-plane"></i></button>
@@ -1370,7 +1433,7 @@
         }
 
         // ================================================================
-        // DOM ELEMENTS
+        // DOM ELEMENTS & STATE
         // ================================================================
         const chatContainer = document.getElementById('chatContainer');
         const inputField = document.getElementById('inputField');
@@ -1387,7 +1450,6 @@
         const userName = document.getElementById('userName');
         const userStatus = document.getElementById('userStatus');
 
-        // ===== STATE =====
         let currentConversationId = null;
         let currentLevel = 'pro';
         let isDark = true;
@@ -1395,7 +1457,8 @@
         let userData = null;
         let socket = null;
         let sessionTimer = null;
-        const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 giờ
+        let attachedFiles = []; // Danh sách file đang đính kèm
+        const SESSION_TIMEOUT = 24 * 60 * 60 * 1000;
 
         const LEVEL_NAMES = {
             basic: 'AI Thường',
@@ -1403,6 +1466,60 @@
             plus: 'AI Plus',
             pro3: 'AI 3.0 Pro'
         };
+
+        // ================================================================
+        // FILE UPLOAD HANDLING
+        // ================================================================
+        function handleFileUpload(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    attachedFiles.push({
+                        name: file.name,
+                        size: (file.size / 1024).toFixed(1) + ' KB',
+                        type: file.type,
+                        content: e.target.result
+                    });
+                    renderFilePreview();
+                };
+
+                // Đọc text đối với file văn bản, hoặc dataURL với file hình
+                if (file.type.startsWith('image/')) {
+                    reader.readAsDataURL(file);
+                } else {
+                    reader.readAsText(file);
+                }
+            });
+
+            event.target.value = ''; // Reset input file
+            showToast('📎 Đã đính kèm file thành công!', 'success');
+        }
+
+        function removeAttachedFile(index) {
+            attachedFiles.splice(index, 1);
+            renderFilePreview();
+        }
+
+        function renderFilePreview() {
+            const area = document.getElementById('filePreviewArea');
+            if (!area) return;
+
+            if (attachedFiles.length === 0) {
+                area.innerHTML = '';
+                return;
+            }
+
+            area.innerHTML = attachedFiles.map((f, i) => `
+                <div class="file-badge">
+                    <i class="fa-solid fa-file-lines" style="color:var(--accent-primary);"></i>
+                    <span>${escapeHTML(f.name)} (${f.size})</span>
+                    <span class="remove-file" onclick="removeAttachedFile(${i})">✕</span>
+                </div>
+            `).join('');
+        }
 
         // ================================================================
         // UI HELPERS
@@ -1505,12 +1622,8 @@
             }, SESSION_TIMEOUT);
         }
 
-        document.addEventListener('click', () => {
-            if (isLoggedIn) checkSessionTimeout();
-        });
-        document.addEventListener('keydown', () => {
-            if (isLoggedIn) checkSessionTimeout();
-        });
+        document.addEventListener('click', () => { if (isLoggedIn) checkSessionTimeout(); });
+        document.addEventListener('keydown', () => { if (isLoggedIn) checkSessionTimeout(); });
 
         function showToast(message, type = 'info') {
             const existing = document.querySelector('.toast-message');
@@ -1540,11 +1653,16 @@
                 document.documentElement.setAttribute('data-theme', 'light');
                 themeToggle.innerHTML = lightIcon;
             }
+
+            if (window.mermaid) {
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: isDark ? 'dark' : 'default'
+                });
+            }
             
             const darkModeCheckbox = document.getElementById('darkModeToggle');
-            if (darkModeCheckbox) {
-                darkModeCheckbox.checked = isDark;
-            }
+            if (darkModeCheckbox) darkModeCheckbox.checked = isDark;
             
             localStorage.setItem('tv_theme', isDark ? 'dark' : 'light');
         }
@@ -1623,11 +1741,7 @@
                 })
                 .catch((error) => {
                     console.error('Google login error:', error);
-                    if (error.code === 'auth/popup-closed-by-user') {
-                        showToast('⚠️ Bạn đã đóng cửa sổ đăng nhập', 'error');
-                    } else {
-                        showToast('❌ Lỗi: ' + error.message, 'error');
-                    }
+                    showToast('❌ Lỗi: ' + error.message, 'error');
                 });
         }
 
@@ -1773,8 +1887,8 @@
         }
 
         function sendMessage() {
-            const text = inputField.value.trim();
-            if (!text) return;
+            let text = inputField.value.trim();
+            if (!text && attachedFiles.length === 0) return;
 
             if (!isLoggedIn) {
                 showToast('🔒 Vui lòng đăng nhập để sử dụng chức năng này.', 'warning');
@@ -1786,8 +1900,17 @@
             const hero = document.getElementById('welcomeHero');
             if (hero) hero.style.display = 'none';
 
-            addMessage('user', text);
+            // Ghép thông tin file vào câu hỏi nếu có đính kèm
+            let fullPrompt = text;
+            if (attachedFiles.length > 0) {
+                const filesContext = attachedFiles.map(f => `[File đính kèm: ${f.name}]\n${f.content}`).join('\n\n');
+                fullPrompt = (text ? text + '\n\n' : '') + filesContext;
+            }
+
+            addMessage('user', text + (attachedFiles.length > 0 ? `\n📎 [Đã gửi ${attachedFiles.length} file đính kèm]` : ''));
             inputField.value = '';
+            attachedFiles = [];
+            renderFilePreview();
 
             const level = levelSelect.value;
 
@@ -1802,7 +1925,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    message: text,
+                    message: fullPrompt,
                     conversation_id: currentConversationId,
                     level: level
                 })
@@ -1849,6 +1972,9 @@
             }
         });
 
+        // ================================================================
+        // RENDER MESSAGE & MERMAID DIAGRAMS
+        // ================================================================
         function addMessage(role, content) {
             const hero = document.getElementById('welcomeHero');
             if (hero) hero.style.display = 'none';
@@ -1863,13 +1989,44 @@
             const msgDiv = document.createElement('div');
             msgDiv.className = 'message ' + role;
             
-            // Render text hoặc HTML nội dung một cách an toàn
-            msgDiv.innerHTML = escapeHTML(content).replace(/\n/g, '<br>') + `<span class="time">${new Date().toLocaleTimeString()}</span>`;
+            if (role === 'ai') {
+                // Kiểm tra đoạn mã mermaid trong phản hồi AI
+                const mermaidRegex = /```mermaid\s*([\s\S]*?)\s*```/g;
+                let hasMermaid = false;
+                
+                let processedContent = escapeHTML(content);
+                
+                // Un-escape khối mermaid để render
+                processedContent = content.replace(mermaidRegex, function(match, code) {
+                    hasMermaid = true;
+                    return `<div class="mermaid">${code.trim()}</div>`;
+                });
+
+                if (!hasMermaid) {
+                    processedContent = escapeHTML(content).replace(/\n/g, '<br>');
+                } else {
+                    processedContent = processedContent.replace(/\n/g, '<br>');
+                }
+
+                msgDiv.innerHTML = processedContent + `<span class="time">${new Date().toLocaleTimeString()}</span>`;
+            } else {
+                msgDiv.innerHTML = escapeHTML(content).replace(/\n/g, '<br>') + `<span class="time">${new Date().toLocaleTimeString()}</span>`;
+            }
 
             wrapper.appendChild(avatar);
             wrapper.appendChild(msgDiv);
             chatContainer.appendChild(wrapper);
             chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // Chạy Render Mermaid Sơ đồ trực quan nếu có
+            if (role === 'ai' && window.mermaid) {
+                const mermaidNodes = msgDiv.querySelectorAll('.mermaid');
+                if (mermaidNodes.length > 0) {
+                    setTimeout(() => {
+                        mermaid.run({ nodes: mermaidNodes });
+                    }, 50);
+                }
+            }
         }
 
         function loadConversations() {
@@ -2333,9 +2490,9 @@
                     <p>Hệ thống AI thế hệ mới nâng cao năng suất, sáng tạo nội dung, lập trình và hỗ trợ công việc đa nhiệm vượt trội.</p>
                     
                     <div class="suggestion-cards">
-                        <div class="suggestion-card" onclick="setInputAndSend('Lập trình một ứng dụng web cơ bản bằng HTML/CSS JS')">
-                            <div class="title"><i class="fa-solid fa-code" style="color:#6366f1;"></i> Viết mã nguồn</div>
-                            <div class="desc">Tạo ứng dụng web cơ bản đầy đủ tính năng</div>
+                        <div class="suggestion-card" onclick="setInputAndSend('Vẽ sơ đồ quy trình xử lý đơn hàng bằng Mermaid JS')">
+                            <div class="title"><i class="fa-solid fa-diagram-project" style="color:#6366f1;"></i> Vẽ sơ đồ Mermaid</div>
+                            <div class="desc">Tạo sơ đồ luồng/quy trình trực quan</div>
                         </div>
                         <div class="suggestion-card" onclick="setInputAndSend('Sáng tạo kịch bản video ngắn thu hút về trí tuệ nhân tạo')">
                             <div class="title"><i class="fa-solid fa-pen-nib" style="color:#a855f7;"></i> Sáng tạo nội dung</div>

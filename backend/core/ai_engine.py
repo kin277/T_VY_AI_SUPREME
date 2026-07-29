@@ -3,9 +3,11 @@
 AI ENGINE CORE - SIÊU TRÍ TUỆ (NHƯ CLAUDE)
 ====================================================================
 Bản quyền: T.VỸ-VIP-FILE
-Phiên bản: 12.0.0
+Phiên bản: 12.5.0 (Đã nâng cấp Bộ kiểm định & Phân loại File)
 ====================================================================
 Tính năng nâng cấp:
+- File Classifier & Validator: Kiểm tra an toàn, loại bỏ file nguy hiểm (.env, .exe, .sh)
+- Multi-format Support: Xử lý nội dung từ Văn bản, Mã nguồn và Hình ảnh
 - Context Memory: Nhớ ngữ cảnh cuộc trò chuyện
 - Chain of Thought: Suy nghĩ từng bước trước khi trả lời
 - Deep Analysis: Phân tích sâu, có cấu trúc
@@ -14,16 +16,82 @@ Tính năng nâng cấp:
 ====================================================================
 """
 
+import os
 import re
 import json
 import random
 import datetime
-from typing import Dict, Any, Optional, List
+import mimetypes
+from typing import Dict, Any, Optional, List, Tuple
 from collections import defaultdict
 
 from .ethics_guard import EthicsGuard
 from .claude_engine import ClaudeEngine
 from config.levels import LEVEL_CONFIG
+
+
+class FileClassifier:
+    """Bộ kiểm định và phân loại File tự động trước khi gửi vào AI"""
+    def __init__(self, max_size_mb: int = 15):
+        self.max_size_bytes = max_size_mb * 1024 * 1024
+        
+        # Danh sách whitelist mở rộng
+        self.allowed_extensions = {
+            # Văn bản & Tài liệu
+            '.txt', '.pdf', '.docx', '.md', '.csv', '.json',
+            # Hình ảnh
+            '.png', '.jpg', '.jpeg', '.webp',
+            # Mã nguồn
+            '.py', '.js', '.ts', '.html', '.css', '.cpp', '.c', '.java'
+        }
+        
+        # Danh sách đen bắt buộc chặn vì lý do bảo mật
+        self.blacklisted_files = {'.env', '.gitignore', '.git', 'config.json', 'settings.py'}
+        self.blacklisted_extensions = {'.exe', '.bat', '.sh', '.dll', '.so', '.bin', '.zip', '.rar', '.7z'}
+
+    def classify_and_validate(self, file_path: str) -> Tuple[bool, str, Dict[str, Any]]:
+        """Kiểm tra tính hợp lệ và phân loại file"""
+        if not os.path.exists(file_path):
+            return False, "FILE_NOT_FOUND", {"reason": "File không tồn tại trên hệ thống."}
+
+        filename = os.path.basename(file_path)
+        _, ext = os.path.splitext(filename)
+        ext = ext.lower()
+
+        # 1. Kiểm tra file hệ thống nhạy cảm hoặc đuôi thực thi nguy hiểm
+        if filename in self.blacklisted_files or ext in self.blacklisted_extensions:
+            return False, "FILE_REJECTED_SECURITY", {
+                "reason": f"File '{filename}' bị từ chối do thuộc danh sách cấm bảo mật."
+            }
+
+        # 2. Kiểm tra Extension
+        if ext not in self.allowed_extensions:
+            return False, "FILE_REJECTED_UNSUPPORTED", {
+                "reason": f"Định dạng file '{ext}' hiện chưa được hỗ trợ."
+            }
+
+        # 3. Kiểm tra Kích thước File
+        file_size = os.path.getsize(file_path)
+        if file_size > self.max_size_bytes:
+            return False, "FILE_REJECTED_SIZE", {
+                "reason": f"Kích thước file ({file_size / (1024*1024):.2f}MB) vượt quá giới hạn ({self.max_size_bytes / (1024*1024)}MB)."
+            }
+
+        # 4. Phân loại loại File
+        mime_type, _ = mimetypes.guess_type(file_path)
+        category = "DOCUMENT"
+        if ext in {'.png', '.jpg', '.jpeg', '.webp'}:
+            category = "IMAGE"
+        elif ext in {'.py', '.js', '.ts', '.html', '.css', '.cpp', '.c', '.java'}:
+            category = "CODE"
+
+        return True, "FILE_ALLOWED", {
+            "filename": filename,
+            "extension": ext,
+            "category": category,
+            "mime_type": mime_type,
+            "size_bytes": file_size
+        }
 
 
 class AIEngine:
@@ -36,6 +104,7 @@ class AIEngine:
         self.user_id = None
         self.thinking_steps = []  # Lưu các bước suy nghĩ
         self.claude_engine = ClaudeEngine()
+        self.file_classifier = FileClassifier(max_size_mb=15)
 
         # Cấu hình theo cấp độ
         self.config = {
@@ -45,14 +114,40 @@ class AIEngine:
             "pro3": {"max_tokens": 2000, "enable_thinking": True, "enable_context": True}
         }
 
-    def process(self, query: str, user_id: str = None) -> Dict[str, Any]:
-        """Xử lý câu hỏi với kiểm tra đạo đức và suy nghĩ sâu"""
+    def process(self, query: str, file_path: Optional[str] = None, user_id: str = None) -> Dict[str, Any]:
+        """Xử lý câu hỏi kết hợp với kiểm tra file đính kèm và kiểm tra đạo đức"""
         self.user_id = user_id
-        query = query.strip()
-        if not query:
-            return {"error": "Câu hỏi trống"}
+        query = query.strip() if query else ""
 
-        # 1. KIỂM TRA ĐẠO ĐỨC
+        # 1. KIỂM TRA VÀ XỬ LÝ FILE ĐÍNH KÈM (NẾU CÓ)
+        file_content_prompt = ""
+        if file_path:
+            is_allowed, status, file_info = self.file_classifier.classify_and_validate(file_path)
+            if not is_allowed:
+                return {
+                    "type": "error",
+                    "message": f"❌ **Tải file thất bại:** {file_info['reason']}"
+                }
+
+            # Đọc dữ liệu văn bản/mã nguồn nếu file thuộc nhóm hỗ trợ đọc
+            if file_info["category"] in ["DOCUMENT", "CODE"]:
+                try:
+                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read(6000)  # Tối đa 6000 ký tự đầu
+                        file_content_prompt = f"\n\n[NỘI DUNG FILE ĐÍNH KÈM ({file_info['filename']})]:\n{content}"
+                except Exception as e:
+                    file_content_prompt = f"\n\n[Lỗi đọc nội dung file: {str(e)}]"
+            elif file_info["category"] == "IMAGE":
+                file_content_prompt = f"\n\n[NGƯỜI DÙNG ĐÃ TẢI LÊN MỘT HÌNH ẢNH: {file_info['filename']}]"
+
+        # Nếu không gửi query nhưng gửi file, tự động gán query mặc định
+        if not query and file_path:
+            query = "Hãy phân tích nội dung file đính kèm giúp tôi."
+
+        if not query and not file_path:
+            return {"error": "Câu hỏi hoặc file không được để trống"}
+
+        # 2. KIỂM TRA ĐẠO ĐỨC
         ethics_check = self.ethics.validate(query)
         if not ethics_check["allowed"]:
             return {
@@ -61,32 +156,33 @@ class AIEngine:
                 "details": ethics_check["reason"]
             }
 
-        # 2. NẠP NGỮ CẢNH TỪ LỊCH SỬ (nếu có user_id)
+        # 3. NẠP NGỮ CẢNH TỪ LỊCH SỬ
         if user_id:
             self._load_context(user_id)
 
-        # 3. THÊM CÂU HỎI VÀO NGỮ CẢNH
-        self.context.append({"role": "user", "content": query, "time": datetime.datetime.now().isoformat()})
+        # 4. LƯU VÀO LỊCH SỬ CHAT
+        full_user_input = query + file_content_prompt
+        self.context.append({"role": "user", "content": full_user_input, "time": datetime.datetime.now().isoformat()})
         if len(self.context) > self.max_context:
             self.context = self.context[-self.max_context:]
 
-        # 4. SUY NGHĨ TỪNG BƯỚC (Chain of Thought) - Chỉ cho Plus và Pro3
+        # 5. SUY NGHĨ TỪNG BƯỚC (Chain of Thought)
         if self.config[self.level]["enable_thinking"]:
             self.thinking_steps = self._think(query)
         else:
             self.thinking_steps = []
 
-        # 5. PHÂN LOẠI Ý ĐỊNH
+        # 6. PHÂN LOẠI Ý ĐỊNH
         intent = self.classify_intent(query)
 
-        # 6. XỬ LÝ THEO INTENT
-        result = self._handle_by_intent(query, intent)
+        # 7. XỬ LÝ THEO INTENT
+        result = self._handle_by_intent(full_user_input, intent)
 
-        # 7. LƯU NGỮ CẢNH (nếu có user_id)
+        # 8. LƯU NGỮ CẢNH
         if user_id:
             self._save_context(user_id)
 
-        # 8. THÊM QUÁ TRÌNH SUY NGHĨ VÀO KẾT QUẢ (nếu có)
+        # 9. ĐÍNH KÈM SUY NGHĨ (NẾU CÓ)
         if self.thinking_steps:
             result["thinking"] = self.thinking_steps
 
@@ -95,32 +191,18 @@ class AIEngine:
     def _think(self, query: str) -> List[str]:
         """Quá trình suy nghĩ từng bước (Chain of Thought)"""
         steps = []
-        q = query.lower()
-
-        # Bước 1: Hiểu câu hỏi
         steps.append(f"🔍 Phân tích câu hỏi: '{query[:50]}...'")
-
-        # Bước 2: Xác định chủ đề
         topics = self._detect_topics(query)
         if topics:
             steps.append(f"📚 Chủ đề liên quan: {', '.join(topics[:3])}")
-
-        # Bước 3: Kiểm tra kiến thức đã học
         learned = self._get_learned_knowledge(query)
         if learned:
             steps.append(f"🧠 Đã có kiến thức từ trước về chủ đề này")
-
-        # Bước 4: Đánh giá độ phức tạp
         complexity = self._assess_complexity(query)
         steps.append(f"📊 Độ phức tạp: {complexity}")
-
-        # Bước 5: Quyết định cách tiếp cận
         approach = self._decide_approach(query)
         steps.append(f"💡 Cách tiếp cận: {approach}")
-
-        # Bước 6: Tổng hợp câu trả lời
         steps.append(f"✅ Đang tổng hợp câu trả lời...")
-
         return steps
 
     def _detect_topics(self, query: str) -> List[str]:
@@ -148,7 +230,7 @@ class AIEngine:
         return topics if topics else ["Tổng hợp"]
 
     def _get_learned_knowledge(self, query: str) -> bool:
-        """Kiểm tra đã có kiến thức về chủ đề này chưa"""
+        """Kiểm tra kiến thức đã học"""
         if not self.user_id:
             return False
         q = query.lower()
@@ -160,24 +242,14 @@ class AIEngine:
     def _assess_complexity(self, query: str) -> str:
         """Đánh giá bản chất câu hỏi dựa trên ngữ nghĩa và độ phức tạp"""
         q = query.lower()
-        
-        # 1. Các dấu hiệu câu hỏi CHUNG CHUNG / MƠ HỒ
-        vague_keywords = [
-            "là gì", "thế nào", "tất cả", "tổng quan", "chia sẻ đi", 
-            "tư vấn đi", "nói về", "giới thiệu", "gì đó", "sao đây"
-        ]
+        vague_keywords = ["là gì", "thế nào", "tất cả", "tổng quan", "chia sẻ đi", "tư vấn đi", "nói về", "giới thiệu"]
         if any(k in q for k in vague_keywords) and len(q.split()) <= 6:
             return "Chung chung"
 
-        # 2. Các dấu hiệu câu hỏi PHỨC TẠP / KHÓ (Cần suy nghĩ sâu)
-        complex_keywords = [
-            "tại sao", "giải thích chi tiết", "phân tích", "so sánh", "ưu nhược điểm",
-            "tối ưu", "xây dựng hệ thống", "thuật toán", "kiến trúc", "nguyên lý"
-        ]
+        complex_keywords = ["tại sao", "giải thích chi tiết", "phân tích", "so sánh", "ưu nhược điểm", "tối ưu", "xây dựng hệ thống", "thuật toán", "kiến trúc"]
         if any(k in q for k in complex_keywords) or len(q.split()) > 20:
             return "Phức tạp (Cần suy nghĩ)"
 
-        # 3. Còn lại rơi vào Trung bình / Đơn giản
         return "Trung bình"
 
     def _decide_approach(self, query: str) -> str:
@@ -196,8 +268,6 @@ class AIEngine:
     def classify_intent(self, query: str) -> str:
         """Phân loại ý định nâng cao"""
         q = query.lower()
-
-        # Phân loại chi tiết hơn
         if any(k in q for k in ["code", "lập trình", "viết code", "function", "class", "def"]):
             return "code"
         if any(k in q for k in ["ảnh", "hình ảnh", "draw", "paint", "vẽ", "design", "hình"]):
@@ -206,11 +276,11 @@ class AIEngine:
             return "music"
         if any(k in q for k in ["tìm", "search", "google", "tra cứu", "thông tin", "kiến thức"]):
             return "web_search"
-        if any(k in q for k in ["tư vấn", "hướng dẫn", "cách", "làm thế nào", "advice", "lời khuyên"]):
+        if any(k in q for k in ["tư vấn", "hướng dẫn", "cách", "làm thế nào", "advice"]):
             return "advice"
         if any(k in q for k in ["tại sao", "giải thích", "phân tích", "so sánh", "vì sao"]):
             return "analysis"
-        if any(k in q for k in ["viết", "sáng tác", "tạo", "làm", "thiết kế", "xây dựng"]):
+        if any(k in q for k in ["viết", "sáng tác", "tạo", "thiết kế", "xây dựng"]):
             return "creative"
         if any(k in q for k in ["dịch", "translate", "ngôn ngữ"]):
             return "translate"
@@ -236,10 +306,8 @@ class AIEngine:
     # ================================================================
 
     def handle_general(self, query: str) -> Dict[str, Any]:
-        """Xử lý câu hỏi tổng quát với suy nghĩ sâu"""
         context_text = self._get_context_summary()
         response = self._generate_intelligent_response(query, context_text)
-
         return {
             "type": "chat",
             "message": response,
@@ -248,257 +316,73 @@ class AIEngine:
         }
 
     def handle_code(self, query: str) -> Dict[str, Any]:
-        """Xử lý tạo code thông minh"""
-        lang = self._detect_language(query)
-        task = self._detect_task(query)
-
+        context_text = self._get_context_summary()
+        response = self._generate_intelligent_response(query, context_text)
         return {
             "type": "code",
-            "message": f"""
-💻 **Tôi sẽ giúp bạn viết code {lang}**
-
-📌 **Yêu cầu:** {query}
-
-🔧 **Ngôn ngữ:** {lang}
-📋 **Chức năng:** {task}
-
-📝 **Code mẫu:**
-
-```{lang}
-# Code được tạo bởi T.VỸ-AI-SUPREME
-# ============================================
-
-def main():
-    # TODO: Thêm logic của bạn vào đây
-    print("Hello, World!")
-
-if __name__ == "__main__":
-    main()
-    
-    💡 Gợi ý: Hãy cho tôi biết chi tiết hơn về chức năng bạn cần để tôi tạo code chính xác hơn.
-    """
+            "message": response
         }
 
     def handle_image(self, query: str) -> Dict[str, Any]:
-        """Xử lý tạo ảnh"""
         desc = self._analyze_image_prompt(query)
         style = self._detect_style(query)
-
         return {
             "type": "image",
-            "message": f"""
-🎨 **Tạo ảnh theo yêu cầu**
-
-📝 **Mô tả:** {query}
-
-🔍 **Phân tích:** {desc}
-
-🖌️ **Phong cách:** {style}
-
-✨ Tôi sẽ tạo ảnh dựa trên mô tả của bạn. Quá trình này có thể mất vài giây.
-
-💡 **Lưu ý:** Để có ảnh đẹp nhất, hãy mô tả chi tiết về:
-- Chủ đề chính
-- Màu sắc và ánh sáng
-- Phong cách (hiện đại, cổ điển, hoạt hình, v.v.)
-- Các chi tiết đặc biệt
-"""
+            "message": f"🎨 **Tạo ảnh theo yêu cầu**\n\n📝 **Mô tả:** {query}\n🔍 **Phân tích:** {desc}\n🖌️ **Phong cách:** {style}"
         }
 
     def handle_music(self, query: str) -> Dict[str, Any]:
-        """Xử lý tạo nhạc"""
         genre = self._detect_genre(query)
         mood = self._detect_mood(query)
         lyrics = self._generate_lyrics(query, genre, mood)
-
         return {
             "type": "music",
-            "message": f"""
-🎵 **Tạo nhạc theo yêu cầu**
-
-📝 **Mô tả:** {query}
-
-🎶 **Thể loại:** {genre}
-🎭 **Tâm trạng:** {mood}
-
-🎤 **Lời bài hát:**
-
-{lyrics}
-
-💡 **Gợi ý:** Bạn có thể yêu cầu tôi:
-- Tạo lời bài hát theo chủ đề khác
-- Đề xuất giai điệu
-- Phân tích cấu trúc bài hát
-"""
+            "message": f"🎵 **Tạo nhạc theo yêu cầu**\n\n🎶 **Thể loại:** {genre}\n🎭 **Tâm trạng:** {mood}\n\n🎤 **Lời bài hát:**\n{lyrics}"
         }
 
     def _generate_lyrics(self, query: str, genre: str, mood: str) -> str:
-        """Tạo lời bài hát động theo yêu cầu"""
         keywords = query.split()[:3]
         topic = " ".join(keywords) if keywords else "tình yêu"
-
-        lyrics_templates = {
-            "Pop": f"""
-Verse 1:
-Em là ánh sáng trong đêm tối
-{topic} mang đến bao điều mới
-Pre-chorus:
-Tình yêu như cơn gió thoáng qua
-Chorus:
-Ta sẽ mãi bên nhau dù bão giông
-{topic} mãi trong tim này
-""",
-            "Rock": f"""
-Verse 1:
-Rise up and fight for what you believe
-{topic} is the fire inside
-Pre-chorus:
-Breaking through the walls of fear
-Chorus:
-We will never fall, we will stand tall
-{topic} will guide us all
-""",
-            "Ballad": f"""
-Verse 1:
-Ngày tháng trôi qua thật nhẹ nhàng
-{topic} như giấc mơ dịu dàng
-Pre-chorus:
-Nỗi nhớ về em không phai
-Chorus:
-Tình yêu này mãi trong tim
-{topic} sẽ không bao giờ phai
-"""
-        }
-
-        return lyrics_templates.get(genre, lyrics_templates["Pop"])
+        return f"Verse 1:\nEm là ánh sáng trong đêm tối\n{topic} mang đến bao điều mới\n\nChorus:\nTa sẽ mãi bên nhau dù bão giông\n{topic} mãi trong tim này."
 
     def handle_web_search(self, query: str) -> Dict[str, Any]:
-        """Xử lý tìm kiếm web"""
+        context_text = self._get_context_summary()
+        response = self._generate_intelligent_response(query, context_text)
         return {
             "type": "web_search",
-            "message": f"""
-🌐 **Tìm kiếm thông tin**
-
-🔍 **Từ khóa:** "{query}"
-
-📡 Đang tìm kiếm từ các nguồn uy tín...
-
-⏳ Quá trình này có thể mất vài giây.
-
-📌 **Kết quả sẽ bao gồm:**
-- Thông tin tổng quan
-- Các nguồn tham khảo
-- Phân tích chuyên sâu
-
-💡 Bạn có thể cung cấp thêm từ khóa để tìm kiếm chính xác hơn.
-"""
+            "message": response
         }
 
     def handle_advice(self, query: str) -> Dict[str, Any]:
-        """Xử lý tư vấn"""
-        problem = self._analyze_problem(query)
-
+        context_text = self._get_context_summary()
+        response = self._generate_intelligent_response(query, context_text)
         return {
             "type": "advice",
-            "message": f"""
-💡 **Tư vấn chuyên sâu**
-
-📌 **Vấn đề:** {query}
-
-🔍 **Phân tích:** {problem}
-
-📋 **Lời khuyên:**
-
-1. **Xác định rõ mục tiêu** - Hãy biết bạn muốn gì
-2. **Lập kế hoạch cụ thể** - Chia nhỏ thành các bước
-3. **Thực hiện từng bước** - Kiên nhẫn và nhất quán
-4. **Đánh giá và điều chỉnh** - Học hỏi từ quá trình
-
-💡 Tôi có thể tư vấn thêm về:
-- Lập trình và công nghệ
-- Học tập và phát triển bản thân
-- Sáng tạo nội dung
-- Kỹ năng mềm
-"""
+            "message": response
         }
 
     def handle_analysis(self, query: str) -> Dict[str, Any]:
-        """Xử lý phân tích chuyên sâu"""
-        structure = self._analyze_structure(query)
-
+        context_text = self._get_context_summary()
+        response = self._generate_intelligent_response(query, context_text)
         return {
             "type": "analysis",
-            "message": f"""
-🔬 **Phân tích chuyên sâu**
-
-📌 **Đối tượng phân tích:** {query}
-
-📊 **Cấu trúc phân tích:**
-
-{structure}
-
-🎯 **Kết luận:**
-
-Dựa trên phân tích trên, tôi nhận thấy đây là một vấn đề đa chiều, cần được xem xét từ nhiều góc độ khác nhau.
-
-💡 **Đề xuất:** Để có phân tích sâu hơn, bạn có thể:
-- Cung cấp thêm ngữ cảnh
-- Nêu rõ các khía cạnh cần tập trung
-- Yêu cầu phân tích theo góc độ cụ thể
-"""
+            "message": response
         }
 
     def handle_creative(self, query: str) -> Dict[str, Any]:
-        """Xử lý sáng tạo nội dung"""
+        context_text = self._get_context_summary()
+        response = self._generate_intelligent_response(query, context_text)
         return {
             "type": "creative",
-            "message": f"""
-✨ **Sáng tạo nội dung**
-
-📝 **Yêu cầu:** {query}
-
-🎨 **Phong cách sáng tạo:**
-
-Tôi sẽ tạo nội dung với phong cách:
-- Độc đáo và mới mẻ
-- Có cấu trúc rõ ràng
-- Truyền tải thông điệp hiệu quả
-
-📋 **Nội dung sáng tạo:**
-
-Đây là nội dung được tạo dựa trên yêu cầu của bạn. Tôi đã áp dụng các kỹ thuật sáng tạo để mang lại sự khác biệt.
-
-💡 Bạn có thể yêu cầu tôi:
-- Viết thơ, truyện ngắn
-- Sáng tác lời bài hát
-- Tạo kịch bản
-- Viết nội dung quảng cáo
-"""
+            "message": response
         }
 
     def handle_translate(self, query: str) -> Dict[str, Any]:
-        """Xử lý dịch ngôn ngữ"""
-        source_lang = self._detect_language_name(query)
-
+        context_text = self._get_context_summary()
+        response = self._generate_intelligent_response(query, context_text)
         return {
             "type": "translate",
-            "message": f"""
-🌐 **Dịch ngôn ngữ**
-
-📝 **Văn bản cần dịch:** {query}
-
-🔍 **Ngôn ngữ phát hiện:** {source_lang}
-
-📌 **Các ngôn ngữ hỗ trợ:**
-- Tiếng Việt (vi)
-- English (en)
-- 한국어 (ko)
-- 日本語 (ja)
-- 中文 (zh)
-
-💡 Để dịch, hãy yêu cầu: "dịch sang [ngôn ngữ] [nội dung]"
-Ví dụ: "dịch sang en Xin chào thế giới"
-"""
+            "message": response
         }
 
     # ================================================================
@@ -514,78 +398,37 @@ Ví dụ: "dịch sang en Xin chào thế giới"
         summary = "📜 **Ngữ cảnh cuộc trò chuyện:**\n"
         for msg in recent:
             role = "👤 Bạn" if msg["role"] == "user" else "🤖 Tôi"
-            summary += f"{role}: {msg['content'][:80]}{'...' if len(msg['content']) > 80 else ''}\n"
+            summary += f"{role}: {msg['content'][:100]}\n"
         return summary
 
     def _generate_intelligent_response(self, query: str, context: str) -> str:
-        """Tạo câu trả lời dựa trên kết quả phân tích độ phức tạp"""
-        topics = ', '.join(self._detect_topics(query)) or "Đa dạng"
+        """Tạo câu trả lời thông qua Claude Engine (Đã khắc phục lỗi in đúp)"""
         complexity = self._assess_complexity(query)
-        approach = self._decide_approach(query)
 
-        # --- THÊM ĐOẠN GỌI CLAUDE ENGINE NÀY ĐỂ LẤY KẾT QUẢ THỰC TẾ ---
-        context_str = self._get_context_summary()
-        claude_result = self.claude_engine.process(query, context=context_str, complexity=complexity)
+        # Gọi Claude Engine để sinh câu trả lời thực tế
+        claude_result = self.claude_engine.process(query, context=context, complexity=complexity)
         
         if "error" in claude_result:
             ai_text = f"⚠️ Lỗi kết nối Claude API: {claude_result['error']}"
         else:
             ai_text = claude_result.get("response", "Không có phản hồi từ AI.")
-        # -----------------------------------------------------------------
 
-        # Xử lý theo từng loại độ phức tạp
-        if complexity == "Trung bình":
-            action_text = "Dưới đây là câu trả lời trực tiếp cho câu hỏi của bạn:"
+        if complexity == "Phức tạp (Cần suy nghĩ)":
+            follow_up_text = "\n\n💡 *Bạn có thể yêu cầu tôi giải thích chi tiết hơn về bất kỳ phần nào ở trên.*"
+        elif complexity == "Chung chung":
+            follow_up_text = "\n\n💡 *Để câu trả lời chính xác hơn, bạn có thể bổ sung thêm thông tin cụ thể nhé.*"
+        else:
             follow_up_text = ""
-        elif complexity == "Phức tạp (Cần suy nghĩ)":
-            action_text = "Đây là một câu hỏi chuyên sâu. Hệ thống đã suy nghĩ kỹ và đưa ra phân tích chi tiết:"
-            follow_up_text = "\n💡 Bạn có thể yêu cầu tôi đi sâu hơn vào từng bước ở trên nếu cần."
-        else: # Chung chung
-            action_text = "Câu hỏi của bạn khá rộng. Tôi xin trả lời bao quát như sau:"
-            follow_up_text = "\n💡 Để tôi trả lời chính xác hơn, bạn có thể cho tôi biết thêm chi tiết về trường hợp cụ thể của bạn không?"
 
-        response = f"""
-🤖 **T.VỸ-AI-SUPREME trả lời:**
-
-📌 **Câu hỏi:** "{query}"
-
-{context if context else ""}
-
-🔍 **Phân tích:**
-- 📚 Chủ đề: {topics}
-- 📊 Đánh giá: {complexity}
-- 💡 Cách tiếp cận: {approach}
-
-📝 **{action_text}**
-
-
-{ai_text}  
-
-{ai_text}  
-
-
-{follow_up_text}
-"""
+        # Sửa dứt điểm lỗi hiển thị lặp lại {ai_text}
+        response = f"{ai_text}{follow_up_text}"
         return response
 
     def _detect_language(self, query: str) -> str:
-        """Phát hiện ngôn ngữ lập trình"""
         q = query.lower()
         languages = {
-            "Python": ["python", "py"],
-            "JavaScript": ["javascript", "js", "node"],
-            "Java": ["java"],
-            "C++": ["c++", "cpp"],
-            "C#": ["c#", "csharp"],
-            "PHP": ["php"],
-            "Ruby": ["ruby"],
-            "Go": ["go", "golang"],
-            "Rust": ["rust"],
-            "Swift": ["swift"],
-            "Kotlin": ["kotlin"],
-            "TypeScript": ["typescript", "ts"],
-            "HTML": ["html"],
-            "CSS": ["css"]
+            "Python": ["python", "py"], "JavaScript": ["javascript", "js"],
+            "Java": ["java"], "C++": ["c++", "cpp"], "HTML": ["html"], "CSS": ["css"]
         }
         for lang, keywords in languages.items():
             if any(k in q for k in keywords):
@@ -593,155 +436,37 @@ Ví dụ: "dịch sang en Xin chào thế giới"
         return "Python"
 
     def _detect_language_name(self, query: str) -> str:
-        """Phát hiện ngôn ngữ tự nhiên"""
         q = query.lower()
-        if any(k in q for k in ["tiếng việt", "việt"]):
-            return "Tiếng Việt"
-        if any(k in q for k in ["english", "tiếng anh"]):
-            return "English"
-        if any(k in q for k in ["korean", "hàn quốc", "한국"]):
-            return "한국어"
-        if any(k in q for k in ["japanese", "nhật bản", "日本"]):
-            return "日本語"
-        if any(k in q for k in ["chinese", "trung quốc", "中文"]):
-            return "中文"
+        if any(k in q for k in ["tiếng việt", "việt"]): return "Tiếng Việt"
+        if any(k in q for k in ["english", "tiếng anh"]): return "English"
         return "Tiếng Việt"
 
     def _detect_task(self, query: str) -> str:
-        """Phát hiện chức năng cần code"""
         q = query.lower()
-        if "web" in q or "website" in q:
-            return "Phát triển web"
-        if "game" in q:
-            return "Phát triển game"
-        if "data" in q or "dữ liệu" in q:
-            return "Xử lý dữ liệu"
-        if "api" in q:
-            return "Xây dựng API"
-        if "ai" in q or "machine learning" in q:
-            return "Trí tuệ nhân tạo"
+        if "web" in q: return "Phát triển web"
+        if "game" in q: return "Phát triển game"
         return "Tổng quát"
 
     def _analyze_image_prompt(self, query: str) -> str:
-        """Phân tích prompt tạo ảnh"""
-        q = query.lower()
-        desc = "📋 **Phân tích mô tả:**\n"
-        if "đẹp" in q or "beautiful" in q:
-            desc += "- 🎨 Phong cách: Đẹp, ấn tượng\n"
-        if "màu" in q or "color" in q:
-            desc += "- 🎨 Màu sắc: Đa dạng, sống động\n"
-        if "tối" in q or "dark" in q:
-            desc += "- 🌙 Ánh sáng: Tối, huyền ảo\n"
-        if "sáng" in q or "bright" in q:
-            desc += "- ☀️ Ánh sáng: Sáng, rực rỡ\n"
-        if "thiên nhiên" in q or "nature" in q:
-            desc += "- 🌿 Chủ đề: Thiên nhiên\n"
-        if "người" in q or "person" in q:
-            desc += "- 🧑 Chủ đề: Con người\n"
-        if "động vật" in q or "animal" in q:
-            desc += "- 🐾 Chủ đề: Động vật\n"
-        return desc if len(desc) > 30 else "📋 Mô tả chi tiết đang được phân tích..."
+        return "📋 Mô tả đang được phân tích..."
 
     def _detect_style(self, query: str) -> str:
-        """Phát hiện phong cách"""
-        q = query.lower()
-        if "hiện đại" in q or "modern" in q:
-            return "Hiện đại"
-        if "cổ điển" in q or "classic" in q:
-            return "Cổ điển"
-        if "hoạt hình" in q or "cartoon" in q:
-            return "Hoạt hình"
-        if "3d" in q:
-            return "3D"
-        if "tối giản" in q or "minimal" in q:
-            return "Tối giản"
         return "Đa phong cách"
 
     def _detect_genre(self, query: str) -> str:
-        """Phát hiện thể loại nhạc"""
-        q = query.lower()
-        genres = {
-            "Pop": ["pop", "nhạc trẻ"],
-            "Rock": ["rock"],
-            "Jazz": ["jazz", "blues"],
-            "EDM": ["edm", "electronic", "dance"],
-            "Classical": ["classical", "cổ điển"],
-            "Rap": ["rap", "hip hop"],
-            "Ballad": ["ballad", "tình ca"],
-            "V-Pop": ["vpop", "nhạc việt"],
-            "K-Pop": ["kpop", "hàn quốc"],
-            "R&B": ["rnb", "r&b", "soul"]
-        }
-        for genre, keywords in genres.items():
-            if any(k in q for k in keywords):
-                return genre
         return "Pop"
 
     def _detect_mood(self, query: str) -> str:
-        """Phát hiện tâm trạng"""
-        q = query.lower()
-        if any(k in q for k in ["vui", "happy", "joy", "hạnh phúc"]):
-            return "Vui vẻ 🎉"
-        if any(k in q for k in ["buồn", "sad", "lonely", "cô đơn"]):
-            return "Buồn 😢"
-        if any(k in q for k in ["lãng mạn", "romantic", "love", "tình yêu"]):
-            return "Lãng mạn 💕"
-        if any(k in q for k in ["hùng", "epic", "mạnh mẽ", "heroic"]):
-            return "Hùng tráng 🏆"
-        if any(k in q for k in ["bình yên", "calm", "relax"]):
-            return "Bình yên 🌅"
-        return "Trung tính 🎵"
-
-    def _analyze_problem(self, query: str) -> str:
-        """Phân tích vấn đề cần tư vấn"""
-        q = query.lower()
-        analysis = "📋 **Phân tích vấn đề:**\n"
-        if "lập trình" in q or "code" in q:
-            analysis += "- 🔧 Lĩnh vực: Công nghệ/Lập trình\n"
-            analysis += "- 💡 Đề xuất: Chia nhỏ vấn đề, giải quyết từng phần\n"
-        elif "học" in q or "study" in q:
-            analysis += "- 📚 Lĩnh vực: Học tập\n"
-            analysis += "- 💡 Đề xuất: Lập kế hoạch học tập rõ ràng\n"
-        elif "tình" in q or "love" in q:
-            analysis += "- 💕 Lĩnh vực: Tình cảm\n"
-            analysis += "- 💡 Đề xuất: Lắng nghe và thấu hiểu\n"
-        elif "công việc" in q or "work" in q:
-            analysis += "- 💼 Lĩnh vực: Công việc\n"
-            analysis += "- 💡 Đề xuất: Quản lý thời gian hiệu quả\n"
-        else:
-            analysis += "- 📌 Lĩnh vực: Đa dạng\n"
-            analysis += "- 💡 Đề xuất: Xác định rõ mục tiêu\n"
-        return analysis
-
-    def _analyze_structure(self, query: str) -> str:
-        """Phân tích cấu trúc câu hỏi"""
-        return """
-📋 **Cấu trúc phân tích:**
-
-1. **🔍 Xác định vấn đề chính**
-   - Phân tích từ khóa quan trọng
-   - Xác định phạm vi vấn đề
-
-2. **📊 Phân tích các khía cạnh**
-   - Khía cạnh 1: Nguyên nhân
-   - Khía cạnh 2: Tác động
-   - Khía cạnh 3: Giải pháp
-
-3. **🎯 Đánh giá và tổng hợp**
-   - Đưa ra nhận định
-   - Kết luận và đề xuất
-"""
+        return "Vui vẻ 🎉"
 
     # ================================================================
     # HÀM LƯU TRỮ NGỮ CẢNH (TỰ HỌC)
     # ================================================================
 
     def _load_context(self, user_id: str):
-        """Nạp ngữ cảnh từ bộ nhớ"""
         pass
 
     def _save_context(self, user_id: str):
-        """Lưu ngữ cảnh vào bộ nhớ"""
         if len(self.context) > 2:
             last_user = None
             last_ai = None
@@ -763,7 +488,6 @@ Ví dụ: "dịch sang en Xin chào thế giới"
                     self.memory[user_id] = self.memory[user_id][-100:]
 
     def learn_from_feedback(self, user_id: str, query: str, rating: int):
-        """Học từ phản hồi người dùng"""
         if rating >= 4:
             self.memory[user_id].append({
                 "query": query,
@@ -776,7 +500,6 @@ Ví dụ: "dịch sang en Xin chào thế giới"
         return {"learned": False}
 
     def get_statistics(self, user_id: str) -> Dict[str, Any]:
-        """Lấy thống kê học tập"""
         memory = self.memory.get(user_id, [])
         return {
             "total_learned": len(memory),
