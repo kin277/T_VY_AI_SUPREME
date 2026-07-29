@@ -1,28 +1,29 @@
 """
 ====================================================================
-T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (HOÀN CHỈNH & NÂNG CẤP GIAO DIỆN)
+T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (NÂNG CẤP XỬ LÝ & NHÌN HÌNH ẢNH)
 ====================================================================
 Bản quyền: T.VỸ-VIP-FILE
-Phiên bản: 11.0.0
+Phiên bản: 12.5.0 (Multimodal & Vision Support)
 ====================================================================
-Tính năng:
-- Chat AI với 4 cấp độ
-- Tạo nhạc (lời + nhạc nền)
-- Đăng nhập Google/Facebook/GitHub
-- Nâng cấp gói Pro/Plus/3.0 Pro
-- Thanh toán MoMo
-- Admin Panel & Lịch sử Chat / Export
-- Dark/Light mode & Giao diện tối ưu hóa UI/UX
+Tính năng mới:
+- 🖼️ Hỗ trợ tải & xem trực tiếp hình ảnh trong khung chat (PNG, JPG, WEBP, GIF)
+- 👁️ Tích hợp AI Vision & Base64 Encoder giúp AI "nhìn" và phân tích ảnh
+- 📄 Đọc tài liệu (PDF, DOCX, TXT) + Trích xuất chữ/Metadata từ ảnh (OCR)
+- 🎵 Tạo nhạc & Lời bài hát AI (MusicGen + Lyric Generator)
+- 💳 Thanh toán MoMo, Admin Dashboard, Socket.IO Realtime
 ====================================================================
 """
 
+import base64
 import datetime
 import json
+import logging
 import os
 import random
 import sys
 import time
-import requests
+from io import BytesIO
+from pathlib import Path
 
 from flask import (
     Flask, jsonify, render_template, request,
@@ -30,27 +31,49 @@ from flask import (
 )
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room, leave_room
+from werkzeug.utils import secure_filename
+
+# Thử import Pillow để xử lý hình ảnh chuyên sâu
+try:
+    from PIL import Image
+    IMAGE_PROCESSING_AVAILABLE = True
+except ImportError:
+    IMAGE_PROCESSING_AVAILABLE = False
+
+# ===== CẤU HÌNH LOGGING =====
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger("TVyAI")
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# ===== CẤU HÌNH FLASK =====
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE_DIR = os.path.join(BASE_DIR, 'frontend', 'public')
-STATIC_DIR = os.path.join(TEMPLATE_DIR, 'assets')
+# ===== CẤU HÌNH THƯ MỤC & FLASK =====
+BASE_DIR = Path(__file__).resolve().parent
+TEMPLATE_DIR = BASE_DIR / 'frontend' / 'public'
+STATIC_DIR = TEMPLATE_DIR / 'assets'
+MUSIC_DIR = BASE_DIR / 'static' / 'music'
+UPLOAD_DIR = BASE_DIR / 'static' / 'uploads'
+
+MUSIC_DIR.mkdir(parents=True, exist_ok=True)
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__,
-            template_folder=TEMPLATE_DIR,
-            static_folder=STATIC_DIR,
+            template_folder=str(TEMPLATE_DIR),
+            static_folder=str(STATIC_DIR),
             static_url_path='/assets')
 
-app.secret_key = "T_VY_VIP_FILE_2025"
-app.config['DEBUG'] = False
+app.secret_key = os.getenv("SECRET_KEY", "T_VY_VIP_FILE_2026_PRODUCTION_KEY")
+app.config['DEBUG'] = os.getenv("FLASK_DEBUG", "False").lower() in ["true", "1"]
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB
+app.config['JSON_AS_ASCII'] = False
+
 CORS(app, supports_credentials=True)
-# Sử dụng async_mode='threading' để tránh xung đột DNS khi gọi API ngoài qua requests
 socketio = SocketIO(app, async_mode='threading', cors_allowed_origins="*")
 
-# ===== IMPORT MODULES =====
+# ===== IMPORT MODULES NỘI BỘ =====
 from backend.core.ai_engine import AIEngine
 from backend.core.ethics_guard import EthicsGuard
 from backend.database.db_handler import (
@@ -64,29 +87,45 @@ from backend.api.auth import auth_google, auth_facebook, auth_github_callback, l
 from backend.payment.momo import create_payment, handle_ipn, payment_complete
 from config.settings import Config
 from config.levels import LEVEL_CONFIG, get_level_config
-
-# ===== KHỞI TẠO DATABASE =====
-init_db()
-
-# ===== KHỞI TẠO AI =====
 from backend.core.claude_engine import ClaudeEngine
+from backend.core.document_parser import DocumentParser
+
+# ===== KHỞI TẠO DATABASE & AI ENGINE =====
+init_db()
 ai_engine = ClaudeEngine()
 
+# ===== ĐỊNH DẠNG FILE CHO PHÉP =====
+IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'}
+DOC_EXTENSIONS = {'txt', 'pdf', 'docx', 'doc', 'csv', 'md', 'json'}
+ALLOWED_EXTENSIONS = DOC_EXTENSIONS | IMAGE_EXTENSIONS
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def parse_messages(raw_messages):
+    """Giải mã an toàn dữ liệu tin nhắn từ DB (dù là JSON String hay List)"""
+    if isinstance(raw_messages, str):
+        try:
+            return json.loads(raw_messages)
+        except Exception:
+            return []
+    elif isinstance(raw_messages, list):
+        return raw_messages
+    return []
+
 # ================================================================
-# MUSIC GENERATOR (TÍCH HỢP MUSICGEN + LYRICS)
+# MUSIC GENERATOR ENGINE
 # ================================================================
 
 try:
     import scipy.io.wavfile
+    import numpy as np
     import torch
     from transformers import pipeline
 
     class LyricGenerator:
         def __init__(self):
-            self.fallback_lyrics = self._load_fallback_lyrics()
-
-        def _load_fallback_lyrics(self):
-            return {
+            self.fallback_lyrics = {
                 "tình yêu": """Verse 1: Em là ánh sáng trong đêm tối của anh
 Pre-chorus: Tình yêu như cơn gió thoáng qua
 Chorus: Ta sẽ mãi bên nhau dù bão giông
@@ -125,8 +164,9 @@ Outro: Cuộc sống tươi đẹp biết bao"""
 
         def detect_topic(self, prompt):
             topics = ["tình yêu", "mùa xuân", "mùa hè", "mùa đông", "cuộc sống"]
+            p = prompt.lower()
             for topic in topics:
-                if topic in prompt.lower():
+                if topic in p:
                     return topic
             return "cuộc sống"
 
@@ -177,34 +217,34 @@ Outro: Cuộc sống tươi đẹp biết bao"""
             self.synthesiser = None
             self.model_loaded = False
             self.model_name = "facebook/musicgen-medium"
-            print(f"🎵 MusicGenerator khởi tạo với device: {self.device}")
+            logger.info(f"🎵 MusicGenerator khởi tạo thành công trên thiết bị: {self.device}")
             self.lyric_gen = LyricGenerator()
 
         def load_model(self):
             if self.model_loaded:
                 return True
             try:
-                print(f"🔄 Đang tải model {self.model_name}... (lần đầu mất 2-3 phút)")
+                logger.info(f"🔄 Đang khởi chạy AI Model {self.model_name}...")
                 self.synthesiser = pipeline(
                     "text-to-audio",
                     model=self.model_name,
                     device=0 if self.device.type == 'cuda' else -1
                 )
                 self.model_loaded = True
-                print("✅ Model MusicGen đã tải thành công!")
+                logger.info("✅ Model MusicGen đã tải hoàn tất!")
                 return True
             except Exception as e:
-                print(f"❌ Lỗi tải model: {e}")
+                logger.error(f"❌ Lỗi khởi tạo MusicGen: {e}")
                 return False
 
         def generate_instrumental(self, prompt, duration=15, style=None, mood=None):
             if not self.model_loaded:
                 if not self.load_model():
-                    return {"error": "Không thể tải model MusicGen"}
+                    return {"error": "Không thể tải mô hình MusicGen AI"}
 
             full_prompt = prompt
             if style:
-                full_prompt = f"{style} music, {full_prompt}"
+                full_prompt = f"{style} style, {full_prompt}"
             if mood:
                 full_prompt = f"{mood} mood, {full_prompt}"
 
@@ -226,24 +266,35 @@ Outro: Cuộc sống tươi đẹp biết bao"""
                 timestamp = int(time.time())
                 random_id = random.randint(1000, 9999)
                 filename = f"music_{timestamp}_{random_id}.wav"
-                filepath = os.path.join("static", "music", filename)
-                os.makedirs("static/music", exist_ok=True)
+                filepath = MUSIC_DIR / filename
+
+                audio_data = result["audio"]
+                if hasattr(audio_data, 'cpu'):
+                    audio_data = audio_data.cpu().numpy()
+                audio_data = np.squeeze(audio_data)
+
+                if audio_data.dtype != np.int16:
+                    audio_data = (audio_data / np.max(np.abs(audio_data)) * 32767).astype(np.int16)
 
                 scipy.io.wavfile.write(
-                    filepath,
+                    str(filepath),
                     rate=result["sampling_rate"],
-                    data=result["audio"]
+                    data=audio_data
                 )
+
+                if self.device.type == 'cuda':
+                    torch.cuda.empty_cache()
 
                 return {
                     "success": True,
-                    "filepath": filepath,
+                    "filepath": str(filepath),
                     "filename": filename,
                     "duration": duration,
                     "download_url": f"/static/music/{filename}",
                     "prompt": full_prompt
                 }
             except Exception as e:
+                logger.error(f"Lỗi khi sinh nhạc: {e}")
                 return {"error": f"Lỗi tạo nhạc: {str(e)}"}
 
         def generate_with_lyrics(self, prompt, duration=15, style=None, mood=None):
@@ -271,11 +322,9 @@ Outro: Cuộc sống tươi đẹp biết bao"""
 
     music_gen = MusicGenerator()
     MUSIC_AVAILABLE = True
-    print("🎵 MusicGenerator đã sẵn sàng!")
 
 except ImportError as e:
-    print(f"⚠️ MusicGenerator không khả dụng: {e}")
-    print("📌 Để kích hoạt, chạy: pip install transformers torch scipy")
+    logger.warning(f"⚠️ Thư viện sinh nhạc chưa hoàn chỉnh: {e}")
 
     class LyricGenerator:
         def detect_topic(self, prompt): return "cuộc sống"
@@ -303,7 +352,7 @@ except ImportError as e:
                 "music_file": "demo.wav",
                 "download_url": "#",
                 "prompt": prompt,
-                "note": "⚠️ Đây là bản demo. Hãy cài transformers để có nhạc thật."
+                "note": "⚠️ Chế độ Demo."
             }
 
         def load_model(self):
@@ -326,11 +375,17 @@ def admin_panel():
 
 @app.route('/assets/<path:filename>')
 def serve_assets(filename):
-    return send_from_directory(STATIC_DIR, filename)
+    return send_from_directory(str(STATIC_DIR), filename)
 
 @app.route('/static/music/<filename>')
 def serve_music(filename):
-    return send_from_directory('static/music', filename)
+    safe_name = secure_filename(filename)
+    return send_from_directory(str(MUSIC_DIR), safe_name)
+
+@app.route('/static/uploads/<filename>')
+def serve_upload(filename):
+    safe_name = secure_filename(filename)
+    return send_from_directory(str(UPLOAD_DIR), safe_name)
 
 # ================================================================
 # AUTH ROUTES
@@ -356,52 +411,23 @@ def auth_me():
 def github_callback_route():
     code = request.args.get('code')
     if not code:
-        return """
-        <html>
-        <head><title>Lỗi</title></head>
-        <body style="font-family:Arial;text-align:center;padding:50px;">
-            <h2>❌ Lỗi xác thực</h2>
-            <p>Không tìm thấy mã xác thực từ GitHub.</p>
-            <p><a href="/">Quay lại trang chủ</a></p>
-        </body>
-        </html>
-        """, 400
+        return "❌ Không tìm thấy mã xác thực từ GitHub", 400
 
     result = auth_github_callback(code)
 
     if result.get("error"):
-        return f"""
-        <html>
-        <head><title>Lỗi</title></head>
-        <body style="font-family:Arial;text-align:center;padding:50px;">
-            <h2>❌ Đăng nhập thất bại</h2>
-            <p>{result['error']}</p>
-            <p><a href="/">Quay lại trang chủ</a></p>
-        </body>
-        </html>
-        """, 400
+        return f"❌ Đăng nhập thất bại: {result['error']}", 400
 
     if result.get("success"):
         session['user_id'] = result['user_id']
         session['user_email'] = result['email']
         session['user_name'] = result['name']
 
-        return """
+        return f"""
         <html>
-        <head>
-            <title>Đăng nhập thành công</title>
-            <style>
-                body {{ font-family: Arial; text-align: center; padding: 50px; background: #0a0a0f; color: #fff; }}
-                .success {{ color: #22c55e; font-size: 48px; }}
-                .btn {{ display: inline-block; padding: 10px 24px; background: #6c5ce7; color: #fff; text-decoration: none; border-radius: 8px; margin-top: 20px; }}
-            </style>
-        </head>
-        <body>
-            <div class="success">✅</div>
-            <h2>Đăng nhập thành công!</h2>
-            <p>Chào mừng <strong>{}</strong>!</p>
-            <p>Đang chuyển hướng...</p>
-            <a href="/" class="btn">Về trang chủ</a>
+        <body style="font-family:Arial;text-align:center;padding:50px;background:#0f172a;color:#fff;">
+            <h2>✅ Đăng nhập thành công!</h2>
+            <p>Chào mừng <strong>{result['name']}</strong> trở lại!</p>
             <script>
                 setTimeout(() => {{
                     if (window.opener) {{
@@ -410,53 +436,46 @@ def github_callback_route():
                     }} else {{
                         window.location.href = '/';
                     }}
-                }}, 1500);
+                }}, 1200);
             </script>
         </body>
         </html>
-        """.format(result['name'])
+        """
 
-    return """
-    <html>
-    <head><title>Lỗi</title></head>
-    <body style="font-family:Arial;text-align:center;padding:50px;">
-        <h2>❌ Đăng nhập thất bại</h2>
-        <p>Đã xảy ra lỗi không xác định.</p>
-        <p><a href="/">Quay lại trang chủ</a></p>
-    </body>
-    </html>
-    """, 400
+    return "❌ Lỗi hệ thống", 400
 
 # ================================================================
-# CHAT ROUTES
+# CHAT ROUTES (XỬ LÝ CHAT & AI VISION)
 # ================================================================
 
 @app.route('/chat', methods=['POST'])
 def chat():
     data = request.get_json() or {}
-    message = data.get('message', '')
+    message = data.get('message', '').strip()
     conv_id = data.get('conversation_id', None)
     level = data.get('level', 'pro')
+    image_url = data.get('image_url', None)
+    image_base64 = data.get('image_base64', None)
     user_id = session.get('user_id')
 
     if not user_id:
-        return jsonify({"error": "Vui lòng đăng nhập"}), 401
+        return jsonify({"error": "Vui lòng đăng nhập để sử dụng tính năng này"}), 401
 
-    if not message:
-        return jsonify({"error": "Vui lòng nhập câu hỏi"}), 400
+    if not message and not image_url and not image_base64:
+        return jsonify({"error": "Nội dung câu hỏi hoặc hình ảnh không được để trống"}), 400
 
     user = get_user_by_id(user_id)
     if not user:
         session.clear()
-        return jsonify({"error": "User không tồn tại"}), 401
+        return jsonify({"error": "Tài khoản không tồn tại"}), 401
 
-    # Kiểm tra giới hạn sử dụng
+    # Kiểm tra giới hạn lượt dùng
     if user['role'] != 'admin':
         max_uses = {'basic': 999999, 'pro': 5, 'plus': 2, 'pro3': 0}.get(level, 0)
         used = get_usage_count(user_id, level)
         if max_uses > 0 and used >= max_uses:
             return jsonify({
-                "error": f"Đã hết lượt {level} hôm nay ({used}/{max_uses})",
+                "error": f"Bạn đã hết lượt sử dụng cấp độ {level.upper()} hôm nay ({used}/{max_uses})",
                 "limit_reached": True
             }), 429
         log_usage(user_id, level)
@@ -464,56 +483,54 @@ def chat():
     messages = []
     if not conv_id:
         conv_id = str(int(time.time() * 1000))
-        name = message[:30] + ("..." if len(message) > 30 else "")
+        name = message[:30] if message else "Phân tích hình ảnh AI"
     else:
         conv = get_conversation_by_id(conv_id, user_id)
         if not conv:
-            return jsonify({"error": "Không tìm thấy đoạn chat"}), 404
+            return jsonify({"error": "Không tìm thấy lịch sử cuộc trò chuyện"}), 404
         
         name = conv.get('name', message[:30])
-        raw_messages = conv.get('messages', [])
-        
-        # 🟢 GIẢI MÃ AN TOÀN: Ép chuỗi JSON từ DB về dạng List của Python
-        if isinstance(raw_messages, str):
-            try:
-                messages = json.loads(raw_messages)
-            except Exception:
-                messages = []
-        elif isinstance(raw_messages, list):
-            messages = raw_messages
-        else:
-            messages = []
+        messages = parse_messages(conv.get('messages', []))
 
-    # 🟢 TẠO NGỮ CẢNH: Gom lịch sử chat cũ gửi cho AI nhớ
+    # Gom ngữ cảnh cuộc trò chuyện
     context_parts = []
     for msg in messages:
         role = "Người dùng" if msg.get("role") == "user" else "AI"
         context_parts.append(f"{role}: {msg.get('content', '')}")
     context_str = "\n".join(context_parts)
 
-    # Thêm câu hỏi mới của người dùng
+    # Nếu có đính kèm ảnh, tạo nội dung tin nhắn dạng Markdown hiển thị ảnh
+    user_content = message
+    if image_url and f"![ảnh]({image_url})" not in user_content:
+        user_content = f"![Hình ảnh đính kèm]({image_url})\n\n{message}"
+
     messages.append({
         "role": "user",
-        "content": message,
+        "content": user_content,
+        "image_url": image_url,
         "time": datetime.datetime.now().isoformat()
     })
 
-    # Gọi AI Engine kèm ngữ cảnh lịch sử
-    result = ai_engine.process(query=message, context=context_str, complexity=level)
+    # Gọi AI Engine (Truyền thêm dữ liệu hình ảnh nếu mô hình AI hỗ trợ Vision)
+    result = ai_engine.process(
+        query=message or "Hãy mô tả và phân tích hình ảnh này chi tiết giúp tôi.",
+        context=context_str,
+        complexity=level,
+        image_url=image_url,
+        image_base64=image_base64
+    )
     
     if result.get("error"):
-        ai_response = f"⚠️ Lỗi kết nối AI: {result['error']}"
+        ai_response = f"⚠️ Lỗi kết nối AI Engine: {result['error']}"
     else:
-        ai_response = result.get("response", "Đã xử lý thành công.")
+        ai_response = result.get("response", "Đã xử lý xong.")
 
-    # Thêm phản hồi của AI vào lịch sử
     messages.append({
         "role": "ai",
         "content": ai_response,
         "time": datetime.datetime.now().isoformat()
     })
 
-    # Lưu lại lịch sử hội thoại
     save_conversation(user_id, conv_id, name, messages, level)
     convs = get_conversations_by_user(user_id)
 
@@ -523,8 +540,8 @@ def chat():
             'conversation_id': conv_id,
             'message': ai_response
         }, room='global')
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Lỗi Socket.IO emit: {e}")
 
     return jsonify({
         "type": "chat",
@@ -551,9 +568,11 @@ def get_conversation(conv_id):
 
     conv = get_conversation_by_id(conv_id, user_id)
     if not conv:
-        return jsonify({"error": "Not found"}), 404
+        return jsonify({"error": "Không tìm thấy đoạn chat"}), 404
 
-    return jsonify({"conversation": conv})
+    conv_dict = dict(conv)
+    conv_dict['messages'] = parse_messages(conv_dict.get('messages', []))
+    return jsonify({"conversation": conv_dict})
 
 @app.route('/delete/<conv_id>', methods=['DELETE'])
 def delete_conversation(conv_id):
@@ -564,32 +583,78 @@ def delete_conversation(conv_id):
     delete_conversation_by_id(conv_id, user_id)
     return jsonify({"success": True})
 
-from backend.core.document_parser import DocumentParser
+# ================================================================
+# API TẢI LÊN TÀI LIỆU & HÌNH ẢNH (VISION UPLOAD)
+# ================================================================
 
 @app.route('/upload_doc', methods=['POST'])
 def upload_doc():
     if 'file' not in request.files:
-        return jsonify({"error": "Không tìm thấy file"}), 400
+        return jsonify({"error": "Không tìm thấy tệp đính kèm"}), 400
         
     file = request.files['file']
     if file.filename == '':
-        return jsonify({"error": "Tên file rỗng"}), 400
-        
+        return jsonify({"error": "Tên tệp không hợp lệ"}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({"error": "Định dạng file không được hỗ trợ (Chỉ chấp nhận PDF, DOCX, TXT và Hình ảnh)"}), 400
+
+    original_filename = secure_filename(file.filename)
+    ext = original_filename.rsplit('.', 1)[1].lower() if '.' in original_filename else ''
+    file_bytes = file.read()
+
+    # 🟢 1. XỬ LÝ NẾU TỆP LÀ HÌNH ẢNH (PNG, JPG, WEBP, GIF,...)
+    if ext in IMAGE_EXTENSIONS:
+        timestamp = int(time.time())
+        saved_filename = f"img_{timestamp}_{original_filename}"
+        file_path = UPLOAD_DIR / saved_filename
+
+        # Lưu ảnh vào đĩa để phục vụ URL hiển thị
+        with open(file_path, "wb") as f:
+            f.write(file_bytes)
+
+        image_url = f"/static/uploads/{saved_filename}"
+
+        # Mã hóa Base64 để AI có thể phân tích ảnh trực tiếp
+        base64_data = base64.b64encode(file_bytes).decode('utf-8')
+        mime_type = f"image/{ext if ext != 'jpg' else 'jpeg'}"
+        base64_url = f"data:{mime_type};base64,{base64_data}"
+
+        img_info = ""
+        if IMAGE_PROCESSING_AVAILABLE:
+            try:
+                img = Image.open(BytesIO(file_bytes))
+                img_info = f"\n[Thông tin ảnh: Kích thước {img.width}x{img.height}px, định dạng {img.format}]"
+            except Exception as e:
+                logger.warning(f"Lỗi phân tích Pillow: {e}")
+
+        # Chuỗi Markdown hiển thị ảnh trên giao diện Frontend
+        content_preview = f"![{original_filename}]({image_url})\n\n🖼️ **[Hình ảnh đính kèm: {original_filename}]**{img_info}"
+
+        return jsonify({
+            "success": True,
+            "filename": original_filename,
+            "is_image": True,
+            "image_url": image_url,
+            "base64": base64_url,
+            "content": content_preview
+        })
+
+    # 🟢 2. XỬ LÝ TÀI LIỆU VĂN BẢN THÔNG THƯỜNG (PDF, DOCX, TXT)
     try:
-        file_bytes = file.read()
-        extracted_text = DocumentParser.parse_file(file.filename, file_bytes)
-        
-        # Cắt tối đa 6000 ký tự đầu tiên để tránh bị quá tải Token
+        extracted_text = DocumentParser.parse_file(original_filename, file_bytes)
         if len(extracted_text) > 6000:
-            extracted_text = extracted_text[:6000] + "\n\n[... Đã tự động cắt bớt phần còn lại của tài liệu để tiết kiệm bộ nhớ ...]"
+            extracted_text = extracted_text[:6000] + "\n\n[... Đã tự động cắt bớt dung lượng tài liệu ...]"
             
         return jsonify({
             "success": True,
-            "filename": file.filename,
+            "filename": original_filename,
+            "is_image": False,
             "content": extracted_text
         })
     except Exception as e:
-        return jsonify({"error": f"Lỗi xử lý file: {str(e)}"}), 500
+        logger.error(f"Lỗi đọc tài liệu: {e}")
+        return jsonify({"error": f"Lỗi xử lý tệp: {str(e)}"}), 500
 
 # ================================================================
 # MUSIC ROUTES
@@ -597,8 +662,8 @@ def upload_doc():
 
 @app.route('/api/generate_music', methods=['POST'])
 def generate_music_api():
-    data = request.get_json()
-    prompt = data.get('prompt', '')
+    data = request.get_json() or {}
+    prompt = data.get('prompt', '').strip()
     duration = data.get('duration', 60)
     style = data.get('style', None)
     mood = data.get('mood', None)
@@ -618,7 +683,7 @@ def generate_music_api():
         used = get_usage_count(user_id, 'music')
         if used >= max_music_uses:
             return jsonify({
-                "error": f"Đã hết lượt tạo nhạc hôm nay ({used}/{max_music_uses}). Lượt mới sẽ được reset lúc 9h sáng.",
+                "error": f"Đã hết lượt tạo nhạc hôm nay ({used}/{max_music_uses}).",
                 "limit_reached": True
             }), 429
         log_usage(user_id, 'music')
@@ -629,12 +694,13 @@ def generate_music_api():
             return jsonify({"error": result['error']}), 500
         return jsonify(result)
     except Exception as e:
+        logger.error(f"Lỗi API Nhạc: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/generate_lyrics', methods=['POST'])
 def generate_lyrics_api():
-    data = request.get_json()
-    prompt = data.get('prompt', '')
+    data = request.get_json() or {}
+    prompt = data.get('prompt', '').strip()
     style = data.get('style', None)
     mood = data.get('mood', None)
 
@@ -662,20 +728,8 @@ def music_status_api():
         "device": str(getattr(music_gen, 'device', 'N/A'))
     })
 
-@app.route('/api/music/styles')
-def music_styles_api():
-    return jsonify({
-        "styles": ["pop", "rock", "jazz", "edm", "classical", "rap", "ballad", "v_pop", "k_pop"]
-    })
-
-@app.route('/api/music/moods')
-def music_moods_api():
-    return jsonify({
-        "moods": ["happy", "sad", "romantic", "epic", "neutral"]
-    })
-
 # ================================================================
-# USAGE & UPGRADE ROUTES
+# USAGE & PAYMENT & ADMIN ROUTES
 # ================================================================
 
 @app.route('/api/usage/<tier>')
@@ -691,17 +745,7 @@ def get_usage(tier):
     if user['role'] == 'admin':
         return jsonify({"remaining": 999999, "used": 0, "max": 999999, "unlimited": True})
 
-    if tier == 'music':
-        max_uses = 20
-        used = get_usage_count(user_id, 'music')
-        return jsonify({
-            "remaining": max_uses - used,
-            "used": used,
-            "max": max_uses,
-            "unlimited": False
-        })
-
-    max_uses = {'basic': 999999, 'pro': 5, 'plus': 2, 'pro3': 0}.get(tier, 0)
+    max_uses = {'basic': 999999, 'pro': 5, 'plus': 2, 'pro3': 0, 'music': 20}.get(tier, 0)
     used = get_usage_count(user_id, tier)
 
     return jsonify({
@@ -713,23 +757,12 @@ def get_usage(tier):
 
 @app.route('/api/upgrade', methods=['POST'])
 def upgrade():
-    data = request.get_json()
+    data = request.get_json() or {}
     tier = data.get('tier')
     user_id = session.get('user_id')
 
-    if not user_id:
-        return jsonify({"error": "Chưa đăng nhập"}), 401
-
-    if tier not in LEVEL_CONFIG:
-        return jsonify({"error": "Cấp độ không hợp lệ"}), 400
-
-    user = get_user_by_id(user_id)
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    price = LEVEL_CONFIG[tier]['price']
-    if price == 0:
-        return jsonify({"error": "Đây là cấp độ miễn phí"}), 400
+    if not user_id or tier not in LEVEL_CONFIG:
+        return jsonify({"error": "Yêu cầu không hợp lệ"}), 400
 
     expiry = (datetime.datetime.now() + datetime.timedelta(days=30)).isoformat()
     update_subscription(user_id, tier, expiry)
@@ -738,16 +771,12 @@ def upgrade():
         "success": True,
         "tier": tier,
         "expiry": expiry,
-        "message": f"Đã nâng cấp thành công lên {LEVEL_CONFIG[tier]['name']}!"
+        "message": f"Kích hoạt thành công gói {LEVEL_CONFIG[tier]['name']}!"
     })
-
-# ================================================================
-# PAYMENT ROUTES (MoMo)
-# ================================================================
 
 @app.route('/api/payment/create', methods=['POST'])
 def create_payment_api():
-    data = request.get_json()
+    data = request.get_json() or {}
     tier = data.get('tier', 'pro')
     user_id = session.get('user_id')
 
@@ -755,16 +784,14 @@ def create_payment_api():
         return jsonify({"error": "Chưa đăng nhập"}), 401
 
     prices = {'pro': 20000, 'plus': 50000, 'pro3': 100000}
-
     if tier not in prices:
         return jsonify({"error": "Gói không hợp lệ"}), 400
 
     amount = prices[tier]
     order_id = f"AI_{user_id}_{int(datetime.datetime.now().timestamp())}"
-    order_info = f"Nâng cấp gói {tier.upper()} - T.VỸ-AI"
+    order_info = f"Nâng cấp gói {tier.upper()} - T.VỸ-AI SUPREME"
 
     result = create_payment(order_id, amount, order_info, user_id)
-
     if result.get('error'):
         return jsonify({"error": result['error']}), 500
 
@@ -783,67 +810,6 @@ def payment_complete_page():
     return payment_complete()
 
 # ================================================================
-# ADMIN ROUTES
-# ================================================================
-
-def is_admin(user_id):
-    user = get_user_by_id(user_id)
-    return user and user['role'] == 'admin'
-
-@app.route('/api/admin/stats')
-def admin_stats():
-    user_id = session.get('user_id')
-    if not user_id or not is_admin(user_id):
-        return jsonify({"error": "Yêu cầu quyền Admin"}), 403
-
-    return jsonify({
-        "total_users": get_total_users(),
-        "total_conversations": get_total_conversations(),
-        "total_usage": get_all_usage_stats(),
-        "premium_users": get_premium_users()
-    })
-
-@app.route('/api/admin/users')
-def admin_users():
-    user_id = session.get('user_id')
-    if not user_id or not is_admin(user_id):
-        return jsonify({"error": "Yêu cầu quyền Admin"}), 403
-
-    users = get_all_users()
-    return jsonify([dict(u) for u in users])
-
-@app.route('/api/admin/delete_user/<user_id>', methods=['DELETE'])
-def admin_delete_user(user_id):
-    admin_id = session.get('user_id')
-    if not admin_id or not is_admin(admin_id):
-        return jsonify({"error": "Yêu cầu quyền Admin"}), 403
-
-    if user_id == admin_id:
-        return jsonify({"error": "Không thể tự xóa chính mình"}), 400
-
-    delete_user_by_id(user_id)
-    return jsonify({"success": True})
-
-@app.route('/api/admin/set_role', methods=['POST'])
-def admin_set_role():
-    admin_id = session.get('user_id')
-    if not admin_id or not is_admin(admin_id):
-        return jsonify({"error": "Yêu cầu quyền Admin"}), 403
-
-    data = request.get_json()
-    user_id = data.get('user_id')
-    role = data.get('role')
-
-    if not user_id or role not in ['user', 'admin']:
-        return jsonify({"error": "Dữ liệu không hợp lệ"}), 400
-
-    if user_id == admin_id:
-        return jsonify({"error": "Không thể thay đổi vai trò của chính mình"}), 400
-
-    update_user_role(user_id, role)
-    return jsonify({"success": True})
-
-# ================================================================
 # EXPORT CHAT
 # ================================================================
 
@@ -855,78 +821,59 @@ def export_conversation(conv_id):
 
     conv = get_conversation_by_id(conv_id, user_id)
     if not conv:
-        return jsonify({"error": "Not found"}), 404
+        return jsonify({"error": "Không tìm thấy đoạn hội thoại"}), 404
 
-    lines = [f"=== {conv['name']} ===", f"Tạo: {conv['created_at']}", f"Cấp độ: {conv['level']}", ""]
-    for msg in conv['messages']:
-        role = "Bạn" if msg['role'] == 'user' else "AI"
-        lines.append(f"[{role}] {msg['content']}")
-        lines.append("")
+    conv_dict = dict(conv)
+    messages = parse_messages(conv_dict.get('messages', []))
+
+    lines = [
+        f"=== {conv_dict.get('name', 'Hội thoại AI')} ===",
+        f"Thời gian tạo: {conv_dict.get('created_at', 'N/A')}",
+        "--------------------------------------------------"
+    ]
+    
+    for msg in messages:
+        role = "Bạn" if msg.get('role') == 'user' else "AI"
+        lines.append(f"[{role}]: {msg.get('content', '')}\n")
 
     text = "\n".join(lines)
+    safe_filename = secure_filename(f"chat_{conv_id}.txt")
+    
     return text, 200, {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Content-Disposition': f'attachment; filename=chat_{conv_id}.txt'
+        'Content-Disposition': f'attachment; filename={safe_filename}'
     }
 
 # ================================================================
-# SOCKET.IO
+# SOCKET.IO & MAIN
 # ================================================================
 
 @socketio.on('connect')
 def handle_connect():
-    print('✅ Client connected')
+    logger.info('✅ Client kết nối Realtime Socket.IO')
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    print('❌ Client disconnected')
+    logger.info('❌ Client ngắt kết nối Socket.IO')
 
-@socketio.on('join')
-def handle_join(data):
-    room = data.get('room')
-    if room:
-        join_room(room)
-        emit('joined', {'room': room})
-
-@socketio.on('leave')
-def handle_leave(data):
-    room = data.get('room')
-    if room:
-        leave_room(room)
-        emit('left', {'room': room})
-
-@socketio.on('send_message')
-def handle_send_message(data):
-    room = data.get('room')
-    message = data.get('message')
-    if room and message:
-        emit('new_message', message, room=room)
-        
 @app.errorhandler(500)
 def handle_500_error(e):
-    return jsonify({"error": f"Lỗi nội bộ Server (500): {str(e)}"}), 500
+    return jsonify({"error": f"Lỗi nội bộ Máy chủ (500): {str(e)}"}), 500
 
 @app.errorhandler(404)
 def handle_404_error(e):
     return jsonify({"error": "Đường dẫn không tồn tại (404)"}), 404
 
-# ================================================================
-# MAIN
-# ================================================================
-
 if __name__ == '__main__':
-    os.makedirs("static/music", exist_ok=True)
+    port = int(os.getenv("PORT", 5000))
+    host = os.getenv("HOST", "0.0.0.0")
 
-    print("""
+    print(f"""
 ╔═══════════════════════════════════════════════════════════════════════╗
-║  T.VỸ-AI-SUPREME v11.0                                              ║
+║  T.VỸ-AI-SUPREME v12.5.0 (VISION & MULTIMODAL EDITION)                ║
 ║  Bản quyền: T.VỸ-VIP-FILE                                           ║
-║  🔥 Chat AI 4 cấp độ                                                ║
-║  🎵 Tạo nhạc bằng AI (MusicGen + Lyrics)                           ║
-║  💳 Thanh toán MoMo                                                 ║
-║  👑 Admin Panel                                                     ║
-║  🚀 Chạy tại: http://localhost:5000                                 ║
-║  📁 Thư mục nhạc: static/music/                                     ║
+║  🖼️ Hỗ trợ Nhận diện & Xem Hình Ảnh Trực Tiếp Trên Khung Chat       ║
+║  🚀 Máy chủ khởi chạy tại: http://localhost:{port}                    ║
 ╚═══════════════════════════════════════════════════════════════════════╝
     """)
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+    socketio.run(app, debug=app.config['DEBUG'], host=host, port=port, allow_unsafe_werkzeug=True)

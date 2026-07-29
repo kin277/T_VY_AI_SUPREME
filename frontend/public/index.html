@@ -3,18 +3,23 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>T.VỸ-AI-SUPREME v11.0</title>
+    <title>T.VỸ-AI-SUPREME v12.0 Ultra</title>
     
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+
+    <!-- Markdown & Syntax Highlighting -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
 
     <!-- Mermaid.js Render Sơ Đồ Trực Quan -->
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -34,8 +39,8 @@
             /* Palette - Dark Mode Default */
             --bg-body: #08090d;
             --bg-sidebar: #0f1118;
-            --bg-card: rgba(20, 24, 36, 0.7);
-            --bg-glass: rgba(255, 255, 255, 0.03);
+            --bg-card: rgba(20, 24, 36, 0.75);
+            --bg-glass: rgba(255, 255, 255, 0.04);
             --bg-glass-hover: rgba(255, 255, 255, 0.08);
             --bg-input: rgba(15, 18, 28, 0.85);
             
@@ -47,10 +52,10 @@
             --accent-primary: #6366f1;
             --accent-hover: #4f46e5;
             --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-            --accent-gradient-subtle: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.12));
+            --accent-gradient-subtle: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15));
             
             --border-color: rgba(255, 255, 255, 0.08);
-            --border-highlight: rgba(99, 102, 241, 0.35);
+            --border-highlight: rgba(99, 102, 241, 0.4);
             
             --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
             --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
@@ -127,6 +132,27 @@
             height: 100vh;
             background: var(--bg-body);
             position: relative;
+        }
+
+        /* Drag Overlay */
+        .drag-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(99, 102, 241, 0.2);
+            border: 3px dashed var(--accent-primary);
+            backdrop-filter: blur(4px);
+            z-index: 999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            pointer-events: none;
+        }
+
+        .drag-overlay.active {
+            display: flex;
         }
 
         /* ===== SIDEBAR ===== */
@@ -539,6 +565,18 @@
             border-color: var(--border-highlight);
         }
 
+        .btn-icon.active {
+            color: #ef4444;
+            border-color: #ef4444;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
         /* ===== CHAT CONTAINER ===== */
         .chat-container {
             flex: 1;
@@ -686,7 +724,7 @@
             30% { transform: translateY(-6px); opacity: 1; }
         }
 
-        /* Message Bubbles */
+        /* Message Bubbles & Code Blocks */
         .message-wrapper {
             display: flex;
             gap: 12px;
@@ -727,7 +765,7 @@
         }
 
         .message {
-            max-width: 75%;
+            max-width: 80%;
             padding: 14px 18px;
             border-radius: var(--radius-lg);
             font-size: 14px;
@@ -751,12 +789,85 @@
             border-top-left-radius: 4px;
         }
 
-        .message .time {
-            display: block;
-            font-size: 10px;
+        /* Code Container & Copy Button */
+        .code-container {
+            position: relative;
+            margin: 10px 0;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.4);
+            padding: 6px 12px;
+            font-size: 11px;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .code-copy-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            border-radius: var(--radius-sm);
+            padding: 2px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .code-copy-btn:hover {
+            background: var(--bg-glass-hover);
+            color: #fff;
+        }
+
+        .message pre {
+            margin: 0;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3) !important;
+            overflow-x: auto;
+            font-family: var(--font-mono);
+            font-size: 13px;
+        }
+
+        .message code {
+            font-family: var(--font-mono);
+        }
+
+        .message-tools {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        .tool-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tool-btn:hover {
+            color: var(--accent-primary);
+        }
+
+        .message .time {
+            font-size: 10px;
             opacity: 0.7;
-            text-align: right;
+            margin-left: auto;
         }
 
         /* Mermaid Container Styling */
@@ -900,12 +1011,12 @@
 
         .input-area {
             display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 8px 12px 8px 20px;
+            align-items: flex-end;
+            gap: 10px;
+            padding: 8px 12px 8px 18px;
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: var(--radius-full);
+            border-radius: var(--radius-xl);
             box-shadow: var(--shadow-lg);
             transition: var(--transition);
         }
@@ -915,14 +1026,18 @@
             box-shadow: var(--shadow-glow);
         }
 
-        .input-area input {
+        .input-area textarea {
             flex: 1;
-            padding: 8px 0;
+            padding: 6px 0;
             background: transparent;
             border: none;
             color: var(--text-main);
             font-size: 14px;
             outline: none;
+            resize: none;
+            max-height: 150px;
+            min-height: 24px;
+            line-height: 1.5;
         }
 
         .input-area button.send-btn {
@@ -1105,13 +1220,17 @@
 <body>
 
     <!-- ===== APP CONTAINER ===== -->
-    <div class="app-container">
+    <div class="app-container" id="appContainer">
+        <!-- Drag Overlay -->
+        <div class="drag-overlay" id="dragOverlay">
+            <i class="fa-solid fa-cloud-arrow-up" style="margin-right:12px;"></i> Thả file vào đây để đính kèm
+        </div>
 
         <!-- ===== SIDEBAR ===== -->
         <aside class="sidebar" id="appSidebar">
             <div class="sidebar-brand">
                 <div class="logo"><i class="fa-solid fa-brain"></i> T.VỸ.AI</div>
-                <span class="version">v11.0</span>
+                <span class="version">v12.0 Ultra</span>
             </div>
 
             <button class="btn-new-chat" onclick="clearAllMessages()">
@@ -1212,7 +1331,7 @@
                 <!-- ===== HERO WELCOME BANNER ===== -->
                 <div class="welcome-hero" id="welcomeHero">
                     <div class="hero-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-                    <h1>T.VỸ-AI-SUPREME v11.0</h1>
+                    <h1>T.VỸ-AI-SUPREME v12.0 Ultra</h1>
                     <p>Hệ thống AI thế hệ mới nâng cao năng suất, sáng tạo nội dung, lập trình và hỗ trợ công việc đa nhiệm vượt trội.</p>
                     
                     <div class="suggestion-cards">
@@ -1243,6 +1362,9 @@
                         <button onclick="analyzeData()"><i class="fa-solid fa-chart-pie"></i> Phân tích dữ liệu</button>
                         <button onclick="generateMusicWithLyrics()"><i class="fa-solid fa-music"></i> Sáng tác nhạc & lời</button>
                         <hr>
+                        <button onclick="exportChatMarkdown()"><i class="fa-solid fa-file-code"></i> Tải về (.MD)</button>
+                        <button onclick="exportChatTXT()"><i class="fa-solid fa-file-lines"></i> Tải về (.TXT)</button>
+                        <hr>
                         <button class="danger" onclick="clearAllMessages()"><i class="fa-solid fa-trash"></i> Xóa toàn bộ chat</button>
                     </div>
                 </div>
@@ -1258,13 +1380,19 @@
             <div class="input-wrapper">
                 <div id="filePreviewArea" class="file-preview-area"></div>
                 <div class="input-area">
-                    <input type="text" id="inputField" placeholder="Hỏi T.VỸ-AI bất kỳ điều gì..." />
+                    <textarea id="inputField" rows="1" placeholder="Hỏi T.VỸ-AI bất kỳ điều gì (Enter để gửi, Shift+Enter để xuống dòng)..."></textarea>
+                    
+                    <!-- Micro Voice Input -->
+                    <button class="btn-icon" id="micBtn" title="Nhập bằng giọng nói" onclick="toggleVoiceInput()" style="margin-bottom:3px;">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+
                     <button class="send-btn" id="sendBtn" title="Gửi tin nhắn"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
             </div>
 
             <footer class="footer">
-                Bản quyền T.VỸ-VIP-FILE | Phiên bản 11.0 Modern Interface
+                Bản quyền T.VỸ-VIP-FILE | Phiên bản 12.0 Ultra Modern Interface
             </footer>
         </main>
     </div>
@@ -1432,6 +1560,19 @@
                 .catch(error => console.error('Persistence error:', error));
         }
 
+        // Configure Marked Renderer
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    if (lang && hljs.getLanguage(lang)) {
+                        return hljs.highlight(code, { language: lang }).value;
+                    }
+                    return hljs.highlightAuto(code).value;
+                },
+                breaks: true
+            });
+        }
+
         // ================================================================
         // DOM ELEMENTS & STATE
         // ================================================================
@@ -1457,7 +1598,9 @@
         let userData = null;
         let socket = null;
         let sessionTimer = null;
-        let attachedFiles = []; // Danh sách file đang đính kèm
+        let attachedFiles = [];
+        let recognition = null;
+        let isRecording = false;
         const SESSION_TIMEOUT = 24 * 60 * 60 * 1000;
 
         const LEVEL_NAMES = {
@@ -1467,13 +1610,127 @@
             pro3: 'AI 3.0 Pro'
         };
 
-        // ================================================================
-        // FILE UPLOAD HANDLING
-        // ================================================================
+        // Auto-resize Textarea
+        if (inputField) {
+            inputField.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+            });
+        }
+
+        // Voice Recognition (Speech-to-Text)
+        function toggleVoiceInput() {
+            const micBtn = document.getElementById('micBtn');
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (!SpeechRecognition) {
+                showToast('❌ Trình duyệt không hỗ trợ nhận diện giọng nói', 'error');
+                return;
+            }
+
+            if (isRecording) {
+                if (recognition) recognition.stop();
+                isRecording = false;
+                if (micBtn) micBtn.classList.remove('active');
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'vi-VN';
+            recognition.interimResults = false;
+
+            recognition.onstart = function() {
+                isRecording = true;
+                if (micBtn) micBtn.classList.add('active');
+                showToast('🎙️ Đang lắng nghe... Nói đi bạn!', 'info');
+            };
+
+            recognition.onresult = function(event) {
+                const text = event.results[0][0].transcript;
+                inputField.value += (inputField.value ? ' ' : '') + text;
+                inputField.dispatchEvent(new Event('input'));
+            };
+
+            recognition.onerror = function(event) {
+                showToast('❌ Lỗi giọng nói: ' + event.error, 'error');
+                isRecording = false;
+                if (micBtn) micBtn.classList.remove('active');
+            };
+
+            recognition.onend = function() {
+                isRecording = false;
+                if (micBtn) micBtn.classList.remove('active');
+            };
+
+            recognition.start();
+        }
+
+        // Text-to-Speech (TTS)
+        function speakText(btn, text) {
+            if (!('speechSynthesis' in window)) {
+                showToast('❌ Trình duyệt không hỗ trợ đọc văn bản', 'error');
+                return;
+            }
+
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+                btn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                return;
+            }
+
+            const cleanText = text.replace(/```[\s\S]*?```/g, '').replace(/<[^>]*>/g, '');
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'vi-VN';
+            utterance.rate = 1.0;
+
+            btn.innerHTML = '<i class="fa-solid fa-square-stop" style="color:#ef4444;"></i>';
+
+            utterance.onend = function() {
+                btn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+            };
+
+            utterance.onerror = function() {
+                btn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Drag and Drop Files
+        const appContainer = document.getElementById('appContainer');
+        const dragOverlay = document.getElementById('dragOverlay');
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            appContainer.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (dragOverlay) dragOverlay.classList.add('active');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            appContainer.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (dragOverlay) dragOverlay.classList.remove('active');
+            }, false);
+        });
+
+        appContainer.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files && files.length > 0) {
+                processFiles(files);
+            }
+        });
+
         function handleFileUpload(event) {
             const files = event.target.files;
-            if (!files || files.length === 0) return;
+            if (files && files.length > 0) processFiles(files);
+            event.target.value = '';
+        }
 
+        function processFiles(files) {
             Array.from(files).forEach(file => {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -1486,15 +1743,12 @@
                     renderFilePreview();
                 };
 
-                // Đọc text đối với file văn bản, hoặc dataURL với file hình
                 if (file.type.startsWith('image/')) {
                     reader.readAsDataURL(file);
                 } else {
                     reader.readAsText(file);
                 }
             });
-
-            event.target.value = ''; // Reset input file
             showToast('📎 Đã đính kèm file thành công!', 'success');
         }
 
@@ -1533,6 +1787,55 @@
             return str.replace(/[&<>'"]/g, 
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );
+        }
+
+        // Copy Code Snippet
+        function copyCodeSnippet(btn, codeText) {
+            navigator.clipboard.writeText(codeText).then(() => {
+                btn.innerHTML = '<i class="fa-solid fa-check" style="color:#22c55e;"></i> Đã chép';
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fa-regular fa-copy"></i> Sao chép';
+                }, 2000);
+            });
+        }
+
+        // Export Chat Client side
+        function exportChatMarkdown() {
+            const messages = document.querySelectorAll('.message-wrapper');
+            if (messages.length === 0) return showToast('Chưa có tin nhắn để xuất', 'error');
+
+            let mdText = `# Nhật ký trò chuyện T.VỸ-AI-SUPREME v12.0\n\n`;
+            messages.forEach(m => {
+                const isUser = m.classList.contains('user');
+                const content = m.querySelector('.message').innerText;
+                mdText += `### ${isUser ? '👤 Người dùng' : '🤖 AI'}:\n${content}\n\n---\n\n`;
+            });
+
+            downloadFile(mdText, `Chat_TVY_AI_${Date.now()}.md`, 'text/markdown');
+        }
+
+        function exportChatTXT() {
+            const messages = document.querySelectorAll('.message-wrapper');
+            if (messages.length === 0) return showToast('Chưa có tin nhắn để xuất', 'error');
+
+            let txtText = `=======================================\nNHẬT KÝ TRÒ CHUYỆN T.VỸ-AI-SUPREME v12.0\n=======================================\n\n`;
+            messages.forEach(m => {
+                const isUser = m.classList.contains('user');
+                const content = m.querySelector('.message').innerText;
+                txtText += `[${isUser ? 'USER' : 'AI'}]\n${content}\n\n---------------------------------------\n\n`;
+            });
+
+            downloadFile(txtText, `Chat_TVY_AI_${Date.now()}.txt`, 'text/plain');
+        }
+
+        function downloadFile(content, fileName, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = fileName;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            showToast('📥 Đã tải file xuống máy thành công!', 'success');
         }
 
         // ================================================================
@@ -1883,6 +2186,7 @@
 
         function setInputAndSend(text) {
             inputField.value = text;
+            inputField.dispatchEvent(new Event('input'));
             sendMessage();
         }
 
@@ -1900,7 +2204,6 @@
             const hero = document.getElementById('welcomeHero');
             if (hero) hero.style.display = 'none';
 
-            // Ghép thông tin file vào câu hỏi nếu có đính kèm
             let fullPrompt = text;
             if (attachedFiles.length > 0) {
                 const filesContext = attachedFiles.map(f => `[File đính kèm: ${f.name}]\n${f.content}`).join('\n\n');
@@ -1909,6 +2212,7 @@
 
             addMessage('user', text + (attachedFiles.length > 0 ? `\n📎 [Đã gửi ${attachedFiles.length} file đính kèm]` : ''));
             inputField.value = '';
+            inputField.style.height = 'auto';
             attachedFiles = [];
             renderFilePreview();
 
@@ -1966,14 +2270,14 @@
 
         sendBtn.addEventListener('click', sendMessage);
         inputField.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
             }
         });
 
         // ================================================================
-        // RENDER MESSAGE & MERMAID DIAGRAMS
+        // RENDER MESSAGE & MERMAID DIAGRAMS & MARKDOWN
         // ================================================================
         function addMessage(role, content) {
             const hero = document.getElementById('welcomeHero');
@@ -1990,27 +2294,75 @@
             msgDiv.className = 'message ' + role;
             
             if (role === 'ai') {
-                // Kiểm tra đoạn mã mermaid trong phản hồi AI
                 const mermaidRegex = /```mermaid\s*([\s\S]*?)\s*```/g;
-                let hasMermaid = false;
+                let mermaidBlocks = [];
                 
-                let processedContent = escapeHTML(content);
-                
-                // Un-escape khối mermaid để render
-                processedContent = content.replace(mermaidRegex, function(match, code) {
-                    hasMermaid = true;
-                    return `<div class="mermaid">${code.trim()}</div>`;
+                // Tách mermaid ra khỏi markdown render
+                let tempContent = content.replace(mermaidRegex, (match, code) => {
+                    mermaidBlocks.push(code.trim());
+                    return `___MERMAID_BLOCK_${mermaidBlocks.length - 1}___`;
                 });
 
-                if (!hasMermaid) {
-                    processedContent = escapeHTML(content).replace(/\n/g, '<br>');
-                } else {
-                    processedContent = processedContent.replace(/\n/g, '<br>');
-                }
+                let parsedHTML = typeof marked !== 'undefined' ? marked.parse(tempContent) : escapeHTML(tempContent).replace(/\n/g, '<br>');
 
-                msgDiv.innerHTML = processedContent + `<span class="time">${new Date().toLocaleTimeString()}</span>`;
+                // Restore mermaid blocks
+                mermaidBlocks.forEach((code, index) => {
+                    parsedHTML = parsedHTML.replace(`___MERMAID_BLOCK_${index}___`, `<div class="mermaid">${code}</div>`);
+                });
+
+                msgDiv.innerHTML = parsedHTML;
+
+                // Thêm nút Copy cho các khối Code Snippet
+                msgDiv.querySelectorAll('pre code').forEach((codeBlock) => {
+                    const preNode = codeBlock.parentNode;
+                    if (preNode.parentNode.classList.contains('code-container')) return;
+
+                    const codeContainer = document.createElement('div');
+                    codeContainer.className = 'code-container';
+
+                    const codeHeader = document.createElement('div');
+                    codeHeader.className = 'code-header';
+                    const lang = (codeBlock.className.match(/language-(\w+)/) || [])[1] || 'code';
+                    codeHeader.innerHTML = `<span>${lang}</span>`;
+
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'code-copy-btn';
+                    copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i> Sao chép';
+                    copyBtn.onclick = () => copyCodeSnippet(copyBtn, codeBlock.innerText);
+
+                    codeHeader.appendChild(copyBtn);
+                    preNode.parentNode.insertBefore(codeContainer, preNode);
+                    codeContainer.appendChild(codeHeader);
+                    codeContainer.appendChild(preNode);
+                });
+
+                // Message Footer Tools (Loa đọc, Copy, Giờ)
+                const toolsDiv = document.createElement('div');
+                toolsDiv.className = 'message-tools';
+
+                const ttsBtn = document.createElement('button');
+                ttsBtn.className = 'tool-btn';
+                ttsBtn.title = 'Đọc phản hồi';
+                ttsBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                ttsBtn.onclick = () => speakText(ttsBtn, content);
+
+                const copyMsgBtn = document.createElement('button');
+                copyMsgBtn.className = 'tool-btn';
+                copyMsgBtn.title = 'Sao chép văn bản';
+                copyMsgBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                copyMsgBtn.onclick = () => copyCodeSnippet(copyMsgBtn, content);
+
+                const timeSpan = document.createElement('span');
+                timeSpan.className = 'time';
+                timeSpan.textContent = new Date().toLocaleTimeString();
+
+                toolsDiv.appendChild(ttsBtn);
+                toolsDiv.appendChild(copyMsgBtn);
+                toolsDiv.appendChild(timeSpan);
+                msgDiv.appendChild(toolsDiv);
+
             } else {
-                msgDiv.innerHTML = escapeHTML(content).replace(/\n/g, '<br>') + `<span class="time">${new Date().toLocaleTimeString()}</span>`;
+                msgDiv.innerHTML = escapeHTML(content).replace(/\n/g, '<br>') + `<div class="message-tools"><span class="time">${new Date().toLocaleTimeString()}</span></div>`;
             }
 
             wrapper.appendChild(avatar);
@@ -2018,7 +2370,6 @@
             chatContainer.appendChild(wrapper);
             chatContainer.scrollTop = chatContainer.scrollHeight;
 
-            // Chạy Render Mermaid Sơ đồ trực quan nếu có
             if (role === 'ai' && window.mermaid) {
                 const mermaidNodes = msgDiv.querySelectorAll('.mermaid');
                 if (mermaidNodes.length > 0) {
@@ -2275,6 +2626,7 @@
                 }
                 addMessage('user', '🧠 Yêu cầu AI Đa luồng: ' + text);
                 inputField.value = '';
+                inputField.style.height = 'auto';
                 showTyping();
                 fetch('/api/multi_ai', {
                     method: 'POST',
@@ -2308,6 +2660,7 @@
                 }
                 addMessage('user', '📝 Yêu cầu tóm tắt: ' + text);
                 inputField.value = '';
+                inputField.style.height = 'auto';
                 showTyping();
                 fetch('/api/summarize', {
                     method: 'POST',
@@ -2338,6 +2691,7 @@
                 if (!lang) return;
                 addMessage('user', `🌐 Yêu cầu dịch sang ${lang}: ${text}`);
                 inputField.value = '';
+                inputField.style.height = 'auto';
                 showTyping();
                 fetch('/api/translate', {
                     method: 'POST',
@@ -2368,6 +2722,7 @@
                 if (!template) return;
                 addMessage('user', `🎬 Yêu cầu tạo video (${template}): ${text}`);
                 inputField.value = '';
+                inputField.style.height = 'auto';
                 showTyping();
                 fetch('/api/generate_video', {
                     method: 'POST',
@@ -2398,6 +2753,7 @@
                 if (numbers.length > 1) {
                     addMessage('user', '📊 Yêu cầu phân tích số: ' + text);
                     inputField.value = '';
+                    inputField.style.height = 'auto';
                     showTyping();
                     fetch('/api/analyze_numbers', {
                         method: 'POST',
@@ -2417,6 +2773,7 @@
                 } else {
                     addMessage('user', '📊 Yêu cầu phân tích văn bản: ' + text);
                     inputField.value = '';
+                    inputField.style.height = 'auto';
                     showTyping();
                     fetch('/api/analyze_text', {
                         method: 'POST',
@@ -2451,6 +2808,7 @@
                 const duration = parseInt(prompt('Chọn độ dài (giây, tối đa 420 - 7 phút):', '60')) || 60;
                 addMessage('user', `🎵 Yêu cầu tạo nhạc (${style}, ${mood}, ${duration}s): ${text}`);
                 inputField.value = '';
+                inputField.style.height = 'auto';
                 showTyping();
                 fetch('/api/generate_music', {
                     method: 'POST',
@@ -2486,7 +2844,7 @@
             chatContainer.innerHTML = `
                 <div class="welcome-hero" id="welcomeHero">
                     <div class="hero-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-                    <h1>T.VỸ-AI-SUPREME v11.0</h1>
+                    <h1>T.VỸ-AI-SUPREME v12.0 Ultra</h1>
                     <p>Hệ thống AI thế hệ mới nâng cao năng suất, sáng tạo nội dung, lập trình và hỗ trợ công việc đa nhiệm vượt trội.</p>
                     
                     <div class="suggestion-cards">
@@ -2519,7 +2877,7 @@
 
         initSocket();
 
-        console.log('🚀 T.VỸ-AI-SUPREME v11.0 Modern Interface Loaded Successfully!');
+        console.log('🚀 T.VỸ-AI-SUPREME v12.0 Ultra Loaded Successfully!');
     </script>
 </body>
 </html>
