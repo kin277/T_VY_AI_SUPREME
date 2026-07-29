@@ -9,7 +9,7 @@ import re
 import requests
 import time
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from backend.core.ethics_guard import EthicsGuard
 from backend.core.web_search import WebSearchEngine
 
@@ -50,7 +50,18 @@ class ClaudeEngine:
             return 0.2
         return 0.7
 
-    def process(self, query: str, context: str = "", complexity: str = "pro") -> Dict[str, Any]:
+    def process(
+        self, 
+        query: str, 
+        context: str = "", 
+        complexity: str = "pro", 
+        image_url: Optional[str] = None, 
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Xử lý yêu cầu AI với ngữ cảnh, độ phức tạp, và hình ảnh (nếu có).
+        Đã thêm image_url và **kwargs để tránh lỗi unexpected keyword argument.
+        """
         # 1. Kiểm tra An toàn Đạo đức
         is_safe, refusal_reason = self.guard.check_message(query)
         if not is_safe:
@@ -107,7 +118,20 @@ class ClaudeEngine:
 
         # Đính kèm thông tin web vào prompt
         user_content = query + web_info
-        messages.append({"role": "user", "content": user_content})
+
+        # 5. Xử lý trường hợp có gửi kèm Image URL
+        if image_url:
+            user_message = {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": user_content},
+                    {"type": "image_url", "image_url": {"url": image_url}}
+                ]
+            }
+        else:
+            user_message = {"role": "user", "content": user_content}
+
+        messages.append(user_message)
 
         last_error = ""
         for key in api_keys:
