@@ -1100,6 +1100,8 @@
             max-width: 460px;
             box-shadow: var(--shadow-lg);
             position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .modal-header {
@@ -1155,6 +1157,79 @@
             background: var(--accent-gradient);
             color: #ffffff;
             box-shadow: var(--shadow-sm);
+        }
+
+        /* Local Auth Form Styling */
+        .auth-input-group {
+            margin-bottom: 12px;
+            text-align: left;
+        }
+
+        .auth-input-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .auth-input-group input {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-main);
+            font-size: 13px;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .auth-input-group input:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .btn-auth-submit {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent-gradient);
+            color: #ffffff;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow-glow);
+            margin-top: 6px;
+            margin-bottom: 14px;
+        }
+
+        .btn-auth-submit:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+            margin: 14px 0;
+        }
+
+        .auth-divider::before,
+        .auth-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .auth-divider span {
+            padding: 0 10px;
         }
 
         /* Toast Message */
@@ -1481,7 +1556,7 @@
         </div>
     </div>
 
-    <!-- ===== LOGIN MODAL ===== -->
+    <!-- ===== LOGIN & REGISTER MODAL (CỤC BỘ & MẠNG XÃ HỘI) ===== -->
     <div class="modal-overlay" id="loginModal">
         <div class="modal-box">
             <div class="modal-header">
@@ -1495,35 +1570,75 @@
                 <button class="auth-tab" id="registerTab" onclick="switchAuthTab('register')">Đăng ký</button>
             </div>
             
-            <!-- Form đăng nhập -->
+            <!-- FORM ĐĂNG NHẬP CỤC BỘ -->
             <div id="loginForm">
-                <button onclick="loginGoogle()" style="width:100%;padding:12px;background:#fff;color:#333;border:1px solid var(--border-color);border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:10px;">
+                <div class="auth-input-group">
+                    <label for="localLoginUser">Tên đăng nhập hoặc Email</label>
+                    <input type="text" id="localLoginUser" placeholder="Nhập username hoặc email..." required />
+                </div>
+                <div class="auth-input-group">
+                    <label for="localLoginPass">Mật khẩu</label>
+                    <input type="password" id="localLoginPass" placeholder="Nhập mật khẩu..." required />
+                </div>
+                <button class="btn-auth-submit" onclick="loginLocal()">
+                    <i class="fa-solid fa-right-to-bracket"></i> Đăng nhập Cục bộ
+                </button>
+
+                <div class="auth-divider">
+                    <span>HOẶC ĐĂNG NHẬP BẰNG</span>
+                </div>
+
+                <button onclick="loginGoogle()" style="width:100%;padding:10px;background:#fff;color:#333;border:1px solid var(--border-color);border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:8px;">
                     <img src="https://www.google.com/favicon.ico" style="width:18px;height:18px;" alt="Google" /> Đăng nhập với Google
                 </button>
-                <button onclick="loginFacebook()" style="width:100%;padding:12px;background:#1877f2;color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:10px;">
+                <button onclick="loginFacebook()" style="width:100%;padding:10px;background:#1877f2;color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:8px;">
                     <img src="https://www.facebook.com/favicon.ico" style="width:18px;height:18px;" alt="Facebook" /> Đăng nhập với Facebook
                 </button>
-                <button onclick="loginGitHub()" style="width:100%;padding:12px;background:#24292e;color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:10px;">
+                <button onclick="loginGitHub()" style="width:100%;padding:10px;background:#24292e;color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:8px;">
                     <img src="https://github.com/favicon.ico" style="width:18px;height:18px;" alt="GitHub" /> Đăng nhập với GitHub
                 </button>
-                <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;">
-                    Chưa có tài khoản? <span style="color:var(--accent-primary);cursor:pointer;" onclick="switchAuthTab('register')">Đăng ký</span>
+                <div style="margin-top:14px;font-size:12px;color:var(--text-muted);text-align:center;">
+                    Chưa có tài khoản? <span style="color:var(--accent-primary);cursor:pointer;font-weight:700;" onclick="switchAuthTab('register')">Đăng ký ngay</span>
                 </div>
             </div>
             
-            <!-- Form đăng ký -->
+            <!-- FORM ĐĂNG KÝ CỤC BỘ -->
             <div id="registerForm" style="display:none;">
-                <button onclick="loginGoogle()" style="width:100%;padding:12px;background:#fff;color:#333;border:1px solid var(--border-color);border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:10px;">
+                <div class="auth-input-group">
+                    <label for="localRegUser">Tên đăng nhập</label>
+                    <input type="text" id="localRegUser" placeholder="Nhập tên tài khoản..." required />
+                </div>
+                <div class="auth-input-group">
+                    <label for="localRegEmail">Địa chỉ Email</label>
+                    <input type="email" id="localRegEmail" placeholder="Nhập email cá nhân..." required />
+                </div>
+                <div class="auth-input-group">
+                    <label for="localRegPass">Mật khẩu</label>
+                    <input type="password" id="localRegPass" placeholder="Tạo mật khẩu an toàn..." required />
+                </div>
+                <div class="auth-input-group">
+                    <label for="localRegConfirmPass">Xác nhận mật khẩu</label>
+                    <input type="password" id="localRegConfirmPass" placeholder="Nhập lại mật khẩu..." required />
+                </div>
+                <button class="btn-auth-submit" onclick="registerLocal()">
+                    <i class="fa-solid fa-user-plus"></i> Đăng ký Tài khoản
+                </button>
+
+                <div class="auth-divider">
+                    <span>HOẶC ĐĂNG KÝ BẰNG</span>
+                </div>
+
+                <button onclick="loginGoogle()" style="width:100%;padding:10px;background:#fff;color:#333;border:1px solid var(--border-color);border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:8px;">
                     <img src="https://www.google.com/favicon.ico" style="width:18px;height:18px;" alt="Google" /> Đăng ký với Google
                 </button>
-                <button onclick="loginFacebook()" style="width:100%;padding:12px;background:#1877f2;color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:10px;">
+                <button onclick="loginFacebook()" style="width:100%;padding:10px;background:#1877f2;color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:8px;">
                     <img src="https://www.facebook.com/favicon.ico" style="width:18px;height:18px;" alt="Facebook" /> Đăng ký với Facebook
                 </button>
-                <button onclick="loginGitHub()" style="width:100%;padding:12px;background:#24292e;color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:10px;">
-                    <img src="https://github.com/favicon.ico" style="width:18px;height:18px;" alt="GitHub" /> Đăng Ký với GitHub
+                <button onclick="loginGitHub()" style="width:100%;padding:10px;background:#24292e;color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;margin-bottom:8px;">
+                    <img src="https://github.com/favicon.ico" style="width:18px;height:18px;" alt="GitHub" /> Đăng ký với GitHub
                 </button>
-                <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;">
-                    Đã có tài khoản? <span style="color:var(--accent-primary);cursor:pointer;" onclick="switchAuthTab('login')">Đăng nhập</span>
+                <div style="margin-top:14px;font-size:12px;color:var(--text-muted);text-align:center;">
+                    Đã có tài khoản? <span style="color:var(--accent-primary);cursor:pointer;font-weight:700;" onclick="switchAuthTab('login')">Đăng nhập</span>
                 </div>
             </div>
             
@@ -1868,6 +1983,84 @@
         function openRegisterModal() {
             switchAuthTab('register');
             openModal('loginModal');
+        }
+
+        // --- ĐĂNG NHẬP CỤC BỘ ---
+        function loginLocal() {
+            const usernameInput = document.getElementById('localLoginUser').value.trim();
+            const passwordInput = document.getElementById('localLoginPass').value.trim();
+
+            if (!usernameInput || !passwordInput) {
+                showToast('❌ Vui lòng nhập đầy đủ Tên đăng nhập/Email và Mật khẩu!', 'error');
+                return;
+            }
+
+            showToast('⏳ Đang xử lý đăng nhập...', 'info');
+
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: usernameInput,
+                    password: passwordInput
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('✅ Đăng nhập thành công!', 'success');
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showToast('❌ ' + (data.error || 'Tên đăng nhập hoặc mật khẩu không đúng'), 'error');
+                }
+            })
+            .catch(err => {
+                console.error('Local login error:', err);
+                showToast('❌ Lỗi kết nối: ' + err.message, 'error');
+            });
+        }
+
+        // --- ĐĂNG KÝ CỤC BỘ ---
+        function registerLocal() {
+            const usernameInput = document.getElementById('localRegUser').value.trim();
+            const emailInput = document.getElementById('localRegEmail').value.trim();
+            const passwordInput = document.getElementById('localRegPass').value.trim();
+            const confirmInput = document.getElementById('localRegConfirmPass').value.trim();
+
+            if (!usernameInput || !emailInput || !passwordInput) {
+                showToast('❌ Vui lòng điền đầy đủ thông tin!', 'error');
+                return;
+            }
+
+            if (passwordInput !== confirmInput) {
+                showToast('❌ Mật khẩu xác nhận không khớp!', 'error');
+                return;
+            }
+
+            showToast('⏳ Đang xử lý đăng ký...', 'info');
+
+            fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: usernameInput,
+                    email: emailInput,
+                    password: passwordInput
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('✅ Đăng ký tài khoản thành công! Đang đăng nhập...', 'success');
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showToast('❌ ' + (data.error || 'Đăng ký thất bại'), 'error');
+                }
+            })
+            .catch(err => {
+                console.error('Local register error:', err);
+                showToast('❌ Lỗi kết nối: ' + err.message, 'error');
+            });
         }
 
         function checkLogin() {

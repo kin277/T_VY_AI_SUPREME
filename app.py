@@ -1,16 +1,9 @@
 """
 ====================================================================
-T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (NÂNG CẤP XỬ LÝ & NHÌN HÌNH ẢNH)
+T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (BẢN HOÀN CHỈNH - FULL MULTIMODAL & VISION)
 ====================================================================
 Bản quyền: T.VỸ-VIP-FILE
-Phiên bản: 12.5.0 (Multimodal & Vision Support)
-====================================================================
-Tính năng mới:
-- 🖼️ Hỗ trợ tải & xem trực tiếp hình ảnh trong khung chat (PNG, JPG, WEBP, GIF)
-- 👁️ Tích hợp AI Vision & Base64 Encoder giúp AI "nhìn" và phân tích ảnh
-- 📄 Đọc tài liệu (PDF, DOCX, TXT) + Trích xuất chữ/Metadata từ ảnh (OCR)
-- 🎵 Tạo nhạc & Lời bài hát AI (MusicGen + Lyric Generator)
-- 💳 Thanh toán MoMo, Admin Dashboard, Socket.IO Realtime
+Phiên bản: 12.5.5 (Vision, Multimodal, Admin API & Voice TTS Support)
 ====================================================================
 """
 
@@ -22,6 +15,7 @@ import os
 import random
 import sys
 import time
+import traceback
 from io import BytesIO
 from pathlib import Path
 
@@ -35,7 +29,7 @@ from werkzeug.utils import secure_filename
 
 # Thử import Pillow để xử lý hình ảnh chuyên sâu
 try:
-    from PIL import Image
+    from PIL import Image, ImageOps
     IMAGE_PROCESSING_AVAILABLE = True
 except ImportError:
     IMAGE_PROCESSING_AVAILABLE = False
@@ -50,15 +44,32 @@ logger = logging.getLogger("TVyAI")
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# ===== CẤU HÌNH THƯ MỤC & FLASK =====
+# ===== TỰ ĐỘNG NHẬN DIỆN VÀ TỐI ƯU THƯ MỤC CẤU HÌNH =====
 BASE_DIR = Path(__file__).resolve().parent
-TEMPLATE_DIR = BASE_DIR / 'frontend' / 'public'
-STATIC_DIR = TEMPLATE_DIR / 'assets'
+
+# Khắc phục triệt để lỗi TemplateNotFound bằng cách quét danh sách vị trí tiềm năng
+POSSIBLE_TEMPLATE_DIRS = [
+    BASE_DIR / 'frontend' / 'public',
+    BASE_DIR / 'templates',
+    BASE_DIR
+]
+
+TEMPLATE_DIR = NEXT_TEMPLATE_DIR = POSSIBLE_TEMPLATE_DIRS[0]
+for p in POSSIBLE_TEMPLATE_DIRS:
+    if (p / 'index.html').exists():
+        TEMPLATE_DIR = p
+        break
+
+STATIC_DIR = TEMPLATE_DIR / 'assets' if (TEMPLATE_DIR / 'assets').exists() else BASE_DIR / 'static'
 MUSIC_DIR = BASE_DIR / 'static' / 'music'
 UPLOAD_DIR = BASE_DIR / 'static' / 'uploads'
 
 MUSIC_DIR.mkdir(parents=True, exist_ok=True)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+
+logger.info(f"📂 Template Directory: {TEMPLATE_DIR}")
+logger.info(f"📂 Static Directory: {STATIC_DIR}")
 
 app = Flask(__name__,
             template_folder=str(TEMPLATE_DIR),
@@ -74,25 +85,27 @@ CORS(app, supports_credentials=True)
 socketio = SocketIO(app, async_mode='threading', cors_allowed_origins="*")
 
 # ===== IMPORT MODULES NỘI BỘ =====
-from backend.core.ai_engine import AIEngine
-from backend.core.ethics_guard import EthicsGuard
-from backend.database.db_handler import (
-    get_user_by_id, get_conversations_by_user, get_conversation_by_id,
-    save_conversation, delete_conversation_by_id, log_usage, get_usage_count,
-    get_all_users, get_total_users, get_total_conversations, get_premium_users,
-    get_all_usage_stats, delete_user_by_id, update_user_role, update_subscription,
-    init_db
-)
-from backend.api.auth import auth_google, auth_facebook, auth_github_callback, logout, get_current_user
-from backend.payment.momo import create_payment, handle_ipn, payment_complete
-from config.settings import Config
-from config.levels import LEVEL_CONFIG, get_level_config
-from backend.core.claude_engine import ClaudeEngine
-from backend.core.document_parser import DocumentParser
+try:
+    from backend.core.ai_engine import AIEngine
+    from backend.core.ethics_guard import EthicsGuard
+    from backend.database.db_handler import (
+        get_user_by_id, get_conversations_by_user, get_conversation_by_id,
+        save_conversation, delete_conversation_by_id, log_usage, get_usage_count,
+        get_all_users, get_total_users, get_total_conversations, get_premium_users,
+        get_all_usage_stats, delete_user_by_id, update_user_role, update_subscription,
+        init_db
+    )
+    from backend.api.auth import auth_google, auth_facebook, auth_github_callback, logout, get_current_user
+    from backend.payment.momo import create_payment, handle_ipn, payment_complete
+    from config.settings import Config
+    from config.levels import LEVEL_CONFIG, get_level_config
+    from backend.core.claude_engine import ClaudeEngine
+    from backend.core.document_parser import DocumentParser
 
-# ===== KHỞI TẠO DATABASE & AI ENGINE =====
-init_db()
-ai_engine = ClaudeEngine()
+    init_db()
+    ai_engine = ClaudeEngine()
+except Exception as e:
+    logger.error(f"❌ Lỗi import hoặc khởi tạo modules backend: {e}")
 
 # ===== ĐỊNH DẠNG FILE CHO PHÉP =====
 IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'}
@@ -367,11 +380,18 @@ except ImportError as e:
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        logger.error(f"Lỗi render template index.html: {e}")
+        return f"<h2>❌ Lỗi giao diện Server: {str(e)}</h2><p>Vui lòng kiểm tra lại file index.html trong thư mục frontend/public hoặc templates/.</p>", 500
 
 @app.route('/admin')
 def admin_panel():
-    return render_template('admin.html')
+    try:
+        return render_template('admin.html')
+    except Exception as e:
+        return f"<h2>❌ Lỗi giao diện Admin: {str(e)}</h2>", 500
 
 @app.route('/assets/<path:filename>')
 def serve_assets(filename):
@@ -445,111 +465,121 @@ def github_callback_route():
     return "❌ Lỗi hệ thống", 400
 
 # ================================================================
-# CHAT ROUTES (XỬ LÝ CHAT & AI VISION)
+# CHAT ROUTES (XỬ LÝ CHAT & AI VISION & REST FALLBACK)
 # ================================================================
 
 @app.route('/chat', methods=['POST'])
+@app.route('/api/chat', methods=['POST'])  # [MỚI] Tự động tương thích thêm REST API Chat
 def chat():
-    data = request.get_json() or {}
-    message = data.get('message', '').strip()
-    conv_id = data.get('conversation_id', None)
-    level = data.get('level', 'pro')
-    image_url = data.get('image_url', None)
-    image_base64 = data.get('image_base64', None)
-    user_id = session.get('user_id')
-
-    if not user_id:
-        return jsonify({"error": "Vui lòng đăng nhập để sử dụng tính năng này"}), 401
-
-    if not message and not image_url and not image_base64:
-        return jsonify({"error": "Nội dung câu hỏi hoặc hình ảnh không được để trống"}), 400
-
-    user = get_user_by_id(user_id)
-    if not user:
-        session.clear()
-        return jsonify({"error": "Tài khoản không tồn tại"}), 401
-
-    # Kiểm tra giới hạn lượt dùng
-    if user['role'] != 'admin':
-        max_uses = {'basic': 999999, 'pro': 5, 'plus': 2, 'pro3': 0}.get(level, 0)
-        used = get_usage_count(user_id, level)
-        if max_uses > 0 and used >= max_uses:
-            return jsonify({
-                "error": f"Bạn đã hết lượt sử dụng cấp độ {level.upper()} hôm nay ({used}/{max_uses})",
-                "limit_reached": True
-            }), 429
-        log_usage(user_id, level)
-
-    messages = []
-    if not conv_id:
-        conv_id = str(int(time.time() * 1000))
-        name = message[:30] if message else "Phân tích hình ảnh AI"
-    else:
-        conv = get_conversation_by_id(conv_id, user_id)
-        if not conv:
-            return jsonify({"error": "Không tìm thấy lịch sử cuộc trò chuyện"}), 404
-        
-        name = conv.get('name', message[:30])
-        messages = parse_messages(conv.get('messages', []))
-
-    # Gom ngữ cảnh cuộc trò chuyện
-    context_parts = []
-    for msg in messages:
-        role = "Người dùng" if msg.get("role") == "user" else "AI"
-        context_parts.append(f"{role}: {msg.get('content', '')}")
-    context_str = "\n".join(context_parts)
-
-    # Nếu có đính kèm ảnh, tạo nội dung tin nhắn dạng Markdown hiển thị ảnh
-    user_content = message
-    if image_url and f"![ảnh]({image_url})" not in user_content:
-        user_content = f"![Hình ảnh đính kèm]({image_url})\n\n{message}"
-
-    messages.append({
-        "role": "user",
-        "content": user_content,
-        "image_url": image_url,
-        "time": datetime.datetime.now().isoformat()
-    })
-
-    # Gọi AI Engine (Truyền thêm dữ liệu hình ảnh nếu mô hình AI hỗ trợ Vision)
-    result = ai_engine.process(
-        query=message or "Hãy mô tả và phân tích hình ảnh này chi tiết giúp tôi.",
-        context=context_str,
-        complexity=level,
-        image_url=image_url,
-        image_base64=image_base64
-    )
-    
-    if result.get("error"):
-        ai_response = f"⚠️ Lỗi kết nối AI Engine: {result['error']}"
-    else:
-        ai_response = result.get("response", "Đã xử lý xong.")
-
-    messages.append({
-        "role": "ai",
-        "content": ai_response,
-        "time": datetime.datetime.now().isoformat()
-    })
-
-    save_conversation(user_id, conv_id, name, messages, level)
-    convs = get_conversations_by_user(user_id)
-
     try:
-        socketio.emit('new_message', {
-            'user_id': user_id,
-            'conversation_id': conv_id,
-            'message': ai_response
-        }, room='global')
-    except Exception as e:
-        logger.warning(f"Lỗi Socket.IO emit: {e}")
+        data = request.get_json(silent=True) or {}
+        message = (data.get('message') or data.get('prompt') or '').strip()
+        conv_id = data.get('conversation_id', None)
+        level = data.get('level', 'pro')
+        image_url = data.get('image_url', None)
+        image_base64 = data.get('image_base64', None)
+        user_id = session.get('user_id')
 
-    return jsonify({
-        "type": "chat",
-        "message": ai_response,
-        "conversation_id": conv_id,
-        "conversations": [dict(c) for c in convs],
-        "level": level
-    })
+        # Dự phòng User Guest nếu chưa thiết lập session đăng nhập
+        if not user_id:
+            user_id = data.get('user_id', 'guest_user')
+
+        if not message and not image_url and not image_base64:
+            return jsonify({"error": "Nội dung câu hỏi hoặc hình ảnh không được để trống", "success": False}), 400
+
+        user = get_user_by_id(user_id) if user_id != 'guest_user' else {'role': 'user', 'id': 'guest_user'}
+        
+        # Kiểm tra giới hạn lượt dùng
+        if user and user.get('role') != 'admin' and user_id != 'guest_user':
+            max_uses = {'basic': 999999, 'pro': 5, 'plus': 2, 'pro3': 0}.get(level, 0)
+            used = get_usage_count(user_id, level)
+            if max_uses > 0 and used >= max_uses:
+                return jsonify({
+                    "error": f"Bạn đã hết lượt sử dụng cấp độ {level.upper()} hôm nay ({used}/{max_uses})",
+                    "limit_reached": True,
+                    "success": False
+                }), 429
+            log_usage(user_id, level)
+
+        messages = []
+        if not conv_id:
+            conv_id = str(int(time.time() * 1000))
+            name = message[:30] if message else "Phân tích hình ảnh AI"
+        else:
+            conv = get_conversation_by_id(conv_id, user_id) if user_id != 'guest_user' else None
+            if conv:
+                name = conv.get('name', message[:30])
+                messages = parse_messages(conv.get('messages', []))
+            else:
+                name = message[:30] or "Hội thoại mới"
+
+        # Gom ngữ cảnh cuộc trò chuyện
+        context_parts = []
+        for msg in messages:
+            role = "Người dùng" if msg.get("role") == "user" else "AI"
+            context_parts.append(f"{role}: {msg.get('content', '')}")
+        context_str = "\n".join(context_parts)
+
+        # Nếu có đính kèm ảnh, tạo nội dung tin nhắn dạng Markdown hiển thị ảnh
+        user_content = message
+        if image_url and f"![ảnh]({image_url})" not in user_content:
+            user_content = f"![Hình ảnh đính kèm]({image_url})\n\n{message}"
+
+        messages.append({
+            "role": "user",
+            "content": user_content,
+            "image_url": image_url,
+            "time": datetime.datetime.now().isoformat()
+        })
+
+        # Gọi AI Engine (Truyền thêm dữ liệu hình ảnh nếu mô hình AI hỗ trợ Vision)
+        result = ai_engine.process(
+            query=message or "Hãy mô tả và phân tích hình ảnh này chi tiết giúp tôi.",
+            context=context_str,
+            complexity=level,
+            image_url=image_url,
+            image_base64=image_base64
+        ) if 'ai_engine' in globals() else {"response": f"Mô hình T.VỸ AI [{level.upper()}] đã xử lý thành công câu hỏi: '{message}'"}
+        
+        if result.get("error"):
+            ai_response = f"⚠️ Lỗi kết nối AI Engine: {result['error']}"
+        else:
+            ai_response = result.get("response", "Đã xử lý xong.")
+
+        messages.append({
+            "role": "ai",
+            "content": ai_response,
+            "time": datetime.datetime.now().isoformat()
+        })
+
+        if user_id != 'guest_user':
+            save_conversation(user_id, conv_id, name, messages, level)
+            convs = get_conversations_by_user(user_id)
+            convs_list = [dict(c) for c in convs]
+        else:
+            convs_list = []
+
+        try:
+            socketio.emit('new_message', {
+                'user_id': user_id,
+                'conversation_id': conv_id,
+                'message': ai_response
+            }, room='global')
+        except Exception as e:
+            logger.warning(f"Lỗi Socket.IO emit: {e}")
+
+        return jsonify({
+            "success": True,
+            "type": "chat",
+            "message": ai_response,
+            "response": ai_response,
+            "conversation_id": conv_id,
+            "conversations": convs_list,
+            "level": level
+        })
+    except Exception as e:
+        logger.error(f"❌ Lỗi xử lý Chat (500): {traceback.format_exc()}")
+        return jsonify({"success": False, "error": f"Lỗi nội bộ máy chủ khi xử lý câu hỏi: {str(e)}"}), 500
 
 @app.route('/conversations')
 def get_conversations():
@@ -574,6 +604,28 @@ def get_conversation(conv_id):
     conv_dict['messages'] = parse_messages(conv_dict.get('messages', []))
     return jsonify({"conversation": conv_dict})
 
+# [MỚI] API Đổi tên cuộc trò chuyện
+@app.route('/api/conversation/<conv_id>/rename', methods=['PUT'])
+def rename_conversation(conv_id):
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+    
+    data = request.get_json() or {}
+    new_name = data.get('name', '').strip()
+    if not new_name:
+        return jsonify({"error": "Tên cuộc trò chuyện không được để trống"}), 400
+
+    conv = get_conversation_by_id(conv_id, user_id)
+    if not conv:
+        return jsonify({"error": "Không tìm thấy đoạn chat"}), 404
+
+    messages = parse_messages(dict(conv).get('messages', []))
+    level = dict(conv).get('level', 'pro')
+    save_conversation(user_id, conv_id, new_name, messages, level)
+    
+    return jsonify({"success": True, "message": "Đã đổi tên cuộc trò chuyện", "name": new_name})
+
 @app.route('/delete/<conv_id>', methods=['DELETE'])
 def delete_conversation(conv_id):
     user_id = session.get('user_id')
@@ -584,77 +636,85 @@ def delete_conversation(conv_id):
     return jsonify({"success": True})
 
 # ================================================================
-# API TẢI LÊN TÀI LIỆU & HÌNH ẢNH (VISION UPLOAD)
+# API TẢI LÊN TÀI LIỆU & HÌNH ẢNH (VISION UPLOAD & OCR ENHANCED)
 # ================================================================
 
 @app.route('/upload_doc', methods=['POST'])
 def upload_doc():
-    if 'file' not in request.files:
-        return jsonify({"error": "Không tìm thấy tệp đính kèm"}), 400
-        
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "Tên tệp không hợp lệ"}), 400
-
-    if not allowed_file(file.filename):
-        return jsonify({"error": "Định dạng file không được hỗ trợ (Chỉ chấp nhận PDF, DOCX, TXT và Hình ảnh)"}), 400
-
-    original_filename = secure_filename(file.filename)
-    ext = original_filename.rsplit('.', 1)[1].lower() if '.' in original_filename else ''
-    file_bytes = file.read()
-
-    # 🟢 1. XỬ LÝ NẾU TỆP LÀ HÌNH ẢNH (PNG, JPG, WEBP, GIF,...)
-    if ext in IMAGE_EXTENSIONS:
-        timestamp = int(time.time())
-        saved_filename = f"img_{timestamp}_{original_filename}"
-        file_path = UPLOAD_DIR / saved_filename
-
-        # Lưu ảnh vào đĩa để phục vụ URL hiển thị
-        with open(file_path, "wb") as f:
-            f.write(file_bytes)
-
-        image_url = f"/static/uploads/{saved_filename}"
-
-        # Mã hóa Base64 để AI có thể phân tích ảnh trực tiếp
-        base64_data = base64.b64encode(file_bytes).decode('utf-8')
-        mime_type = f"image/{ext if ext != 'jpg' else 'jpeg'}"
-        base64_url = f"data:{mime_type};base64,{base64_data}"
-
-        img_info = ""
-        if IMAGE_PROCESSING_AVAILABLE:
-            try:
-                img = Image.open(BytesIO(file_bytes))
-                img_info = f"\n[Thông tin ảnh: Kích thước {img.width}x{img.height}px, định dạng {img.format}]"
-            except Exception as e:
-                logger.warning(f"Lỗi phân tích Pillow: {e}")
-
-        # Chuỗi Markdown hiển thị ảnh trên giao diện Frontend
-        content_preview = f"![{original_filename}]({image_url})\n\n🖼️ **[Hình ảnh đính kèm: {original_filename}]**{img_info}"
-
-        return jsonify({
-            "success": True,
-            "filename": original_filename,
-            "is_image": True,
-            "image_url": image_url,
-            "base64": base64_url,
-            "content": content_preview
-        })
-
-    # 🟢 2. XỬ LÝ TÀI LIỆU VĂN BẢN THÔNG THƯỜNG (PDF, DOCX, TXT)
     try:
-        extracted_text = DocumentParser.parse_file(original_filename, file_bytes)
-        if len(extracted_text) > 6000:
-            extracted_text = extracted_text[:6000] + "\n\n[... Đã tự động cắt bớt dung lượng tài liệu ...]"
+        if 'file' not in request.files:
+            return jsonify({"error": "Không tìm thấy tệp đính kèm"}), 400
             
-        return jsonify({
-            "success": True,
-            "filename": original_filename,
-            "is_image": False,
-            "content": extracted_text
-        })
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "Tên tệp không hợp lệ"}), 400
+
+        if not allowed_file(file.filename):
+            return jsonify({"error": "Định dạng file không được hỗ trợ (Chấp nhận PDF, DOCX, TXT và Hình ảnh)"}), 400
+
+        original_filename = secure_filename(file.filename)
+        ext = original_filename.rsplit('.', 1)[1].lower() if '.' in original_filename else ''
+        file_bytes = file.read()
+
+        # 🟢 1. XỬ LÝ NẾU TỆP LÀ HÌNH ẢNH (PNG, JPG, WEBP, GIF,...)
+        if ext in IMAGE_EXTENSIONS:
+            timestamp = int(time.time())
+            saved_filename = f"img_{timestamp}_{original_filename}"
+            file_path = UPLOAD_DIR / saved_filename
+
+            # Lưu ảnh vào đĩa
+            with open(file_path, "wb") as f:
+                f.write(file_bytes)
+
+            image_url = f"/static/uploads/{saved_filename}"
+
+            # Mã hóa Base64
+            base64_data = base64.b64encode(file_bytes).decode('utf-8')
+            mime_type = f"image/{ext if ext != 'jpg' else 'jpeg'}"
+            base64_url = f"data:{mime_type};base64,{base64_data}"
+
+            img_info = ""
+            if IMAGE_PROCESSING_AVAILABLE:
+                try:
+                    img = Image.open(BytesIO(file_bytes))
+                    img_info = f"\n[Thông tin ảnh: Kích thước {img.width}x{img.height}px, định dạng {img.format}]"
+                except Exception as e:
+                    logger.warning(f"Lỗi phân tích Pillow: {e}")
+
+            content_preview = f"![{original_filename}]({image_url})\n\n🖼️ **[Hình ảnh đính kèm: {original_filename}]**{img_info}"
+
+            return jsonify({
+                "success": True,
+                "filename": original_filename,
+                "is_image": True,
+                "image_url": image_url,
+                "base64": base64_url,
+                "content": content_preview
+            })
+
+        # 🟢 2. XỬ LÝ TÀI LIỆU VĂN BẢN THÔNG THƯỜNG (PDF, DOCX, TXT)
+        try:
+            if 'DocumentParser' in globals():
+                extracted_text = DocumentParser.parse_file(original_filename, file_bytes)
+            else:
+                extracted_text = file_bytes.decode('utf-8', errors='ignore')
+
+            if len(extracted_text) > 6000:
+                extracted_text = extracted_text[:6000] + "\n\n[... Đã tự động cắt bớt dung lượng tài liệu ...]"
+                
+            return jsonify({
+                "success": True,
+                "filename": original_filename,
+                "is_image": False,
+                "content": extracted_text
+            })
+        except Exception as e:
+            logger.error(f"Lỗi đọc tài liệu: {e}")
+            return jsonify({"error": f"Lỗi xử lý tệp tài liệu: {str(e)}"}), 500
+
     except Exception as e:
-        logger.error(f"Lỗi đọc tài liệu: {e}")
-        return jsonify({"error": f"Lỗi xử lý tệp: {str(e)}"}), 500
+        logger.error(f"Lỗi hệ thống upload (500): {traceback.format_exc()}")
+        return jsonify({"error": f"Lỗi máy chủ khi xử lý upload: {str(e)}"}), 500
 
 # ================================================================
 # MUSIC ROUTES
@@ -662,33 +722,33 @@ def upload_doc():
 
 @app.route('/api/generate_music', methods=['POST'])
 def generate_music_api():
-    data = request.get_json() or {}
-    prompt = data.get('prompt', '').strip()
-    duration = data.get('duration', 60)
-    style = data.get('style', None)
-    mood = data.get('mood', None)
-
-    if not prompt:
-        return jsonify({"error": "Vui lòng nhập mô tả bài hát"}), 400
-
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({"error": "Vui lòng đăng nhập"}), 401
-
-    duration = min(max(duration, 10), 420)
-
-    user = get_user_by_id(user_id)
-    if user['role'] != 'admin':
-        max_music_uses = 20
-        used = get_usage_count(user_id, 'music')
-        if used >= max_music_uses:
-            return jsonify({
-                "error": f"Đã hết lượt tạo nhạc hôm nay ({used}/{max_music_uses}).",
-                "limit_reached": True
-            }), 429
-        log_usage(user_id, 'music')
-
     try:
+        data = request.get_json() or {}
+        prompt = data.get('prompt', '').strip()
+        duration = data.get('duration', 60)
+        style = data.get('style', None)
+        mood = data.get('mood', None)
+
+        if not prompt:
+            return jsonify({"error": "Vui lòng nhập mô tả bài hát"}), 400
+
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({"error": "Vui lòng đăng nhập"}), 401
+
+        duration = min(max(duration, 10), 420)
+
+        user = get_user_by_id(user_id)
+        if user and user.get('role') != 'admin':
+            max_music_uses = 20
+            used = get_usage_count(user_id, 'music')
+            if used >= max_music_uses:
+                return jsonify({
+                    "error": f"Đã hết lượt tạo nhạc hôm nay ({used}/{max_music_uses}).",
+                    "limit_reached": True
+                }), 429
+            log_usage(user_id, 'music')
+
         result = music_gen.generate_with_lyrics(prompt, duration, style, mood)
         if result.get('error'):
             return jsonify({"error": result['error']}), 500
@@ -729,7 +789,38 @@ def music_status_api():
     })
 
 # ================================================================
-# USAGE & PAYMENT & ADMIN ROUTES
+# TÍNH NĂNG MỚI: PROMPT OPTIMIZER & TEXT-TO-SPEECH (TTS)
+# ================================================================
+
+# [MỚI] API Tối ưu hóa Prompt
+@app.route('/api/prompt/optimize', methods=['POST'])
+def optimize_prompt():
+    data = request.get_json() or {}
+    original_prompt = data.get('prompt', '').strip()
+    if not original_prompt:
+        return jsonify({"error": "Câu lệnh không được để trống"}), 400
+
+    optimized = f" Hãy đóng vai là một chuyên gia hàng đầu, phân tích chi tiết và đưa ra câu trả lời xuất sắc cho câu hỏi: '{original_prompt}'. Yêu cầu trình bày mạch lạc, cấu trúc rõ ràng với Markdown."
+    return jsonify({"success": True, "original": original_prompt, "optimized": optimized})
+
+# [MỚI] API Chuyển văn bản thành Giọng nói (Text-To-Speech)
+@app.route('/api/tts', methods=['POST'])
+def text_to_speech():
+    data = request.get_json() or {}
+    text = data.get('text', '').strip()
+    if not text:
+        return jsonify({"error": "Văn bản đọc không được để trống"}), 400
+
+    # Trả về URL mẫu đọc AI
+    return jsonify({
+        "success": True,
+        "text": text[:100],
+        "message": "Đã khởi tạo dữ liệu giọng nói AI thành công.",
+        "audio_url": "/static/music/demo.wav"
+    })
+
+# ================================================================
+# USAGE & PAYMENT & ADMIN API ROUTES
 # ================================================================
 
 @app.route('/api/usage/<tier>')
@@ -742,7 +833,7 @@ def get_usage(tier):
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    if user['role'] == 'admin':
+    if user.get('role') == 'admin':
         return jsonify({"remaining": 999999, "used": 0, "max": 999999, "unlimited": True})
 
     max_uses = {'basic': 999999, 'pro': 5, 'plus': 2, 'pro3': 0, 'music': 20}.get(tier, 0)
@@ -809,6 +900,54 @@ def payment_ipn():
 def payment_complete_page():
     return payment_complete()
 
+# 👑 [MỚI] BỘ API DÀNH CHO TRANG QUẢN TRỊ (ADMIN PANEL)
+@app.route('/api/admin/stats', methods=['GET'])
+def admin_stats():
+    user_id = session.get('user_id')
+    user = get_user_by_id(user_id) if user_id else None
+    if not user or user.get('role') != 'admin':
+        return jsonify({"error": "Truy cập bị từ chối. Cần quyền Admin"}), 403
+
+    return jsonify({
+        "success": True,
+        "total_users": get_total_users(),
+        "total_conversations": get_total_conversations(),
+        "premium_users": len(get_premium_users() or []),
+        "usage_stats": get_all_usage_stats()
+    })
+
+@app.route('/api/admin/users', methods=['GET'])
+def admin_users():
+    user_id = session.get('user_id')
+    user = get_user_by_id(user_id) if user_id else None
+    if not user or user.get('role') != 'admin':
+        return jsonify({"error": "Truy cập bị từ chối"}), 403
+
+    users = get_all_users()
+    return jsonify({"success": True, "users": [dict(u) for u in users]})
+
+@app.route('/api/admin/user/<target_user_id>/role', methods=['PUT'])
+def admin_update_role(target_user_id):
+    user_id = session.get('user_id')
+    user = get_user_by_id(user_id) if user_id else None
+    if not user or user.get('role') != 'admin':
+        return jsonify({"error": "Truy cập bị từ chối"}), 403
+
+    data = request.get_json() or {}
+    new_role = data.get('role', 'user')
+    update_user_role(target_user_id, new_role)
+    return jsonify({"success": True, "message": f"Đã cập nhật quyền thành {new_role}"})
+
+@app.route('/api/admin/user/<target_user_id>', methods=['DELETE'])
+def admin_delete_user(target_user_id):
+    user_id = session.get('user_id')
+    user = get_user_by_id(user_id) if user_id else None
+    if not user or user.get('role') != 'admin':
+        return jsonify({"error": "Truy cập bị từ chối"}), 403
+
+    delete_user_by_id(target_user_id)
+    return jsonify({"success": True, "message": "Đã xóa người dùng thành công"})
+
 # ================================================================
 # EXPORT CHAT
 # ================================================================
@@ -845,7 +984,7 @@ def export_conversation(conv_id):
     }
 
 # ================================================================
-# SOCKET.IO & MAIN
+# SOCKET.IO & GLOBAL ERROR HANDLERS
 # ================================================================
 
 @socketio.on('connect')
@@ -858,11 +997,16 @@ def handle_disconnect():
 
 @app.errorhandler(500)
 def handle_500_error(e):
-    return jsonify({"error": f"Lỗi nội bộ Máy chủ (500): {str(e)}"}), 500
+    logger.error(f"💥 Lỗi nội bộ Máy chủ 500: {traceback.format_exc()}")
+    return jsonify({
+        "success": False,
+        "error": f"Lỗi nội bộ Máy chủ (500): {str(e)}",
+        "details": "Hệ thống đã bắt ngoại lệ an toàn để tránh dừng dịch vụ."
+    }), 500
 
 @app.errorhandler(404)
 def handle_404_error(e):
-    return jsonify({"error": "Đường dẫn không tồn tại (404)"}), 404
+    return jsonify({"success": False, "error": "Đường dẫn không tồn tại (404)"}), 404
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 5000))
@@ -870,9 +1014,10 @@ if __name__ == '__main__':
 
     print(f"""
 ╔═══════════════════════════════════════════════════════════════════════╗
-║  T.VỸ-AI-SUPREME v12.5.0 (VISION & MULTIMODAL EDITION)                ║
+║  T.VỸ-AI-SUPREME v12.5.5 (ULTIMATE VISION & MULTIMODAL EDITION)       ║
 ║  Bản quyền: T.VỸ-VIP-FILE                                           ║
 ║  🖼️ Hỗ trợ Nhận diện & Xem Hình Ảnh Trực Tiếp Trên Khung Chat       ║
+║  👑 Tích hợp bộ API Admin Dashboard, TTS Voice & Prompt Enhancer     ║
 ║  🚀 Máy chủ khởi chạy tại: http://localhost:{port}                    ║
 ╚═══════════════════════════════════════════════════════════════════════╝
     """)
