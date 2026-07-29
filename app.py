@@ -575,8 +575,8 @@ def chat():
 
         if api_key:
             try:
-                # Cấu hình gọi thẳng tới Google Gemini (1.5 Flash)
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+                # Cấu hình gọi thẳng tới Google Gemini (2.5 Flash)
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
                 headers = {'Content-Type': 'application/json'}
                 
                 # Gộp lịch sử ngữ cảnh + Câu hỏi mới nhất
