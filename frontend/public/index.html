@@ -1979,102 +1979,98 @@
             currentConversationId = null;
         }
 
-        // --- NÂNG CẤP API: KẾT NỐI GEMINI AI THẬT SỰ TẠI ĐÂY ---
-        async function generateAIResponse(promptText, fileDataArray) {
-            // Kiểm tra cấu hình key
-            if(!GEMINI_API_KEY || GEMINI_API_KEY === "NHẬP_API_KEY_GEMINI_CỦA_BẠN_VÀO_ĐÂY") {
-                return `⚠️ **CẢNH BÁO HỆ THỐNG:**\n\nBạn chưa thiết lập mã API Key để kết nối AI thật.\nVui lòng mở mã nguồn, tìm dòng \`const GEMINI_API_KEY = "NHẬP_API_KEY_GEMINI_CỦA_BẠN_VÀO_ĐÂY";\` và nhập mã bí mật của bạn vào để kích hoạt AI Full Chức Năng.`;
-            }
+        // --- NÂNG CẤP API: GIAO TIẾP VỚI BACKEND BẢO MẬT T.VỸ-AI ---
+		async function generateAIResponse(promptText, fileDataArray) {
+			// 1. Xử lý gộp file đính kèm vào tin nhắn (như cũ)
+			let fullPrompt = promptText;
+			if (fileDataArray && fileDataArray.length > 0) {
+				fullPrompt += "\n\n[Dữ liệu đính kèm cần xử lý]:\n";
+				fileDataArray.forEach(file => {
+					fullPrompt += `\n--- Bắt đầu nội dung file: ${file.name} ---\n${file.content}\n--- Kết thúc file ---\n`;
+				});
+			}
 
-            // Xử lý dữ liệu file đính kèm để gửi cho AI
-            let fullPrompt = promptText;
-            if (fileDataArray && fileDataArray.length > 0) {
-                fullPrompt += "\n\n[Dữ liệu đính kèm cần xử lý]:\n";
-                fileDataArray.forEach(file => {
-                    fullPrompt += `\n--- Bắt đầu nội dung file: ${file.name} ---\n${file.content}\n--- Kết thúc file ---\n`;
-                });
-            }
+			try {
+				// 2. GỌI VỀ BACKEND CỦA BẠN (Thay vì gọi thẳng API Google lộ Key)
+				// Lưu ý: window.currentConversationId dùng để server biết đây là đoạn chat nào và tự động nối lịch sử.
+				const response = await fetch('/api/chat', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						message: fullPrompt,
+						conversation_id: window.currentConversationId || null, 
+						level: "pro" 
+					})
+				});
 
-            // Ghi nhớ vào History
-            conversationHistory.push({
-                "role": "user",
-                "parts": [{ "text": fullPrompt }]
-            });
+				const data = await response.json();
+				
+				// 3. Bắt lỗi từ server nếu có
+				if (!data.success) {
+					throw new Error(data.error || "Lỗi không xác định từ Backend.");
+				}
 
-            // Định dạng payload gửi đi (dùng mô hình gemini-1.5-flash nhanh và thông minh)
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-            
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: conversationHistory,
-                        systemInstruction: {
-                            parts: [{ text: "Bạn là T.VỸ-AI-SUPREME v12.5 Ultra. Trợ lý AI thế hệ mới, tối ưu hóa lập trình, không bao giờ dùng code mẫu, hãy cung cấp mã nguồn đầy đủ, không cắt xén, không dùng placeholder. Nếu người dùng yêu cầu vẽ sơ đồ, hãy luôn dùng định dạng Mermaid js. Hỗ trợ giao tiếp hoàn toàn bằng tiếng Việt trừ khi người dùng yêu cầu ngôn ngữ khác."}]
-                        }
-                    })
-                });
+				// 4. Lưu lại ID cuộc trò chuyện để giữ ngữ cảnh cho các tin nhắn sau
+				if (data.conversation_id) {
+					window.currentConversationId = data.conversation_id;
+				}
 
-                const data = await response.json();
-                
-                if (data.error) throw new Error(data.error.message);
+				// Trả kết quả AI đã xử lý về UI
+				return data.message;
 
-                const aiReply = data.candidates[0].content.parts[0].text;
-                
-                // Lưu vào lịch sử để giữ bối cảnh
-                conversationHistory.push({
-                    "role": "model",
-                    "parts": [{ "text": aiReply }]
-                });
-
-                return aiReply;
-
-            } catch (error) {
-                console.error("API Error:", error);
-                // Bỏ tin nhắn lỗi ra khỏi lịch sử
-                conversationHistory.pop();
-                return `❌ **Lỗi kết nối máy chủ AI:**\n\`\`\`\n${error.message}\n\`\`\`\nVui lòng kiểm tra lại kết nối mạng hoặc API Key của bạn.`;
-            }
-        }
+			} catch (error) {
+				console.error("API Error:", error);
+				return `❌ **Lỗi hệ thống Backend:**\n\`\`\`\n${error.message}\n\`\`\`\nVui lòng kiểm tra lại kết nối mạng hoặc xem server app.py đã chạy chưa.`;
+			}
+		}
 
         // --- XỬ LÝ GỬI TIN NHẮN (BẤT ĐỒNG BỘ MỚI) ---
-        async function sendMessage() {
-            let text = inputField.value.trim();
-            if (!text && attachedFiles.length === 0) return;
+		async function sendMessage() {
+			let text = inputField.value.trim();
+			if (!text && attachedFiles.length === 0) return;
 
-            // Xóa màn hình chào mừng
-            document.getElementById('welcomeHero')?.remove();
+			// Xóa màn hình chào mừng nếu có
+			document.getElementById('welcomeHero')?.remove();
 
-            let userMsg = text;
-            if (attachedFiles.length > 0) {
-                userMsg += (userMsg ? '\n\n' : '') + `📎 **Đã đính kèm (${attachedFiles.length} file):**\n` + 
-                           attachedFiles.map(f => `- \`${f.name}\` (${f.size})`).join('\n');
-            }
+			let userMsg = text;
+			if (attachedFiles.length > 0) {
+				userMsg += (userMsg ? '\n\n' : '') + `📎 **Đã đính kèm (${attachedFiles.length} file):**\n` + 
+						   attachedFiles.map(f => `- \`${f.name}\` (${f.size})`).join('\n');
+			}
 
-            // Ghi nhận file và in ra UI
-            const filesToProcess = [...attachedFiles];
-            addMessage('user', userMsg);
-            
-            // Xóa input
-            inputField.value = '';
-            inputField.style.height = 'auto';
-            attachedFiles = [];
-            renderFilePreview();
+			// Ghi nhận file và in ra UI
+			const filesToProcess = [...attachedFiles];
+			addMessage('user', userMsg);
+			
+			// Xóa input
+			inputField.value = '';
+			inputField.style.height = 'auto';
+			attachedFiles = [];
+			if (typeof renderFilePreview === "function") renderFilePreview();
 
-            // Hiển thị tiến trình UI Suy Nghĩ Mới
-            showDeepThink();
+			// Hiển thị tiến trình UI Suy Nghĩ Mới
+			if (typeof showDeepThink === "function") showDeepThink();
 
-            // Đợi gọi API thật
-            const aiReplyText = await generateAIResponse(text || "Vui lòng phân tích file đính kèm", filesToProcess);
-            
-            // Ẩn tiến trình và render HTML Markdown
-            hideDeepThink();
-            addMessage('ai', aiReplyText);
-        }
+			// Đợi phản hồi từ Backend
+			const aiReplyText = await generateAIResponse(text || "Vui lòng phân tích file đính kèm", filesToProcess);
+			
+			// Ẩn tiến trình và render HTML Markdown
+			if (typeof hideDeepThink === "function") hideDeepThink();
+			addMessage('ai', aiReplyText);
+		}
 
-        sendBtn.addEventListener('click', sendMessage);
-        inputField.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+		// Bắt sự kiện gửi tin nhắn
+		if (typeof sendBtn !== 'undefined') {
+			sendBtn.addEventListener('click', sendMessage);
+		}
+		if (typeof inputField !== 'undefined') {
+			inputField.addEventListener('keydown', e => { 
+				if (e.key === 'Enter' && !e.shiftKey) { 
+					e.preventDefault(); 
+					sendMessage(); 
+				} 
+			});
+		}
 
         function addMessage(role, content) {
             const wrapper = document.createElement('div');
