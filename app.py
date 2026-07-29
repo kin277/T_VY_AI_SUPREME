@@ -1,9 +1,9 @@
 """
 ====================================================================
-T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (BẢN HOÀN CHỈNH - FULL MULTIMODAL & VISION)
+T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (BẢN HOÀN CHỈNH - FULL MULTIMODAL & AUTO CODE ENGINE)
 ====================================================================
 Bản quyền: T.VỸ-VIP-FILE
-Phiên bản: 12.5.5 (Vision, Multimodal, Admin API & Voice TTS Support)
+Phiên bản: 12.6.0 (Vision, Multimodal, Auto Code Extension & Smart Project Continuation)
 ====================================================================
 """
 
@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import random
+import re
 import sys
 import time
 import traceback
@@ -125,6 +126,29 @@ def parse_messages(raw_messages):
     elif isinstance(raw_messages, list):
         return raw_messages
     return []
+
+# ================================================================
+# SYSTEM PROMPT BỘ QUY TẮC NÂNG CẤP LẬP TRÌNH TỰ ĐỘNG
+# ================================================================
+SMART_CODE_SYSTEM_PROMPT = """
+[BỘ QUY TẮC XỬ LÝ NÂNG CẤP CỦA T.VỸ-AI SUPREME]
+
+1. TỰ ĐỘNG NHẬN DIỆN NGÔN NGỮ & ĐUÔI FILE CODE:
+   - Tự động nhận diện ngôn ngữ lập trình và đuôi file tương ứng (.glsl, .vsh, .fsh, .py, .js, .cpp, .html, .css, .java, .kt, .c, .cs, .ts, .php, .go, .rs, .json, .yaml,...).
+   - Nếu người dùng chỉ nêu mục đích công việc (ví dụ: "làm shader minecraft", "tạo bot discord", "làm game 2D"), bạn PHẢI TỰ PHÂN TÍCH mục đích và chọn chính xác cấu trúc cũng như đuôi file phù hợp nhất.
+
+2. TỔNG HỢP TRI THỨC THÔNG MINH:
+   - AI tổng hợp thông tin, đưa ra câu trả lời chuẩn xác tuyệt đối dù câu trả lời rất ngắn hay cực kỳ dài.
+
+3. CƠ CHẾ CHIA NHỎ DỰ ÁN (4 - 5 FILE MỖI LƯỢT):
+   - Đối với dự án cần nhiều file, bạn hãy xuất trước 4 - 5 file chính của dự án.
+   - Ở CUỐI CÙNG của câu trả lời, BẮT BUỘC đính kèm đúng câu thoại sau:
+     "Vì dự án khá dài nên không thể chỉ bằng 1 dòng tin nhắn là xong được. Bạn có muốn tiếp tục không?"
+
+4. VÒNG LẶP TỰ ĐỘNG TIẾP TỤC (CONTINUATION LOOP):
+   - Khi nhận phản hồi từ người dùng chứa các từ khóa tiếp tục ("tiếp", "tiếp tục", "ok", "continue", "tiếp đi", "yes",...), bạn sẽ tự động sinh các file tiếp theo của dự án còn dở dang.
+   - Tiếp tục lặp lại quy trình chia nhỏ 4-5 file kèm câu hỏi trên cho đến khi hoàn thành toàn bộ 100% dự án.
+"""
 
 # ================================================================
 # MUSIC GENERATOR ENGINE
@@ -465,11 +489,11 @@ def github_callback_route():
     return "❌ Lỗi hệ thống", 400
 
 # ================================================================
-# CHAT ROUTES (XỬ LÝ CHAT & AI VISION & REST FALLBACK)
+# CHAT ROUTES (NÂNG CẤP TỰ ĐỘNG ĐUÔI FILE & CONTINUATION LOOP)
 # ================================================================
 
 @app.route('/chat', methods=['POST'])
-@app.route('/api/chat', methods=['POST'])  # [MỚI] Tự động tương thích thêm REST API Chat
+@app.route('/api/chat', methods=['POST'])
 def chat():
     try:
         data = request.get_json(silent=True) or {}
@@ -504,7 +528,7 @@ def chat():
         messages = []
         if not conv_id:
             conv_id = str(int(time.time() * 1000))
-            name = message[:30] if message else "Phân tích hình ảnh AI"
+            name = message[:30] if message else "Lập trình & Phân tích AI"
         else:
             conv = get_conversation_by_id(conv_id, user_id) if user_id != 'guest_user' else None
             if conv:
@@ -513,14 +537,14 @@ def chat():
             else:
                 name = message[:30] or "Hội thoại mới"
 
-        # Gom ngữ cảnh cuộc trò chuyện
-        context_parts = []
+        # TÍCH HỢP SYSTEM PROMPT NÂNG CẤP VÀO NGỮ CẢNH
+        context_parts = [SMART_CODE_SYSTEM_PROMPT]
         for msg in messages:
             role = "Người dùng" if msg.get("role") == "user" else "AI"
             context_parts.append(f"{role}: {msg.get('content', '')}")
         context_str = "\n".join(context_parts)
 
-        # Nếu có đính kèm ảnh, tạo nội dung tin nhắn dạng Markdown hiển thị ảnh
+        # Đính kèm URL hình ảnh nếu có
         user_content = message
         if image_url and f"![ảnh]({image_url})" not in user_content:
             user_content = f"![Hình ảnh đính kèm]({image_url})\n\n{message}"
@@ -532,19 +556,30 @@ def chat():
             "time": datetime.datetime.now().isoformat()
         })
 
-        # Gọi AI Engine (Truyền thêm dữ liệu hình ảnh nếu mô hình AI hỗ trợ Vision)
-        result = ai_engine.process(
-            query=message or "Hãy mô tả và phân tích hình ảnh này chi tiết giúp tôi.",
-            context=context_str,
-            complexity=level,
-            image_url=image_url,
-            image_base64=image_base64
-        ) if 'ai_engine' in globals() else {"response": f"Mô hình T.VỸ AI [{level.upper()}] đã xử lý thành công câu hỏi: '{message}'"}
+        # KIỂM TRA PHẢN HỒI TIẾP TỤC (CONTINUATION LOOP)
+        is_continuation = bool(re.search(r'^\s*(tiếp|tiếp tục|ok|continue|tiếp đi|yes)\b', message.lower()))
         
-        if result.get("error"):
-            ai_response = f"⚠️ Lỗi kết nối AI Engine: {result['error']}"
+        enhanced_query = message
+        if is_continuation:
+            enhanced_query = (
+                f"{message}\n\n[HỆ THỐNG]: Người dùng yêu cầu TIẾP TỤC dự án. "
+                f"Hãy tạo tiếp 4 - 5 file tiếp theo của dự án còn dở dang. "
+                f"Nếu vẫn chưa xong hết toàn bộ dự án, ở cuối tin nhắn BẮT BUỘC lặp lại đúng câu hỏi: "
+                f"\"Vì dự án khá dài nên không thể chỉ bằng 1 dòng tin nhắn là xong được. Bạn có muốn tiếp tục không?\""
+            )
+
+        # Gọi AI Engine
+        if 'ai_engine' in globals():
+            result = ai_engine.process(
+                query=enhanced_query,
+                context=context_str,
+                complexity=level,
+                image_url=image_url,
+                image_base64=image_base64
+            )
+            ai_response = result.get("response", "Đã xử lý xong.") if not result.get("error") else f"⚠️ Lỗi kết nối AI Engine: {result['error']}"
         else:
-            ai_response = result.get("response", "Đã xử lý xong.")
+            ai_response = f"Mô hình T.VỸ AI [{level.upper()}] đã xử lý thành công câu hỏi: '{message}'"
 
         messages.append({
             "role": "ai",
@@ -604,7 +639,6 @@ def get_conversation(conv_id):
     conv_dict['messages'] = parse_messages(conv_dict.get('messages', []))
     return jsonify({"conversation": conv_dict})
 
-# [MỚI] API Đổi tên cuộc trò chuyện
 @app.route('/api/conversation/<conv_id>/rename', methods=['PUT'])
 def rename_conversation(conv_id):
     user_id = session.get('user_id')
@@ -662,13 +696,11 @@ def upload_doc():
             saved_filename = f"img_{timestamp}_{original_filename}"
             file_path = UPLOAD_DIR / saved_filename
 
-            # Lưu ảnh vào đĩa
             with open(file_path, "wb") as f:
                 f.write(file_bytes)
 
             image_url = f"/static/uploads/{saved_filename}"
 
-            # Mã hóa Base64
             base64_data = base64.b64encode(file_bytes).decode('utf-8')
             mime_type = f"image/{ext if ext != 'jpg' else 'jpeg'}"
             base64_url = f"data:{mime_type};base64,{base64_data}"
@@ -789,10 +821,9 @@ def music_status_api():
     })
 
 # ================================================================
-# TÍNH NĂNG MỚI: PROMPT OPTIMIZER & TEXT-TO-SPEECH (TTS)
+# PROMPT OPTIMIZER & TEXT-TO-SPEECH (TTS)
 # ================================================================
 
-# [MỚI] API Tối ưu hóa Prompt
 @app.route('/api/prompt/optimize', methods=['POST'])
 def optimize_prompt():
     data = request.get_json() or {}
@@ -803,7 +834,6 @@ def optimize_prompt():
     optimized = f" Hãy đóng vai là một chuyên gia hàng đầu, phân tích chi tiết và đưa ra câu trả lời xuất sắc cho câu hỏi: '{original_prompt}'. Yêu cầu trình bày mạch lạc, cấu trúc rõ ràng với Markdown."
     return jsonify({"success": True, "original": original_prompt, "optimized": optimized})
 
-# [MỚI] API Chuyển văn bản thành Giọng nói (Text-To-Speech)
 @app.route('/api/tts', methods=['POST'])
 def text_to_speech():
     data = request.get_json() or {}
@@ -811,7 +841,6 @@ def text_to_speech():
     if not text:
         return jsonify({"error": "Văn bản đọc không được để trống"}), 400
 
-    # Trả về URL mẫu đọc AI
     return jsonify({
         "success": True,
         "text": text[:100],
@@ -900,7 +929,7 @@ def payment_ipn():
 def payment_complete_page():
     return payment_complete()
 
-# 👑 [MỚI] BỘ API DÀNH CHO TRANG QUẢN TRỊ (ADMIN PANEL)
+# BỘ API DÀNH CHO TRANG QUẢN TRỊ (ADMIN PANEL)
 @app.route('/api/admin/stats', methods=['GET'])
 def admin_stats():
     user_id = session.get('user_id')
@@ -1014,11 +1043,11 @@ if __name__ == '__main__':
 
     print(f"""
 ╔═══════════════════════════════════════════════════════════════════════╗
-║  T.VỸ-AI-SUPREME v12.5.5 (ULTIMATE VISION & MULTIMODAL EDITION)       ║
+║  T.VỸ-AI-SUPREME v12.6.0 (SMART CODE & MULTI-FILE PROJECT ENGINE)     ║
 ║  Bản quyền: T.VỸ-VIP-FILE                                           ║
-║  🖼️ Hỗ trợ Nhận diện & Xem Hình Ảnh Trực Tiếp Trên Khung Chat       ║
-║  👑 Tích hợp bộ API Admin Dashboard, TTS Voice & Prompt Enhancer     ║
-║  🚀 Máy chủ khởi chạy tại: http://localhost:{port}                    ║
+║  🚀 Tự động nhận diện đuôi file (.glsl, .vsh, .fsh, .py, .js,...)     ║
+║  📦 Tự động phân chia dự án lớn thành 4-5 file/lượt & Vòng lặp Tiếp tục║
+║  🖼️ Giữ nguyên đầy đủ Vision, Audio TTS, Music AI, MoMo & Admin API   ║
 ╚═══════════════════════════════════════════════════════════════════════╝
     """)
     socketio.run(app, debug=app.config['DEBUG'], host=host, port=port, allow_unsafe_werkzeug=True)
