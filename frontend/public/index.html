@@ -1394,7 +1394,7 @@
                         <button onclick="useMultiAI()"><i class="fa-solid fa-network-wired"></i> AI Đa luồng</button>
                         <button onclick="summarizeText()"><i class="fa-solid fa-file-contract"></i> Tóm tắt văn bản</button>
                         <button onclick="translateText()"><i class="fa-solid fa-language"></i> Dịch đa ngôn ngữ</button>
-                        <button onclick="generateVideo()"><i class="fa-solid fa-film"></i> Tạo video AI</button>
+                        <button onclick="generateVideo()"><i class="fa-solid fa-film"></i> Tạo kịch bản Video</button>
                         <button onclick="analyzeData()"><i class="fa-solid fa-chart-pie"></i> Phân tích dữ liệu</button>
                         <button onclick="generateMusicWithLyrics()"><i class="fa-solid fa-music"></i> Sáng tác nhạc & lời</button>
                         <hr>
@@ -1578,9 +1578,14 @@
     <div class="search-result" id="searchResult" style="position:fixed;bottom:90px;right:20px;background:var(--bg-card);padding:10px 16px;border-radius:var(--radius-md);border:1px solid var(--border-color);font-size:13px;z-index:999;display:none;"></div>
 
     <!-- ============================================================ -->
-    <!-- JAVASCRIPT CHÍNH -->
+    <!-- JAVASCRIPT CHÍNH (ĐÃ UPGRADE HỆ THỐNG AI THẬT) -->
     <!-- ============================================================ -->
     <script>
+        // ---------------------------------------------------------
+        // BƯỚC 1: CẤU HÌNH API KEY (THAY BẰNG KEY GEMINI CỦA BẠN ĐỂ CHẠY THẬT)
+        // Lấy key miễn phí tại: https://aistudio.google.com/app/apikey
+        // ---------------------------------------------------------
+        
         const firebaseConfig = {
             apiKey: "AIzaSyA4rZOgKFKKt3_b1XChI7i3c6cZ6mVkz6A",
             authDomain: "ltv-pro-applock.firebaseapp.com",
@@ -1636,6 +1641,9 @@
         let attachedFiles = [];
         let recognition = null;
         let isRecording = false;
+        
+        // Lưu trữ ngữ cảnh (Context) để AI nhớ lịch sử trò chuyện
+        let conversationHistory = [];
 
         const LEVEL_NAMES = {
             basic: 'AI Thường',
@@ -1868,26 +1876,35 @@
 
         function toggleMenu() { document.getElementById('functionMenu').classList.toggle('show'); }
 
-        // --- Cải tiến Suy nghĩ sâu: di chuyển hiển thị xuống cuối tin nhắn ---
-        function showDeepThink(stage = 0) {
+        // --- Hệ thống UI Suy Nghĩ sâu đa luồng ---
+        let thinkInterval;
+        function showDeepThink() {
             const ind = document.getElementById('deepThinkIndicator');
             const status = document.getElementById('thinkStatus');
             const stages = [
                 "🔍 Đang phân tích câu hỏi...",
                 "📚 Tìm kiếm & Tổng hợp kiến thức...",
                 "🧠 Xây dựng lập luận chi tiết...",
-                "✍️ Hoàn thiện câu trả lời..."
+                "✍️ Đang viết code và hoàn thiện..."
             ];
+            let stageIndex = 0;
             if (ind) {
                 ind.style.display = 'block';
-                chatContainer.appendChild(ind); // Đảm bảo luôn nằm dưới cùng cuộc trò chuyện
-                if (status) status.textContent = stages[stage] || stages[0];
+                chatContainer.appendChild(ind);
                 chatContainer.scrollTop = chatContainer.scrollHeight;
+                
+                if (status) status.textContent = stages[0];
+                thinkInterval = setInterval(() => {
+                    stageIndex = (stageIndex + 1) % stages.length;
+                    if(status) status.textContent = stages[stageIndex];
+                }, 1000);
             }
         }
+        
         function hideDeepThink() {
             const ind = document.getElementById('deepThinkIndicator');
             if (ind) ind.style.display = 'none';
+            if (thinkInterval) clearInterval(thinkInterval);
         }
 
         function loadUsage() {
@@ -1918,6 +1935,7 @@
 
         function clearAllMessages() {
             if (!confirm('Xóa sạch lịch sử trò chuyện?')) return;
+            conversationHistory = []; // Reset bộ nhớ AI
             chatContainer.innerHTML = `
                 <div class="upgrade-required" id="upgradeRequired">
                     <strong>🔒 Chức năng này yêu cầu đăng nhập!</strong>
@@ -1961,51 +1979,98 @@
             currentConversationId = null;
         }
 
-        // --- Hàm tạo phản hồi AI đầy đủ & thông minh ---
-        function generateAIResponse(promptText) {
-            const p = promptText.toLowerCase();
-            if (p.includes('mermaid') || p.includes('sơ đồ') || p.includes('quy trình')) {
-                return `### 📊 Sơ đồ Quy trình (Mermaid JS)\n\nDưới đây là sơ đồ quy trình được thiết kế trực quan theo yêu cầu của bạn:\n\n\`\`\`mermaid\ngraph TD;\n    A[Nhận Yêu Cầu] --> B{Kiểm Tra Dữ Liệu};\n    B -- Hợp lệ --> C[Xử Lý AI DeepThink];\n    B -- Không hợp lệ --> D[Báo Lỗi & Phản Hồi];\n    C --> E[Tạo Câu Trả Lời Chi Tiết];\n    E --> F[Xuất Kết Quả Cho Người Dùng];\n\`\`\`\n\n**Giải thích quy trình:**\n1. **Nhận Yêu Cầu:** Tiếp nhận câu hỏi và tệp đính kèm từ người dùng.\n2. **Suy nghĩ & Phân tích:** Hệ thống phân tích đa tầng bằng quy trình Suy nghĩ sâu.\n3. **Xuất kết quả:** Trả về câu trả lời hoàn chỉnh kèm công cụ hỗ trợ đọc và sao chép.`;
-            } else if (p.includes('kịch bản') || p.includes('sáng tạo') || p.includes('nội dung')) {
-                return `### 🎬 Kịch Bản Video Ngắn: Trí Tuệ Nhân Tạo & Tương Lai\n\n**Thời lượng:** 60 giây | **Phong cách:** Năng động, cuốn hút\n\n--- \n\n* **[00:00 - 00:05] Hook:** (Hình ảnh chuyển động AI) \n  > "Bạn có biết AI hiện nay đã có thể suy nghĩ và giải quyết vấn đề phức tạp chỉ trong vài giây?"\n* **[00:05 - 00:20] Thách thức:** \n  > "Nhiều người lo lắng AI thay thế công việc, nhưng thực tế AI là công cụ nhân bản hiệu suất của bạn gấp 10 lần!"\n* **[00:20 - 00:45] Giải pháp:** \n  > "Sử dụng T.VỸ-AI v12.5 Ultra để lập trình, vẽ sơ đồ, sáng tác nhạc và tóm tắt tài liệu tự động."\n* **[00:45 - 01:00] Call to Action:** \n  > "Hãy trải nghiệm ngay hôm nay để làm chủ công nghệ!"`;
-            } else if (p.includes('code') || p.includes('lập trình') || p.includes('html') || p.includes('javascript') || p.includes('python')) {
-                return `### 🚀 Đoạn Mã Nguồn Theo Yêu Cầu\n\nDưới đây là mã nguồn được tối ưu sẵn sàng chạy thử:\n\n\`\`\`html\n<!DOCTYPE html>\n<html lang="vi">\n<head>\n    <meta charset="UTF-8">\n    <title>Demo Code Sandbox</title>\n    <style>\n        body { font-family: sans-serif; padding: 20px; background: #0f172a; color: #fff; text-align: center; }\n        .btn { padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }\n        .btn:hover { background: #4f46e5; }\n    </style>\n</head>\n<body>\n    <h2>Xin chào từ T.VỸ-AI Sandbox!</h2>\n    <button class="btn" onclick="alert('Hệ thống hoạt động hoàn hảo!')">Thử Nhấn Vào Đây</button>\n</body>\n</html>\n\`\`\`\n\n💡 *Bạn có thể bấm nút **Chạy thử** ngay góc mã nguồn trên để mở Live Code Sandbox!*`;
-            } else {
-                return `### 🧠 Phản Hồi Chi Tiết Từ T.VỸ-AI\n\nCảm ơn bạn đã đặt câu hỏi: **"${promptText}"**.\n\nDưới đây là phân tích và giải đáp đầy đủ từ hệ thống:\n\n1. **Phân tích yêu cầu:** Hệ thống đã thực hiện suy luận đa luồng để đánh giá nội dung bạn cung cấp.\n2. **Giải pháp đề xuất:** Dựa trên cơ sở dữ liệu hiện tại, bạn nên thực hiện các bước theo thứ tự ưu tiên nhằm nâng cao độ chính xác và tối ưu hiệu suất công việc.\n3. **Khuyến nghị bổ sung:**\n   - Tận dụng các công cụ AI đi kèm (Tóm tắt, Dịch thuật, Phân tích dữ liệu).\n   - Đính kèm file văn bản hoặc mã nguồn nếu cần xử lý chuyên sâu hơn.\n\n*Nếu bạn có thêm bất kỳ thắc mắc nào, hãy tiếp tục đặt câu hỏi nhé!*`;
+        // --- NÂNG CẤP API: KẾT NỐI GEMINI AI THẬT SỰ TẠI ĐÂY ---
+        async function generateAIResponse(promptText, fileDataArray) {
+            // Kiểm tra cấu hình key
+            if(!GEMINI_API_KEY || GEMINI_API_KEY === "NHẬP_API_KEY_GEMINI_CỦA_BẠN_VÀO_ĐÂY") {
+                return `⚠️ **CẢNH BÁO HỆ THỐNG:**\n\nBạn chưa thiết lập mã API Key để kết nối AI thật.\nVui lòng mở mã nguồn, tìm dòng \`const GEMINI_API_KEY = "NHẬP_API_KEY_GEMINI_CỦA_BẠN_VÀO_ĐÂY";\` và nhập mã bí mật của bạn vào để kích hoạt AI Full Chức Năng.`;
+            }
+
+            // Xử lý dữ liệu file đính kèm để gửi cho AI
+            let fullPrompt = promptText;
+            if (fileDataArray && fileDataArray.length > 0) {
+                fullPrompt += "\n\n[Dữ liệu đính kèm cần xử lý]:\n";
+                fileDataArray.forEach(file => {
+                    fullPrompt += `\n--- Bắt đầu nội dung file: ${file.name} ---\n${file.content}\n--- Kết thúc file ---\n`;
+                });
+            }
+
+            // Ghi nhớ vào History
+            conversationHistory.push({
+                "role": "user",
+                "parts": [{ "text": fullPrompt }]
+            });
+
+            // Định dạng payload gửi đi (dùng mô hình gemini-1.5-flash nhanh và thông minh)
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: conversationHistory,
+                        systemInstruction: {
+                            parts: [{ text: "Bạn là T.VỸ-AI-SUPREME v12.5 Ultra. Trợ lý AI thế hệ mới, tối ưu hóa lập trình, không bao giờ dùng code mẫu, hãy cung cấp mã nguồn đầy đủ, không cắt xén, không dùng placeholder. Nếu người dùng yêu cầu vẽ sơ đồ, hãy luôn dùng định dạng Mermaid js. Hỗ trợ giao tiếp hoàn toàn bằng tiếng Việt trừ khi người dùng yêu cầu ngôn ngữ khác."}]
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.error) throw new Error(data.error.message);
+
+                const aiReply = data.candidates[0].content.parts[0].text;
+                
+                // Lưu vào lịch sử để giữ bối cảnh
+                conversationHistory.push({
+                    "role": "model",
+                    "parts": [{ "text": aiReply }]
+                });
+
+                return aiReply;
+
+            } catch (error) {
+                console.error("API Error:", error);
+                // Bỏ tin nhắn lỗi ra khỏi lịch sử
+                conversationHistory.pop();
+                return `❌ **Lỗi kết nối máy chủ AI:**\n\`\`\`\n${error.message}\n\`\`\`\nVui lòng kiểm tra lại kết nối mạng hoặc API Key của bạn.`;
             }
         }
 
-        // --- Xử lý Gửi tin nhắn chính xác: Suy nghĩ xong mới xuất câu trả lời ---
-        function sendMessage() {
+        // --- XỬ LÝ GỬI TIN NHẮN (BẤT ĐỒNG BỘ MỚI) ---
+        async function sendMessage() {
             let text = inputField.value.trim();
             if (!text && attachedFiles.length === 0) return;
 
+            // Xóa màn hình chào mừng
             document.getElementById('welcomeHero')?.remove();
 
             let userMsg = text;
             if (attachedFiles.length > 0) {
-                userMsg += (userMsg ? '\n\n' : '') + `📎 **Tệp đính kèm (${attachedFiles.length}):**\n` + 
+                userMsg += (userMsg ? '\n\n' : '') + `📎 **Đã đính kèm (${attachedFiles.length} file):**\n` + 
                            attachedFiles.map(f => `- \`${f.name}\` (${f.size})`).join('\n');
             }
 
+            // Ghi nhận file và in ra UI
+            const filesToProcess = [...attachedFiles];
             addMessage('user', userMsg);
+            
+            // Xóa input
             inputField.value = '';
             inputField.style.height = 'auto';
             attachedFiles = [];
             renderFilePreview();
 
-            // Tiến trình Suy nghĩ từng bước
-            showDeepThink(0);
-            setTimeout(() => showDeepThink(1), 600);
-            setTimeout(() => showDeepThink(2), 1200);
-            setTimeout(() => showDeepThink(3), 1800);
+            // Hiển thị tiến trình UI Suy Nghĩ Mới
+            showDeepThink();
 
-            // Hoàn thành suy nghĩ -> Ẩn suy nghĩ -> Ra câu trả lời
-            setTimeout(() => {
-                hideDeepThink();
-                let aiReply = generateAIResponse(text);
-                addMessage('ai', aiReply);
-            }, 2400);
+            // Đợi gọi API thật
+            const aiReplyText = await generateAIResponse(text || "Vui lòng phân tích file đính kèm", filesToProcess);
+            
+            // Ẩn tiến trình và render HTML Markdown
+            hideDeepThink();
+            addMessage('ai', aiReplyText);
         }
 
         sendBtn.addEventListener('click', sendMessage);
@@ -2118,57 +2183,27 @@
         function upgradeWithMomo(tier) { window.open('https://momo.vn', '_blank'); showToast('💳 Đang chuyển đến cổng thanh toán MoMo...', 'info'); }
         function saveSettings() { showToast('✅ Đã lưu cài đặt!', 'success'); closeModal('settingsModal'); }
 
-        // --- Công cụ AI mở rộng ---
+        // --- CÁC CÔNG CỤ TÍCH HỢP TỰ ĐỘNG GỌI API THẬT ---
         function useMultiAI() {
-            addMessage('user', '🧠 Yêu cầu AI Đa luồng');
-            showDeepThink(0);
-            setTimeout(() => showDeepThink(2), 600);
-            setTimeout(() => {
-                hideDeepThink();
-                addMessage('ai', '📌 **Kết quả tổng hợp từ 3 mô hình AI hàng đầu:**\n- Độ chính xác dữ liệu: 98.5%\n- Độ tin cậy phản hồi: Cao\n- Đề xuất: Đã sẵn sàng ứng dụng vào công việc.');
-            }, 1200);
+            setInputAndSend("Hãy đóng vai 3 chuyên gia AI xuất sắc nhất thế giới, lần lượt cung cấp góc nhìn và giải pháp phân tích sâu sắc về vấn đề tôi sắp hỏi. Sẵn sàng chưa?");
         }
         function summarizeText() {
-            addMessage('user', '📝 Yêu cầu tóm tắt văn bản');
-            showDeepThink(0);
-            setTimeout(() => {
-                hideDeepThink();
-                addMessage('ai', '📝 **Bản tóm tắt súc tích:**\n1. Ý chính 1: Nội dung cốt lõi đã được cô đọng.\n2. Ý chính 2: Các điểm quan trọng nhất được giữ nguyên.\n3. Kết luận: Văn bản sẵn sàng sử dụng.');
-            }, 1000);
+            setInputAndSend("Tôi có một đoạn văn bản/nội dung dưới đây. Hãy giúp tôi tóm tắt ý chính một cách súc tích, gạch đầu dòng rõ ràng những điểm quan trọng nhất:\n[Dán nội dung của bạn vào đây]");
         }
         function translateText() {
-            const lang = prompt('Nhập mã ngôn ngữ muốn dịch (en, ja, ko, zh):', 'en');
+            const lang = prompt('Nhập ngôn ngữ muốn dịch sang (Ví dụ: Tiếng Anh, Tiếng Nhật...):', 'Tiếng Anh');
             if (lang) {
-                showDeepThink(0);
-                setTimeout(() => {
-                    hideDeepThink();
-                    addMessage('ai', `🌐 **Đã chuyển dịch sang [${lang.toUpperCase()}] thành công!**`);
-                }, 800);
+                setInputAndSend(`Hãy đóng vai một chuyên gia ngôn ngữ, dịch chuẩn xác và giữ nguyên văn phong ngữ cảnh đoạn sau sang ${lang}:\n[Dán nội dung của bạn vào đây]`);
             }
         }
         function generateVideo() {
-            addMessage('user', '🎬 Yêu cầu tạo video AI');
-            showDeepThink(0);
-            setTimeout(() => {
-                hideDeepThink();
-                addMessage('ai', '🎬 **Đã khởi tạo kịch bản & khung hình Video AI thành công!**\n- Thời lượng: 30s\n- Chất lượng: Full HD 1080p');
-            }, 1200);
+            setInputAndSend("Tôi muốn làm một video ngắn (TikTok/Reels/Shorts). Hãy giúp tôi viết một kịch bản chi tiết bao gồm: Hook (mở đầu thu hút), Body (nội dung chính), và Call to Action (kêu gọi hành động) kèm theo mô tả góc quay/hình ảnh:\n[Nhập chủ đề video của bạn]");
         }
         function analyzeData() {
-            addMessage('user', '📊 Yêu cầu phân tích dữ liệu');
-            showDeepThink(0);
-            setTimeout(() => {
-                hideDeepThink();
-                addMessage('ai', '📊 **Báo cáo Phân Tích Dữ Liệu:**\n- Xu hướng phát triển: 📈 Tăng 24%\n- Chỉ số ổn định: 96%\n- Cảnh báo rủi ro: Không có');
-            }, 1200);
+            setInputAndSend("Đóng vai chuyên gia phân tích dữ liệu (Data Analyst). Hãy xem xét số liệu tôi cung cấp dưới đây, chỉ ra xu hướng, điểm bất thường và đưa ra lời khuyên chiến lược kinh doanh:\n[Dán dữ liệu/bảng biểu của bạn vào đây]");
         }
         function generateMusicWithLyrics() {
-            addMessage('user', '🎵 Yêu cầu sáng tác nhạc & lời');
-            showDeepThink(0);
-            setTimeout(() => {
-                hideDeepThink();
-                addMessage('ai', '🎵 **Giai Điệu Tương Lai**\n\n*(Verse 1)*\nÁnh sáng vươn mình bay cao qua từng đám mây...\n\n*(Chorus)*\nT.VỸ AI đồng hành cùng bạn vươn tới tương lai!');
-            }, 1400);
+            setInputAndSend("Tôi muốn sáng tác một bài hát. Chủ đề là: [Nhập chủ đề]. Hãy viết cho tôi lời bài hát có cấu trúc rõ ràng (Verse, Pre-Chorus, Chorus, Bridge, Outro) và gợi ý phong cách nhạc, nhạc cụ nên sử dụng.");
         }
     </script>
 </body>
