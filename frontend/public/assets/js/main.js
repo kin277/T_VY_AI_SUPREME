@@ -259,7 +259,7 @@ if (localStorage.getItem('tv_theme') === 'dark') {
 if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 
 // ================================================================
-// TOGGLE MENU & DEEP THINK[cite: 10]
+// TOGGLE MENU & ẨN DÒNG SUY NGHĨ THEO YÊU CẦU
 // ================================================================
 function toggleMenu() {
     const menu = document.getElementById('functionMenu');
@@ -276,25 +276,13 @@ document.addEventListener('click', function(event) {
     }
 });
 
+// Đã vô hiệu hóa hiển thị dòng suy nghĩ rườm rà, trả kết quả trực tiếp ngay lập tức
 function showDeepThink(stage = 0) {
-    const indicator = document.getElementById('deepThinkIndicator');
-    const status = document.getElementById('thinkStatus');
-    if (!indicator || !status) return;
-
-    const stages = [
-        "🔍 Đang phân tích chuyên sâu & nhận dạng ý định câu hỏi...",
-        "📚 Tổng hợp dữ liệu web liên quan & tài nguyên lập trình...",
-        "🧠 Xây dựng cấu trúc giải pháp tối ưu cho mọi cấp độ AI...",
-        "✍️ Hoàn thiện câu trả lời chính xác, đầy đủ..."
-    ];
-
-    indicator.style.display = 'block';
-    status.textContent = stages[Math.min(stage, stages.length - 1)] || stages[0];
+    // Giữ lại hàm rỗng để tránh lỗi gọi ở các module khác nếu có
 }
 
 function hideDeepThink() {
-    const indicator = document.getElementById('deepThinkIndicator');
-    if (indicator) indicator.style.display = 'none';
+    // Giữ lại hàm rỗng
 }
 
 // ================================================================
@@ -571,10 +559,9 @@ if (fileInput) {
         formData.append('file', file);
         formData.append('conversation_id', currentConversationId || '');
         formData.append('level', levelSelect ? levelSelect.value : 'pro');
-        formData.append('smart_synthesis', 'true'); // Kích hoạt tổng hợp thông minh cho tài liệu
+        formData.append('smart_synthesis', 'true');
 
         showTyping();
-        showDeepThink(0);
 
         fetch('/api/upload_and_analyze', {
             method: 'POST',
@@ -583,7 +570,6 @@ if (fileInput) {
         .then(res => res.json())
         .then(data => {
             hideTyping();
-            hideDeepThink();
             fileInput.value = '';
 
             if (data.error) {
@@ -601,7 +587,6 @@ if (fileInput) {
         })
         .catch(err => {
             hideTyping();
-            hideDeepThink();
             fileInput.value = '';
             addMessage('ai', '❌ Lỗi tải hoặc phân tích file: ' + err.message);
         });
@@ -609,7 +594,7 @@ if (fileInput) {
 }
 
 // ================================================================
-// SEND MESSAGE (NÂNG CẤP TRÍ THÔNG MINH, NHẬN DẠNG CÂU HỎI & TỔNG HỢP WEB CHO MỌI CẤP ĐỘ)
+// SEND MESSAGE (TRẢ KẾT QUẢ TRỰC TIẾP, ĐẦY ĐỦ, KHÔNG CẮT BỚT MÃ CODE)
 // ================================================================
 function sendMessage() {
     if (!inputField) return;
@@ -631,17 +616,11 @@ function sendMessage() {
 
     const level = levelSelect ? levelSelect.value : 'pro';
 
-    // Tự động phát hiện xem yêu cầu có cần tạo code hoặc có độ phức tạp từ trung bình trở lên không
-    const isCodeRequest = /code|viết chương trình|script|function|class|html|css|javascript|python|java|c\+\+|sql|sửa lỗi|debug|tạo ứng dụng/i.test(text);
+    const isCodeRequest = /code|viết chương trình|script|function|class|html|css|javascript|python|java|c\+\+|sql|sửa lỗi|debug|tạo ứng dụng|shader/i.test(text);
     const isComplexQuery = text.length > 50 || /phân tích|so sánh|giải thích chi tiết|tổng hợp|nghiên cứu|chiến lược|tối ưu hóa/i.test(text);
     const requiresWebSynthesis = isCodeRequest || isComplexQuery;
 
     showTyping();
-    showDeepThink(0);
-
-    setTimeout(() => showDeepThink(1), 800);
-    setTimeout(() => showDeepThink(2), 1600);
-    setTimeout(() => showDeepThink(3), 2400);
 
     fetch('/chat', {
         method: 'POST',
@@ -650,15 +629,15 @@ function sendMessage() {
             message: text,
             conversation_id: currentConversationId,
             level: level,
-            intent_recognition: true, // Kích hoạt nhận dạng câu hỏi chính xác cho tất cả cấp độ AI
-            web_synthesis: requiresWebSynthesis, // Tự động lấy toàn bộ dữ liệu web liên quan khi yêu cầu code hoặc phức tạp trung bình trở lên
-            comprehensive_answer: true // Đảm bảo trả lời đúng và đủ dù dài hay ngắn
+            intent_recognition: true,
+            web_synthesis: requiresWebSynthesis,
+            comprehensive_answer: true,
+            full_code: true // Đảm bảo trả về code đầy đủ không bị cắt bớt
         })
     })
     .then(res => res.json())
     .then(data => {
         hideTyping();
-        hideDeepThink();
         if (data.error) {
             addMessage('ai', '❌ ' + data.error);
             if (data.limit_reached) {
@@ -683,7 +662,6 @@ function sendMessage() {
     })
     .catch(err => {
         hideTyping();
-        hideDeepThink();
         addMessage('ai', '❌ Lỗi kết nối: ' + err.message);
     });
 }
@@ -1183,5 +1161,5 @@ if (typeof io !== 'undefined') {
     initSocket();
 }
 
-console.log('🚀 T.VỸ-AI-SUPREME v13.5: Đã nâng cấp trí thông minh nhận dạng câu hỏi & tổng hợp web toàn diện cho mọi cấp độ AI!');
+console.log('🚀 T.VỸ-AI-SUPREME v13.5: Đã tối ưu ẩn dòng suy nghĩ & trả về code hoàn chỉnh ngay lập tức!');
 console.log('📌 Bản quyền: T.VỸ-VIP-FILE');

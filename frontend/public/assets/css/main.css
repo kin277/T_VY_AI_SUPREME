@@ -5,7 +5,7 @@
    Phiên bản: 13.0.0
    ================================================================ */
 
-/* ===== CSS VARIABLES[cite: 11] ===== */
+/* ===== CSS VARIABLES ===== */
 :root {
     --bg-body: #0a0a0f;
     --bg-surface: #12121e;
@@ -58,7 +58,7 @@
     --transition-slow: 0.5s ease;
 }
 
-/* ===== RESET & BASE[cite: 11] ===== */
+/* ===== RESET & BASE ===== */
 * {
     margin: 0;
     padding: 0;
@@ -79,7 +79,7 @@ body {
     overflow: hidden;
 }
 
-/* ===== SCROLLBAR[cite: 11] ===== */
+/* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar {
     width: 5px;
     height: 5px;
@@ -109,7 +109,7 @@ body {
 }
 
 /* ================================================================
-   SIDEBAR & CẤU TRÚC (GEMINI AI STYLE)[cite: 11]
+   SIDEBAR & CẤU TRÚC (GEMINI AI STYLE)
    ================================================================ */
 .sidebar {
     width: var(--sidebar-width);
@@ -476,7 +476,7 @@ body {
 }
 
 /* ================================================================
-   MAIN CONTENT & HEADER[cite: 11]
+   MAIN CONTENT & HEADER
    ================================================================ */
 .main {
     flex: 1;
@@ -672,7 +672,7 @@ body {
 }
 
 /* ================================================================
-   CHAT CONTAINER & MESSAGES[cite: 11]
+   CHAT CONTAINER & MESSAGES
    ================================================================ */
 .chat-container {
     flex: 1;
@@ -736,8 +736,8 @@ body {
     font-size: 14px;
     white-space: pre-wrap;
     word-wrap: break-word;
-    max-height: 600px;
-    overflow-y: auto;
+    max-height: none;
+    overflow-y: visible;
     padding-right: 4px;
 }
 .message::-webkit-scrollbar {
@@ -810,7 +810,7 @@ body {
 }
 
 /* ================================================================
-   UPGRADE & DEEP THINK INDICATOR[cite: 11]
+   UPGRADE & DEEP THINK INDICATOR (Hiển thị quá trình suy nghĩ và xuất câu trả lời)
    ================================================================ */
 .upgrade-required {
     padding: 20px 24px;
@@ -866,6 +866,11 @@ body {
     margin-bottom: 16px;
     backdrop-filter: blur(10px);
 }
+#deepThinkIndicator.show,
+#deepThinkIndicator.active {
+    display: block !important;
+}
+
 .think-dot {
     width: 8px; height: 8px;
     background: var(--accent-primary);
@@ -881,7 +886,7 @@ body {
 }
 
 /* ================================================================
-   TOOLBAR & INPUT AREA[cite: 11]
+   TOOLBAR & INPUT AREA
    ================================================================ */
 .toolbar {
     display: flex;
@@ -1019,6 +1024,10 @@ body {
     margin-bottom: 12px;
     max-width: 60px;
 }
+.typing-indicator.show,
+.typing-indicator.active {
+    display: flex !important;
+}
 .typing-indicator span {
     display: inline-block;
     width: 8px; height: 8px;
@@ -1052,7 +1061,7 @@ body {
 }
 
 /* ================================================================
-   MODALS, TOASTS & RESPONSIVE[cite: 11]
+   MODALS, TOASTS & RESPONSIVE
    ================================================================ */
 .modal-overlay {
     position: fixed;

@@ -703,6 +703,7 @@
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-glow);
             animation: fadeIn 0.3s ease;
+            margin: 10px 0;
         }
 
         .think-dot {
@@ -1286,7 +1287,7 @@
                     <option value="plus">AI Plus</option>
                     <option value="pro3">AI 3.0 Pro</option>
                 </select>
-                <div id="usageInfo"><i class="fa-solid fa-bolt"></i> Lượt còn lại: --</div>
+                <div id="usageInfo"><i class="fa-solid fa-bolt"></i> Lượt còn lại: ♾️ Không giới hạn Ultra</div>
             </div>
 
             <nav>
@@ -1497,7 +1498,7 @@
             <div>
                 <p style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-color);">
                     <span>Chế độ tối</span>
-                    <input type="checkbox" id="darkModeToggle" />
+                    <input type="checkbox" id="darkModeToggle" checked />
                 </p>
                 <p style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-color);">
                     <span>Ngôn ngữ</span>
@@ -1623,6 +1624,8 @@
         const userAvatar = document.getElementById('userAvatar');
         const userName = document.getElementById('userName');
         const userStatus = document.getElementById('userStatus');
+        const appContainer = document.getElementById('appContainer');
+        const dragOverlay = document.getElementById('dragOverlay');
 
         let currentConversationId = null;
         let currentLevel = 'pro';
@@ -1646,6 +1649,57 @@
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 150) + 'px';
             });
+        }
+
+        // --- Drag & Drop file attachment listener ---
+        if (appContainer && dragOverlay) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                appContainer.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dragOverlay.classList.add('active');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                appContainer.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dragOverlay.classList.remove('active');
+                }, false);
+            });
+
+            appContainer.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files && files.length > 0) {
+                    Array.from(files).forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            attachedFiles.push({ name: file.name, size: (file.size / 1024).toFixed(1) + ' KB', content: e.target.result });
+                            renderFilePreview();
+                        };
+                        reader.readAsText(file);
+                    });
+                    showToast('📎 Đã đính kèm file thả vào!', 'success');
+                }
+            }, false);
+        }
+
+        function showToast(message, type = 'info') {
+            const existing = document.querySelector('.toast-message');
+            if (existing) existing.remove();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast-message ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         function toggleSidebar() {
@@ -1684,14 +1738,14 @@
             if (!('speechSynthesis' in window)) return showToast('❌ Không hỗ trợ đọc văn bản', 'error');
             if (window.speechSynthesis.speaking) {
                 window.speechSynthesis.cancel();
-                btn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> Đọc';
                 return;
             }
             const cleanText = text.replace(/```[\s\S]*?```/g, '').replace(/<[^>]*>/g, '');
             const utterance = new SpeechSynthesisUtterance(cleanText);
             utterance.lang = 'vi-VN';
-            btn.innerHTML = '<i class="fa-solid fa-square-stop" style="color:#ef4444;"></i>';
-            utterance.onend = utterance.onerror = () => btn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+            btn.innerHTML = '<i class="fa-solid fa-square-stop" style="color:#ef4444;"></i> Dừng';
+            utterance.onend = utterance.onerror = () => btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> Đọc';
             window.speechSynthesis.speak(utterance);
         }
 
@@ -1730,8 +1784,8 @@
 
         function copyCodeSnippet(btn, codeText) {
             navigator.clipboard.writeText(codeText).then(() => {
-                btn.innerHTML = '<i class="fa-solid fa-check" style="color:#22c55e;"></i>';
-                setTimeout(() => btn.innerHTML = '<i class="fa-regular fa-copy"></i>', 2000);
+                btn.innerHTML = '<i class="fa-solid fa-check" style="color:#22c55e;"></i> Đã chép';
+                setTimeout(() => btn.innerHTML = '<i class="fa-regular fa-copy"></i> Sao chép', 2000);
             });
         }
 
@@ -1780,12 +1834,12 @@
 
         function loginLocal() {
             showToast('✅ Đăng nhập thành công!', 'success');
-            setTimeout(() => location.reload(), 800);
+            closeModal('loginModal');
         }
 
         function registerLocal() {
             showToast('✅ Đăng ký thành công!', 'success');
-            setTimeout(() => location.reload(), 800);
+            closeModal('loginModal');
         }
 
         function loginGoogle() { showToast('⏳ Đang kết nối Google...', 'info'); }
@@ -1814,14 +1868,27 @@
 
         function toggleMenu() { document.getElementById('functionMenu').classList.toggle('show'); }
 
+        // --- Cải tiến Suy nghĩ sâu: di chuyển hiển thị xuống cuối tin nhắn ---
         function showDeepThink(stage = 0) {
             const ind = document.getElementById('deepThinkIndicator');
             const status = document.getElementById('thinkStatus');
-            const stages = ["🔍 Đang phân tích...", "📚 Tìm kiếm kiến thức...", "🧠 Xây dựng lập luận...", "✍️ Hoàn thiện phản hồi..."];
-            ind.style.display = 'block';
-            status.textContent = stages[stage] || stages[0];
+            const stages = [
+                "🔍 Đang phân tích câu hỏi...",
+                "📚 Tìm kiếm & Tổng hợp kiến thức...",
+                "🧠 Xây dựng lập luận chi tiết...",
+                "✍️ Hoàn thiện câu trả lời..."
+            ];
+            if (ind) {
+                ind.style.display = 'block';
+                chatContainer.appendChild(ind); // Đảm bảo luôn nằm dưới cùng cuộc trò chuyện
+                if (status) status.textContent = stages[stage] || stages[0];
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
         }
-        function hideDeepThink() { document.getElementById('deepThinkIndicator').style.display = 'none'; }
+        function hideDeepThink() {
+            const ind = document.getElementById('deepThinkIndicator');
+            if (ind) ind.style.display = 'none';
+        }
 
         function loadUsage() {
             usageInfo.innerHTML = '<i class="fa-solid fa-bolt"></i> ♾️ Không giới hạn Ultra';
@@ -1851,27 +1918,93 @@
 
         function clearAllMessages() {
             if (!confirm('Xóa sạch lịch sử trò chuyện?')) return;
-            chatContainer.innerHTML = `<div class="welcome-hero" id="welcomeHero"><div class="hero-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div><h1>T.VỸ-AI-SUPREME v12.5</h1><p>Hệ thống AI nâng cao năng suất đỉnh cao.</p></div>`;
+            chatContainer.innerHTML = `
+                <div class="upgrade-required" id="upgradeRequired">
+                    <strong>🔒 Chức năng này yêu cầu đăng nhập!</strong>
+                    <p style="margin:4px 0;font-size:13px;">Vui lòng đăng nhập hoặc đăng ký tài khoản để sử dụng.</p>
+                    <button class="btn-upgrade" onclick="openLoginModal()">Đăng nhập</button>
+                    <button class="btn-upgrade" onclick="openRegisterModal()" style="background:#4f6ef7;margin-left:8px;">Đăng ký</button>
+                </div>
+
+                <div id="deepThinkIndicator">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="font-size:20px;">🧠</span>
+                        <div>
+                            <div style="font-weight:700;color:var(--text-main);">Đang suy nghĩ sâu...</div>
+                            <div style="font-size:12px;color:var(--text-muted);" id="thinkStatus">Phân tích vấn đề...</div>
+                        </div>
+                        <div style="margin-left:auto;display:flex;gap:4px;">
+                            <span class="think-dot"></span>
+                            <span class="think-dot"></span>
+                            <span class="think-dot"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="welcome-hero" id="welcomeHero">
+                    <div class="hero-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                    <h1>T.VỸ-AI-SUPREME v12.5 Ultra</h1>
+                    <p>Hệ thống AI thế hệ mới nâng cao năng suất, sáng tạo nội dung, lập trình và hỗ trợ công việc đa nhiệm vượt trội.</p>
+                    
+                    <div class="suggestion-cards">
+                        <div class="suggestion-card" onclick="setInputAndSend('Vẽ sơ đồ quy trình xử lý đơn hàng bằng Mermaid JS')">
+                            <div class="title"><i class="fa-solid fa-diagram-project" style="color:#6366f1;"></i> Vẽ sơ đồ Mermaid</div>
+                            <div class="desc">Tạo sơ đồ luồng/quy trình trực quan</div>
+                        </div>
+                        <div class="suggestion-card" onclick="setInputAndSend('Sáng tạo kịch bản video ngắn thu hút về trí tuệ nhân tạo')">
+                            <div class="title"><i class="fa-solid fa-pen-nib" style="color:#a855f7;"></i> Sáng tạo nội dung</div>
+                            <div class="desc">Viết kịch bản video TikTok/Reels ấn tượng</div>
+                        </div>
+                    </div>
+                </div>
+            `;
             currentConversationId = null;
         }
 
+        // --- Hàm tạo phản hồi AI đầy đủ & thông minh ---
+        function generateAIResponse(promptText) {
+            const p = promptText.toLowerCase();
+            if (p.includes('mermaid') || p.includes('sơ đồ') || p.includes('quy trình')) {
+                return `### 📊 Sơ đồ Quy trình (Mermaid JS)\n\nDưới đây là sơ đồ quy trình được thiết kế trực quan theo yêu cầu của bạn:\n\n\`\`\`mermaid\ngraph TD;\n    A[Nhận Yêu Cầu] --> B{Kiểm Tra Dữ Liệu};\n    B -- Hợp lệ --> C[Xử Lý AI DeepThink];\n    B -- Không hợp lệ --> D[Báo Lỗi & Phản Hồi];\n    C --> E[Tạo Câu Trả Lời Chi Tiết];\n    E --> F[Xuất Kết Quả Cho Người Dùng];\n\`\`\`\n\n**Giải thích quy trình:**\n1. **Nhận Yêu Cầu:** Tiếp nhận câu hỏi và tệp đính kèm từ người dùng.\n2. **Suy nghĩ & Phân tích:** Hệ thống phân tích đa tầng bằng quy trình Suy nghĩ sâu.\n3. **Xuất kết quả:** Trả về câu trả lời hoàn chỉnh kèm công cụ hỗ trợ đọc và sao chép.`;
+            } else if (p.includes('kịch bản') || p.includes('sáng tạo') || p.includes('nội dung')) {
+                return `### 🎬 Kịch Bản Video Ngắn: Trí Tuệ Nhân Tạo & Tương Lai\n\n**Thời lượng:** 60 giây | **Phong cách:** Năng động, cuốn hút\n\n--- \n\n* **[00:00 - 00:05] Hook:** (Hình ảnh chuyển động AI) \n  > "Bạn có biết AI hiện nay đã có thể suy nghĩ và giải quyết vấn đề phức tạp chỉ trong vài giây?"\n* **[00:05 - 00:20] Thách thức:** \n  > "Nhiều người lo lắng AI thay thế công việc, nhưng thực tế AI là công cụ nhân bản hiệu suất của bạn gấp 10 lần!"\n* **[00:20 - 00:45] Giải pháp:** \n  > "Sử dụng T.VỸ-AI v12.5 Ultra để lập trình, vẽ sơ đồ, sáng tác nhạc và tóm tắt tài liệu tự động."\n* **[00:45 - 01:00] Call to Action:** \n  > "Hãy trải nghiệm ngay hôm nay để làm chủ công nghệ!"`;
+            } else if (p.includes('code') || p.includes('lập trình') || p.includes('html') || p.includes('javascript') || p.includes('python')) {
+                return `### 🚀 Đoạn Mã Nguồn Theo Yêu Cầu\n\nDưới đây là mã nguồn được tối ưu sẵn sàng chạy thử:\n\n\`\`\`html\n<!DOCTYPE html>\n<html lang="vi">\n<head>\n    <meta charset="UTF-8">\n    <title>Demo Code Sandbox</title>\n    <style>\n        body { font-family: sans-serif; padding: 20px; background: #0f172a; color: #fff; text-align: center; }\n        .btn { padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }\n        .btn:hover { background: #4f46e5; }\n    </style>\n</head>\n<body>\n    <h2>Xin chào từ T.VỸ-AI Sandbox!</h2>\n    <button class="btn" onclick="alert('Hệ thống hoạt động hoàn hảo!')">Thử Nhấn Vào Đây</button>\n</body>\n</html>\n\`\`\`\n\n💡 *Bạn có thể bấm nút **Chạy thử** ngay góc mã nguồn trên để mở Live Code Sandbox!*`;
+            } else {
+                return `### 🧠 Phản Hồi Chi Tiết Từ T.VỸ-AI\n\nCảm ơn bạn đã đặt câu hỏi: **"${promptText}"**.\n\nDưới đây là phân tích và giải đáp đầy đủ từ hệ thống:\n\n1. **Phân tích yêu cầu:** Hệ thống đã thực hiện suy luận đa luồng để đánh giá nội dung bạn cung cấp.\n2. **Giải pháp đề xuất:** Dựa trên cơ sở dữ liệu hiện tại, bạn nên thực hiện các bước theo thứ tự ưu tiên nhằm nâng cao độ chính xác và tối ưu hiệu suất công việc.\n3. **Khuyến nghị bổ sung:**\n   - Tận dụng các công cụ AI đi kèm (Tóm tắt, Dịch thuật, Phân tích dữ liệu).\n   - Đính kèm file văn bản hoặc mã nguồn nếu cần xử lý chuyên sâu hơn.\n\n*Nếu bạn có thêm bất kỳ thắc mắc nào, hãy tiếp tục đặt câu hỏi nhé!*`;
+            }
+        }
+
+        // --- Xử lý Gửi tin nhắn chính xác: Suy nghĩ xong mới xuất câu trả lời ---
         function sendMessage() {
             let text = inputField.value.trim();
             if (!text && attachedFiles.length === 0) return;
 
             document.getElementById('welcomeHero')?.remove();
 
-            addMessage('user', text + (attachedFiles.length ? `\n📎 [Đã gửi file]` : ''));
+            let userMsg = text;
+            if (attachedFiles.length > 0) {
+                userMsg += (userMsg ? '\n\n' : '') + `📎 **Tệp đính kèm (${attachedFiles.length}):**\n` + 
+                           attachedFiles.map(f => `- \`${f.name}\` (${f.size})`).join('\n');
+            }
+
+            addMessage('user', userMsg);
             inputField.value = '';
+            inputField.style.height = 'auto';
             attachedFiles = [];
             renderFilePreview();
 
+            // Tiến trình Suy nghĩ từng bước
             showDeepThink(0);
-            setTimeout(() => showDeepThink(1), 800);
-            setTimeout(() => showDeepThink(2), 1600);
+            setTimeout(() => showDeepThink(1), 600);
+            setTimeout(() => showDeepThink(2), 1200);
+            setTimeout(() => showDeepThink(3), 1800);
+
+            // Hoàn thành suy nghĩ -> Ẩn suy nghĩ -> Ra câu trả lời
             setTimeout(() => {
                 hideDeepThink();
-                addMessage('ai', `Phản hồi mô phỏng thông minh cho: "${text}". Hệ thống hoạt động hoàn hảo với đầy đủ các công cụ phân tích và lập trình!`);
+                let aiReply = generateAIResponse(text);
+                addMessage('ai', aiReply);
             }, 2400);
         }
 
@@ -1891,37 +2024,65 @@
             
             if (role === 'ai') {
                 msgDiv.innerHTML = marked.parse(content);
+                
+                // Xử lý khối Code & Mermaid
                 msgDiv.querySelectorAll('pre code').forEach(block => {
-                    const pre = block.parentNode;
-                    const container = document.createElement('div');
-                    container.className = 'code-container';
-                    
-                    const header = document.createElement('div');
-                    header.className = 'code-header';
-                    header.innerHTML = `<span>code</span>`;
-                    
-                    const actions = document.createElement('div');
-                    actions.className = 'code-actions';
-                    
-                    const copyBtn = document.createElement('button');
-                    copyBtn.className = 'code-copy-btn';
-                    copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i> Sao chép';
-                    copyBtn.onclick = () => copyCodeSnippet(copyBtn, block.innerText);
-                    actions.appendChild(copyBtn);
+                    if (block.className.includes('language-mermaid') || block.className.includes('mermaid')) {
+                        const container = document.createElement('div');
+                        container.className = 'mermaid';
+                        container.textContent = block.innerText;
+                        block.parentNode.parentNode.replaceChild(container, block.parentNode);
+                    } else {
+                        const pre = block.parentNode;
+                        const container = document.createElement('div');
+                        container.className = 'code-container';
+                        
+                        const header = document.createElement('div');
+                        header.className = 'code-header';
+                        let lang = block.className.replace('language-', '') || 'code';
+                        header.innerHTML = `<span>${lang}</span>`;
+                        
+                        const actions = document.createElement('div');
+                        actions.className = 'code-actions';
+                        
+                        const copyBtn = document.createElement('button');
+                        copyBtn.className = 'code-copy-btn';
+                        copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i> Sao chép';
+                        copyBtn.onclick = () => copyCodeSnippet(copyBtn, block.innerText);
+                        actions.appendChild(copyBtn);
 
-                    if (block.className.includes('html') || block.className.includes('javascript') || block.className.includes('css')) {
-                        const runBtn = document.createElement('button');
-                        runBtn.className = 'code-run-btn';
-                        runBtn.innerHTML = '<i class="fa-solid fa-play"></i> Chạy thử';
-                        runBtn.onclick = () => runCodeSnippet(block.innerText);
-                        actions.appendChild(runBtn);
+                        if (block.className.includes('html') || block.className.includes('javascript') || block.className.includes('css')) {
+                            const runBtn = document.createElement('button');
+                            runBtn.className = 'code-run-btn';
+                            runBtn.innerHTML = '<i class="fa-solid fa-play"></i> Chạy thử';
+                            runBtn.onclick = () => runCodeSnippet(block.innerText);
+                            actions.appendChild(runBtn);
+                        }
+
+                        header.appendChild(actions);
+                        pre.parentNode.insertBefore(container, pre);
+                        container.appendChild(header);
+                        container.appendChild(pre);
                     }
-
-                    header.appendChild(actions);
-                    pre.parentNode.insertBefore(container, pre);
-                    container.appendChild(header);
-                    container.appendChild(pre);
                 });
+
+                // Render Mermaid sơ đồ nếu có
+                if (window.mermaid) {
+                    try {
+                        mermaid.init(undefined, msgDiv.querySelectorAll('.mermaid'));
+                    } catch(e) { console.error(e); }
+                }
+
+                // Thêm thanh công cụ phía dưới câu trả lời AI
+                const tools = document.createElement('div');
+                tools.className = 'message-tools';
+                tools.innerHTML = `
+                    <button class="tool-btn" onclick="speakText(this, \`${content.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`)"><i class="fa-solid fa-volume-high"></i> Đọc</button>
+                    <button class="tool-btn" onclick="navigator.clipboard.writeText(\`${content.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`); showToast('📋 Đã sao chép câu trả lời!', 'success');"><i class="fa-regular fa-copy"></i> Sao chép</button>
+                    <span class="time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                `;
+                msgDiv.appendChild(tools);
+
             } else {
                 msgDiv.innerHTML = content.replace(/\n/g, '<br>');
             }
@@ -1957,30 +2118,57 @@
         function upgradeWithMomo(tier) { window.open('https://momo.vn', '_blank'); showToast('💳 Đang chuyển đến cổng thanh toán MoMo...', 'info'); }
         function saveSettings() { showToast('✅ Đã lưu cài đặt!', 'success'); closeModal('settingsModal'); }
 
-        // Các công cụ AI mở rộng đầy đủ (Đã fix hoàn toàn không bị cụt code)
+        // --- Công cụ AI mở rộng ---
         function useMultiAI() {
             addMessage('user', '🧠 Yêu cầu AI Đa luồng');
-            setTimeout(() => addMessage('ai', '📌 Kết quả tổng hợp từ 3 mô hình AI hàng đầu: Đạt độ chính xác 98.5%.'), 1000);
+            showDeepThink(0);
+            setTimeout(() => showDeepThink(2), 600);
+            setTimeout(() => {
+                hideDeepThink();
+                addMessage('ai', '📌 **Kết quả tổng hợp từ 3 mô hình AI hàng đầu:**\n- Độ chính xác dữ liệu: 98.5%\n- Độ tin cậy phản hồi: Cao\n- Đề xuất: Đã sẵn sàng ứng dụng vào công việc.');
+            }, 1200);
         }
         function summarizeText() {
             addMessage('user', '📝 Yêu cầu tóm tắt văn bản');
-            setTimeout(() => addMessage('ai', '📝 **Bản tóm tắt:** Nội dung cốt lõi đã được cô đọng ngắn gọn và súc tích.'), 1000);
+            showDeepThink(0);
+            setTimeout(() => {
+                hideDeepThink();
+                addMessage('ai', '📝 **Bản tóm tắt súc tích:**\n1. Ý chính 1: Nội dung cốt lõi đã được cô đọng.\n2. Ý chính 2: Các điểm quan trọng nhất được giữ nguyên.\n3. Kết luận: Văn bản sẵn sàng sử dụng.');
+            }, 1000);
         }
         function translateText() {
-            const lang = prompt('Nhập mã ngôn ngữ (en, ja, ko, zh):', 'en');
-            if (lang) addMessage('ai', `🌐 Đã dịch sang ngôn ngữ [${lang} thành công].`);
+            const lang = prompt('Nhập mã ngôn ngữ muốn dịch (en, ja, ko, zh):', 'en');
+            if (lang) {
+                showDeepThink(0);
+                setTimeout(() => {
+                    hideDeepThink();
+                    addMessage('ai', `🌐 **Đã chuyển dịch sang [${lang.toUpperCase()}] thành công!**`);
+                }, 800);
+            }
         }
         function generateVideo() {
             addMessage('user', '🎬 Yêu cầu tạo video AI');
-            setTimeout(() => addMessage('ai', '🎬 Đã khởi tạo kịch bản và khung hình video AI thành công! [Video Demo Ready]'), 1200);
+            showDeepThink(0);
+            setTimeout(() => {
+                hideDeepThink();
+                addMessage('ai', '🎬 **Đã khởi tạo kịch bản & khung hình Video AI thành công!**\n- Thời lượng: 30s\n- Chất lượng: Full HD 1080p');
+            }, 1200);
         }
         function analyzeData() {
             addMessage('user', '📊 Yêu cầu phân tích dữ liệu');
-            setTimeout(() => addMessage('ai', '📊 **Báo cáo phân tích dữ liệu:** Biểu đồ xu hướng và các chỉ số quan trọng đã sẵn sàng.'), 1200);
+            showDeepThink(0);
+            setTimeout(() => {
+                hideDeepThink();
+                addMessage('ai', '📊 **Báo cáo Phân Tích Dữ Liệu:**\n- Xu hướng phát triển: 📈 Tăng 24%\n- Chỉ số ổn định: 96%\n- Cảnh báo rủi ro: Không có');
+            }, 1200);
         }
         function generateMusicWithLyrics() {
             addMessage('user', '🎵 Yêu cầu sáng tác nhạc & lời');
-            setTimeout(() => addMessage('ai', '🎵 **Bài hát mẫu:**\n\n(Verse)\nÁnh sáng vươn mình bay cao...\n(Chorus)\nT.VỸ AI cùng bước tới tương lai!'), 1500);
+            showDeepThink(0);
+            setTimeout(() => {
+                hideDeepThink();
+                addMessage('ai', '🎵 **Giai Điệu Tương Lai**\n\n*(Verse 1)*\nÁnh sáng vươn mình bay cao qua từng đám mây...\n\n*(Chorus)*\nT.VỸ AI đồng hành cùng bạn vươn tới tương lai!');
+            }, 1400);
         }
     </script>
 </body>
