@@ -1,8 +1,8 @@
 /* ================================================================
-   MAIN CSS - T.VỸ-AI-SUPREME (SIÊU HIỆN ĐẠI)
+   MAIN CSS - T.VỸ-AI-SUPREME (SIÊU HIỆN ĐẠI - ĐÃ NÂNG CẤP ĐÓNG MỞ SIDEBAR)
    ================================================================
    Bản quyền: T.VỸ-VIP-FILE
-   Phiên bản: 12.0.0
+   Phiên bản: 12.1.0
    ================================================================ */
 
 /* ===== CSS VARIABLES ===== */
@@ -122,7 +122,7 @@ body {
 }
 
 /* ================================================================
-   SIDEBAR
+   SIDEBAR & COLLAPSED FUNCTIONALITY
    ================================================================ */
 .sidebar {
     width: var(--sidebar-width);
@@ -134,12 +134,53 @@ body {
     padding: 16px 12px;
     height: 100vh;
     overflow-y: auto;
-    transition: width var(--transition-normal), min-width var(--transition-normal);
+    transition: width var(--transition-normal), min-width var(--transition-normal), padding var(--transition-normal);
     position: relative;
     z-index: 10;
 }
 .sidebar::-webkit-scrollbar {
     width: 3px;
+}
+
+/* Trạng thái đóng/thu gọn thanh bên (Desktop Toggle & Responsive) */
+.sidebar.collapsed {
+    width: var(--sidebar-collapsed);
+    min-width: var(--sidebar-collapsed);
+    padding: 12px 8px;
+}
+.sidebar.collapsed .sidebar-brand .logo-text,
+.sidebar.collapsed .sidebar-brand .logo-badge,
+.sidebar.collapsed .level-selector .label,
+.sidebar.collapsed .level-selector select,
+.sidebar.collapsed .nav-item .nav-label,
+.sidebar.collapsed .nav-item .badge-notify,
+.sidebar.collapsed #usageInfo,
+.sidebar.collapsed .user-profile .info {
+    display: none !important;
+}
+.sidebar.collapsed .sidebar-brand {
+    padding: 8px 4px 16px;
+    justify-content: center;
+}
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 12px;
+}
+.sidebar.collapsed .nav-item i {
+    font-size: 20px;
+}
+.sidebar.collapsed .user-profile {
+    justify-content: center;
+    padding: 8px;
+}
+.sidebar.collapsed .user-profile .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+}
+.sidebar.collapsed .level-selector {
+    padding: 8px;
+    margin: 4px 0;
 }
 
 /* Brand */

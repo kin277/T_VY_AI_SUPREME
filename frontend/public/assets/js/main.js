@@ -1,5 +1,5 @@
 // ================================================================
-// T.VỸ-AI-SUPREME - MAIN JS (FULL INTEGRATED: MERMAID & FILE UPLOAD)
+// T.VỸ-AI-SUPREME - MAIN JS (FULL INTEGRATED: SIDEBAR, MERMAID & FILE UPLOAD)
 // ================================================================
 
 // ===== DOM ELEMENTS =====
@@ -18,9 +18,11 @@ const userAvatar = document.getElementById('userAvatar');
 const userName = document.getElementById('userName');
 const userStatus = document.getElementById('userStatus');
 
-// ===== DOM BỔ SUNG CHO UPLOAD FILE =====
+// ===== DOM BỔ SUNG CHO UPLOAD FILE & SIDEBAR =====
 const fileInput = document.getElementById('fileInput');
 const uploadBtn = document.getElementById('uploadBtn');
+const sidebar = document.getElementById('sidebar') || document.querySelector('.sidebar');
+const sidebarToggle = document.getElementById('sidebarToggle') || document.getElementById('menuToggleSidebar');
 
 // ===== STATE =====
 let currentConversationId = null;
@@ -38,6 +40,22 @@ const LEVEL_NAMES = {
     plus: 'AI Plus',
     pro3: 'AI 3.0 Pro'
 };
+
+// ================================================================
+// TOGGLE SIDEBAR (CHỨC NĂNG ĐÓNG MỞ THANH BÊN MỚI)
+// ================================================================
+function toggleSidebar() {
+    if (sidebar) {
+        sidebar.classList.toggle('collapsed');
+        sidebar.classList.toggle('closed');
+        sidebar.classList.toggle('active'); // Hỗ trợ đa dạng cấu trúc CSS class ẩn/hiện
+    }
+}
+
+// Gắn sự kiện cho nút bấm đóng mở thanh bên nếu tồn tại
+if (sidebarToggle) {
+    sidebarToggle.addEventListener('click', toggleSidebar);
+}
 
 // ================================================================
 // MERMAID DIAGRAM INITIALIZATION
@@ -495,7 +513,6 @@ function addMessage(role, content) {
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message ' + role;
 
-    // Phát hiện khối mã ```mermaid ... ``` để biến đổi thành thẻ render
     let formattedContent = content;
     const mermaidRegex = /```mermaid\s*([\s\S]*?)\s*```/g;
     formattedContent = formattedContent.replace(mermaidRegex, (match, code) => {
@@ -508,7 +525,6 @@ function addMessage(role, content) {
     chatContainer.appendChild(wrapper);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 
-    // Gọi hàm render Mermaid Diagram nếu có trong nội dung
     renderMermaidInContainer(msgDiv);
 }
 
@@ -544,7 +560,7 @@ if (fileInput) {
             return;
         }
 
-        if (file.size > 15 * 1024 * 1024) { // Tối đa 15MB
+        if (file.size > 15 * 1024 * 1024) {
             showToast('❌ Dung lượng file vượt quá 15MB!', 'error');
             fileInput.value = '';
             return;
@@ -1150,7 +1166,6 @@ function clearAllMessages() {
 checkLogin();
 if (inputField) inputField.focus();
 
-// Tự động làm mới dữ liệu lượt dùng mỗi 60 giây
 setInterval(() => {
     if (isLoggedIn) loadUsage();
 }, 60000);
@@ -1159,5 +1174,5 @@ if (typeof io !== 'undefined') {
     initSocket();
 }
 
-console.log('🚀 T.VỸ-AI-SUPREME v12.0: Đã tích hợp Mermaid Diagram & Upload File!');
+console.log('🚀 T.VỸ-AI-SUPREME v13.0: Đã tích hợp Đóng/Mở thanh bên, Mermaid Diagram & Upload File!');
 console.log('📌 Bản quyền: T.VỸ-VIP-FILE');
