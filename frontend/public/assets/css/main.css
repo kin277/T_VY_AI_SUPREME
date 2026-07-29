@@ -1,75 +1,64 @@
 /* ================================================================
-   MAIN CSS - T.VỸ-AI-SUPREME (ĐÃ TÙY CHỈNH THANH BÊN THEO YÊU CẦU)
+   MAIN CSS - T.VỸ-AI-SUPREME (ĐÃ TÙY CHỈNH & NÂNG CẤP GIAO DIỆN SUPREME)
    ================================================================
    Bản quyền: T.VỸ-VIP-FILE
-   Phiên bản: 12.2.0
+   Phiên bản: 13.0.0
    ================================================================ */
 
-/* ===== CSS VARIABLES ===== */
+/* ===== CSS VARIABLES[cite: 11] ===== */
 :root {
-    /* Màu nền chính */
     --bg-body: #0a0a0f;
     --bg-surface: #12121e;
     --bg-elevated: #1a1a2e;
     --bg-highlight: #222244;
     --bg-card: #16162a;
     
-    /* Màu nền sáng */
     --bg-primary-light: #f0f2f8;
     --bg-secondary-light: #ffffff;
     
-    /* Màu chữ */
     --text-primary: #f0f0ff;
     --text-secondary: #b0b0cc;
     --text-muted: #6a6a8a;
     --text-inverse: #0a0a0f;
     
-    /* Màu chính */
     --accent-primary: #6c5ce7;
     --accent-secondary: #00b4d8;
     --accent-gradient: linear-gradient(135deg, #6c5ce7, #00b4d8);
     --accent-gradient-2: linear-gradient(135deg, #f43f5e, #f97316);
     
-    /* Màu phụ */
     --success: #22c55e;
     --warning: #f59e0b;
     --error: #ef4444;
     --info: #3b82f6;
     
-    /* Border & Shadow */
     --border: rgba(255,255,255,0.06);
     --border-hover: rgba(108,92,231,0.3);
     --shadow: 0 8px 32px rgba(0,0,0,0.4);
     --shadow-glow: 0 0 60px rgba(108,92,231,0.15);
     --shadow-card: 0 4px 24px rgba(0,0,0,0.3);
     
-    /* Radius */
     --radius-sm: 8px;
     --radius-md: 14px;
     --radius-lg: 20px;
     --radius-xl: 28px;
     --radius-full: 9999px;
     
-    /* Glass effect */
     --glass-bg: rgba(255,255,255,0.04);
     --glass-border: rgba(255,255,255,0.06);
     
-    /* Font */
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
     
-    /* Kích thước */
     --sidebar-width: 280px;
     --sidebar-collapsed: 72px;
     --header-height: 64px;
     --input-height: 60px;
     
-    /* Transitions */
     --transition-fast: 0.15s ease;
     --transition-normal: 0.3s ease;
     --transition-slow: 0.5s ease;
 }
 
-/* ===== RESET & BASE ===== */
+/* ===== RESET & BASE[cite: 11] ===== */
 * {
     margin: 0;
     padding: 0;
@@ -90,7 +79,7 @@ body {
     overflow: hidden;
 }
 
-/* ===== SCROLLBAR ===== */
+/* ===== SCROLLBAR[cite: 11] ===== */
 ::-webkit-scrollbar {
     width: 5px;
     height: 5px;
@@ -107,13 +96,11 @@ body {
     opacity: 1;
 }
 
-/* ===== SELECTION ===== */
 ::selection {
     background: var(--accent-primary);
     color: #fff;
 }
 
-/* ===== LAYOUT ===== */
 .app-container {
     display: flex;
     height: 100vh;
@@ -122,7 +109,7 @@ body {
 }
 
 /* ================================================================
-   SIDEBAR & CẤU TRÚC MỚI (GEMINI AI STYLE)
+   SIDEBAR & CẤU TRÚC (GEMINI AI STYLE)[cite: 11]
    ================================================================ */
 .sidebar {
     width: var(--sidebar-width);
@@ -142,7 +129,6 @@ body {
     width: 3px;
 }
 
-/* Trạng thái đóng/thu gọn thanh bên */
 .sidebar.collapsed {
     width: var(--sidebar-collapsed);
     min-width: var(--sidebar-collapsed);
@@ -188,7 +174,6 @@ body {
     margin: 4px 0;
 }
 
-/* Brand */
 .sidebar-brand {
     display: flex;
     align-items: center;
@@ -232,7 +217,6 @@ body {
     text-transform: uppercase;
 }
 
-/* Level Selector */
 .level-selector {
     margin: 4px 4px 12px;
     padding: 10px 14px;
@@ -293,7 +277,6 @@ body {
     color: var(--text-primary);
 }
 
-/* MỤC NÂNG CẤP ĐƯỢC CHUYỂN LÊN TRÊN (GIỐNG GIAO DIỆN GEMINI AI) */
 .sidebar-upgrade-btn {
     display: flex;
     align-items: center;
@@ -326,7 +309,6 @@ body {
     text-overflow: ellipsis;
 }
 
-/* LỊCH SỬ TRÒ CHUYỆN / NAV-MENU ĐƯỢC KÉO DÀI LÊN CHIẾM KHÔNG GIAN TRỐNG */
 .nav-menu {
     display: flex;
     flex-direction: column;
@@ -405,7 +387,6 @@ body {
     animation: pulse 2s infinite;
 }
 
-/* Usage Info */
 #usageInfo {
     font-size: 12px;
     color: var(--text-muted);
@@ -422,7 +403,6 @@ body {
     animation: pulse 2s infinite;
 }
 
-/* User Profile */
 .user-profile {
     display: flex;
     align-items: center;
@@ -440,10 +420,7 @@ body {
 .user-profile::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
     background: var(--accent-gradient);
     opacity: 0;
     transition: var(--transition-normal);
@@ -473,10 +450,8 @@ body {
 }
 .user-profile .avatar .status-dot {
     position: absolute;
-    bottom: -2px;
-    right: -2px;
-    width: 10px;
-    height: 10px;
+    bottom: -2px; right: -2px;
+    width: 10px; height: 10px;
     background: var(--success);
     border-radius: 50%;
     border: 2px solid var(--bg-surface);
@@ -501,7 +476,7 @@ body {
 }
 
 /* ================================================================
-   MAIN CONTENT
+   MAIN CONTENT & HEADER[cite: 11]
    ================================================================ */
 .main {
     flex: 1;
@@ -513,9 +488,6 @@ body {
     position: relative;
 }
 
-/* ================================================================
-   HEADER
-   ================================================================ */
 .header {
     display: flex;
     align-items: center;
@@ -566,7 +538,6 @@ body {
     flex-shrink: 0;
 }
 
-/* Search Box */
 .search-box {
     display: flex;
     align-items: center;
@@ -612,7 +583,6 @@ body {
     color: var(--text-primary);
 }
 
-/* Auth Buttons */
 .auth-buttons {
     display: flex;
     gap: 6px;
@@ -645,7 +615,6 @@ body {
     box-shadow: 0 4px 24px rgba(108,92,231,0.35);
 }
 
-/* User Info */
 .user-info {
     display: flex;
     align-items: center;
@@ -681,7 +650,6 @@ body {
     color: var(--error);
 }
 
-/* Icon Buttons */
 .btn-icon {
     width: 38px;
     height: 38px;
@@ -704,7 +672,7 @@ body {
 }
 
 /* ================================================================
-   CHAT CONTAINER
+   CHAT CONTAINER & MESSAGES[cite: 11]
    ================================================================ */
 .chat-container {
     flex: 1;
@@ -720,9 +688,6 @@ body {
     border-radius: var(--radius-full);
 }
 
-/* ================================================================
-   MESSAGES
-   ================================================================ */
 .message-wrapper {
     display: flex;
     padding: 20px 0;
@@ -790,7 +755,6 @@ body {
     display: block;
 }
 
-/* Code Block */
 .message .code-block {
     background: var(--bg-body);
     padding: 16px 20px;
@@ -806,23 +770,13 @@ body {
 .message .code-block::before {
     content: '</>';
     position: absolute;
-    top: 8px;
-    right: 12px;
+    top: 8px; right: 12px;
     font-size: 10px;
     color: var(--text-muted);
     font-weight: 600;
     letter-spacing: 0.5px;
 }
-.message .code-block::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-}
-.message .code-block::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.15);
-    border-radius: var(--radius-full);
-}
 
-/* Image Container */
 .message .image-container {
     margin-top: 10px;
     border-radius: var(--radius-md);
@@ -836,7 +790,6 @@ body {
     display: block;
 }
 
-/* Download Button */
 .message .download-btn {
     display: inline-flex;
     align-items: center;
@@ -857,7 +810,7 @@ body {
 }
 
 /* ================================================================
-   UPGRADE REQUIRED MODAL/SECTION
+   UPGRADE & DEEP THINK INDICATOR[cite: 11]
    ================================================================ */
 .upgrade-required {
     padding: 20px 24px;
@@ -873,10 +826,8 @@ body {
 .upgrade-required::before {
     content: '';
     position: absolute;
-    top: -50%;
-    right: -20%;
-    width: 200px;
-    height: 200px;
+    top: -50%; right: -20%;
+    width: 200px; height: 200px;
     background: radial-gradient(circle, rgba(108,92,231,0.1), transparent);
     border-radius: 50%;
 }
@@ -906,9 +857,6 @@ body {
     background: var(--border);
 }
 
-/* ================================================================
-   DEEP THINK INDICATOR
-   ================================================================ */
 #deepThinkIndicator {
     display: none;
     padding: 16px 20px;
@@ -919,8 +867,7 @@ body {
     backdrop-filter: blur(10px);
 }
 .think-dot {
-    width: 8px;
-    height: 8px;
+    width: 8px; height: 8px;
     background: var(--accent-primary);
     border-radius: 50%;
     display: inline-block;
@@ -934,7 +881,7 @@ body {
 }
 
 /* ================================================================
-   TOOLBAR
+   TOOLBAR & INPUT AREA[cite: 11]
    ================================================================ */
 .toolbar {
     display: flex;
@@ -1014,9 +961,6 @@ body {
     color: var(--text-muted);
 }
 
-/* ================================================================
-   INPUT AREA
-   ================================================================ */
 .input-area {
     display: flex;
     gap: 12px;
@@ -1066,9 +1010,6 @@ body {
     transform: scale(0.97);
 }
 
-/* ================================================================
-   TYPING INDICATOR
-   ================================================================ */
 .typing-indicator {
     display: none;
     padding: 12px 18px;
@@ -1080,8 +1021,7 @@ body {
 }
 .typing-indicator span {
     display: inline-block;
-    width: 8px;
-    height: 8px;
+    width: 8px; height: 8px;
     background: var(--accent-primary);
     border-radius: 50%;
     margin: 0 3px;
@@ -1094,9 +1034,6 @@ body {
     30% { transform: translateY(-8px); }
 }
 
-/* ================================================================
-   FOOTER
-   ================================================================ */
 .footer {
     text-align: center;
     padding: 10px 20px;
@@ -1115,14 +1052,12 @@ body {
 }
 
 /* ================================================================
-   MODALS
+   MODALS, TOASTS & RESPONSIVE[cite: 11]
    ================================================================ */
 .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
     background: rgba(0,0,0,0.7);
     backdrop-filter: blur(8px);
     display: none;
@@ -1139,8 +1074,7 @@ body {
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 32px;
-    max-width: 480px;
-    width: 100%;
+    max-width: 480px; width: 100%;
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: var(--shadow);
@@ -1181,7 +1115,6 @@ body {
     line-height: 1.7;
 }
 
-/* Auth Tabs */
 .auth-tabs {
     display: flex;
     gap: 4px;
@@ -1212,7 +1145,6 @@ body {
     color: var(--text-primary);
 }
 
-/* OAuth Buttons */
 .btn-oauth {
     width: 100%;
     padding: 12px;
@@ -1238,7 +1170,6 @@ body {
 .btn-oauth.facebook { background: #1877f2; color: #fff; border-color: #1877f2; }
 .btn-oauth.github { background: #24292e; color: #fff; border-color: #24292e; }
 
-/* Upgrade Cards */
 .upgrade-card {
     background: var(--glass-bg);
     border-radius: var(--radius-sm);
@@ -1274,7 +1205,6 @@ body {
     cursor: not-allowed;
 }
 
-/* History Items */
 .history-item {
     display: flex;
     justify-content: space-between;
@@ -1302,13 +1232,9 @@ body {
     background: rgba(239,68,68,0.1);
 }
 
-/* ================================================================
-   TOAST MESSAGES
-   ================================================================ */
 .toast-message {
     position: fixed;
-    bottom: 100px;
-    right: 24px;
+    bottom: 100px; right: 24px;
     background: var(--bg-surface);
     color: var(--text-primary);
     padding: 14px 24px;
@@ -1331,13 +1257,9 @@ body {
 .toast-message.info { border-left: 4px solid var(--info); }
 .toast-message.warning { border-left: 4px solid var(--warning); }
 
-/* ================================================================
-   SEARCH RESULT
-   ================================================================ */
 .search-result {
     position: fixed;
-    bottom: 90px;
-    right: 24px;
+    bottom: 90px; right: 24px;
     background: var(--bg-surface);
     padding: 8px 18px;
     border-radius: var(--radius-full);
@@ -1351,9 +1273,6 @@ body {
 }
 .search-result.show { display: block; }
 
-/* ================================================================
-   ANIMATIONS
-   ================================================================ */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -1362,18 +1281,7 @@ body {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
 }
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-@keyframes glow {
-    0%, 100% { box-shadow: 0 0 20px rgba(108,92,231,0.1); }
-    50% { box-shadow: 0 0 40px rgba(108,92,231,0.2); }
-}
 
-/* ================================================================
-   RESPONSIVE
-   ================================================================ */
 @media (max-width: 1024px) {
     .sidebar {
         width: var(--sidebar-collapsed);
@@ -1391,234 +1299,51 @@ body {
     .user-profile .info {
         display: none;
     }
-    .sidebar-upgrade-btn {
-        justify-content: center;
-        padding: 10px;
-    }
-    .nav-item {
-        justify-content: center;
-        padding: 12px;
-    }
-    .nav-item i {
-        font-size: 20px;
-    }
-    .user-profile {
-        justify-content: center;
-        padding: 8px;
-    }
-    .user-profile .avatar {
-        width: 32px;
-        height: 32px;
-        font-size: 12px;
-    }
-    .level-selector {
-        padding: 8px;
-        margin: 4px 0;
-    }
-    .header-right .search-box input {
-        width: 100px;
-    }
-    .chat-container {
-        padding: 0 16px;
-    }
-    .message-wrapper {
-        padding: 16px 0;
-    }
-    .message-wrapper.user {
-        margin: 0 -16px;
-        padding: 16px;
-    }
-    .input-area {
-        padding: 8px 16px 16px;
-    }
-    .toolbar {
-        padding: 6px 16px;
-    }
+    .sidebar-upgrade-btn { justify-content: center; padding: 10px; }
+    .nav-item { justify-content: center; padding: 12px; }
+    .nav-item i { font-size: 20px; }
+    .user-profile { justify-content: center; padding: 8px; }
+    .user-profile .avatar { width: 32px; height: 32px; font-size: 12px; }
+    .level-selector { padding: 8px; margin: 4px 0; }
+    .header-right .search-box input { width: 100px; }
+    .chat-container { padding: 0 16px; }
+    .message-wrapper { padding: 16px 0; }
+    .message-wrapper.user { margin: 0 -16px; padding: 16px; }
+    .input-area { padding: 8px 16px 16px; }
+    .toolbar { padding: 6px 16px; }
 }
 
 @media (max-width: 640px) {
-    .sidebar {
-        width: 56px;
-        min-width: 56px;
-        padding: 8px 4px;
-    }
-    .sidebar-brand {
-        padding: 4px 8px;
-        justify-content: center;
-    }
-    .sidebar-brand .logo-icon {
-        width: 32px;
-        height: 32px;
-        font-size: 16px;
-    }
-    .sidebar-upgrade-btn {
-        padding: 8px;
-        justify-content: center;
-    }
-    .nav-item {
-        padding: 8px;
-    }
-    .nav-item i {
-        font-size: 18px;
-    }
-    .user-profile {
-        padding: 4px;
-    }
-    .user-profile .avatar {
-        width: 28px;
-        height: 28px;
-        font-size: 11px;
-    }
-    .user-profile .avatar .status-dot {
-        width: 8px;
-        height: 8px;
-    }
-    
-    .header {
-        padding: 8px 12px;
-        flex-wrap: wrap;
-        gap: 6px;
-        min-height: auto;
-    }
-    .header-left .title {
-        font-size: 14px;
-    }
-    .header-left .level-badge {
-        font-size: 10px;
-        padding: 2px 12px;
-    }
-    .header-right {
-        width: 100%;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 6px;
-    }
-    .header-right .search-box {
-        flex: 1;
-        min-width: 80px;
-        padding: 2px 12px;
-    }
-    .header-right .search-box input {
-        width: 100%;
-        font-size: 12px;
-        padding: 4px 0;
-    }
-    .btn-auth {
-        font-size: 12px;
-        padding: 4px 10px;
-    }
-    .btn-icon {
-        width: 30px;
-        height: 30px;
-        font-size: 14px;
-    }
-    
-    .chat-container {
-        padding: 0 12px;
-    }
-    .message-wrapper {
-        padding: 12px 0;
-        gap: 10px;
-    }
-    .message-wrapper.user {
-        margin: 0 -12px;
-        padding: 12px;
-    }
-    .message-wrapper .avatar {
-        width: 28px;
-        height: 28px;
-        font-size: 12px;
-    }
-    .message {
-        font-size: 13px;
-        max-height: 350px;
-    }
-    
-    .input-area {
-        padding: 6px 12px 12px;
-        gap: 6px;
-        flex-wrap: wrap;
-    }
-    .input-area input {
-        font-size: 13px;
-        padding: 10px 16px;
-        min-width: 100%;
-    }
-    .input-area button {
-        padding: 10px 20px;
-        font-size: 13px;
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .toolbar {
-        padding: 4px 12px;
-        gap: 4px;
-    }
-    .toolbar .menu-btn {
-        font-size: 14px;
-        padding: 4px 12px;
-    }
-    .toolbar .dropdown-menu {
-        min-width: 160px;
-        left: -8px;
-    }
-    .toolbar .menu-hint {
-        font-size: 11px;
-    }
-    
-    .modal-box {
-        padding: 20px;
-        max-width: 100%;
-    }
-    .modal-header h2 {
-        font-size: 16px;
-    }
-    
-    .footer {
-        font-size: 10px;
-        padding: 4px 12px;
-    }
-    .toast-message {
-        bottom: 80px;
-        right: 12px;
-        left: 12px;
-        max-width: 100%;
-        font-size: 13px;
-        padding: 10px 16px;
-    }
-    .search-result {
-        bottom: 70px;
-        right: 12px;
-        font-size: 12px;
-        padding: 4px 12px;
-    }
-}
-
-/* ================================================================
-   UTILITY
-   ================================================================ */
-.text-center { text-align: center; }
-.text-muted { color: var(--text-muted); }
-.text-accent { color: var(--accent-primary); }
-.text-success { color: var(--success); }
-.text-error { color: var(--error); }
-.text-warning { color: var(--warning); }
-.flex { display: flex; }
-.flex-center { display: flex; align-items: center; justify-content: center; }
-.flex-between { display: flex; align-items: center; justify-content: space-between; }
-.gap-8 { gap: 8px; }
-.gap-12 { gap: 12px; }
-.gap-16 { gap: 16px; }
-.w-full { width: 100%; }
-.mt-8 { margin-top: 8px; }
-.mb-8 { margin-bottom: 8px; }
-.p-8 { padding: 8px; }
-.p-16 { padding: 16px; }
-.rounded { border-radius: var(--radius-sm); }
-.rounded-lg { border-radius: var(--radius-md); }
-
-/* Glow effect */
-.glow {
-    animation: glow 3s infinite;
+    .sidebar { width: 56px; min-width: 56px; padding: 8px 4px; }
+    .sidebar-brand { padding: 4px 8px; justify-content: center; }
+    .sidebar-brand .logo-icon { width: 32px; height: 32px; font-size: 16px; }
+    .sidebar-upgrade-btn { padding: 8px; justify-content: center; }
+    .nav-item { padding: 8px; }
+    .nav-item i { font-size: 18px; }
+    .user-profile { padding: 4px; }
+    .user-profile .avatar { width: 28px; height: 28px; font-size: 11px; }
+    .user-profile .avatar .status-dot { width: 8px; height: 8px; }
+    .header { padding: 8px 12px; flex-wrap: wrap; gap: 6px; min-height: auto; }
+    .header-left .title { font-size: 14px; }
+    .header-left .level-badge { font-size: 10px; padding: 2px 12px; }
+    .header-right { width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+    .header-right .search-box { flex: 1; min-width: 80px; padding: 2px 12px; }
+    .header-right .search-box input { width: 100%; font-size: 12px; padding: 4px 0; }
+    .btn-auth { font-size: 12px; padding: 4px 10px; }
+    .btn-icon { width: 30px; height: 30px; font-size: 14px; }
+    .chat-container { padding: 0 12px; }
+    .message-wrapper { padding: 12px 0; gap: 10px; }
+    .message-wrapper.user { margin: 0 -12px; padding: 12px; }
+    .message-wrapper .avatar { width: 28px; height: 28px; font-size: 12px; }
+    .message { font-size: 13px; max-height: 350px; }
+    .input-area { padding: 6px 12px 12px; gap: 6px; flex-wrap: wrap; }
+    .input-area input { font-size: 13px; padding: 10px 16px; min-width: 100%; }
+    .input-area button { padding: 10px 20px; font-size: 13px; width: 100%; justify-content: center; }
+    .toolbar { padding: 4px 12px; gap: 4px; }
+    .toolbar .menu-btn { font-size: 14px; padding: 4px 12px; }
+    .toolbar .dropdown-menu { min-width: 160px; left: -8px; }
+    .modal-box { padding: 20px; max-width: 100%; }
+    .footer { font-size: 10px; padding: 4px 12px; }
+    .toast-message { bottom: 80px; right: 12px; left: 12px; max-width: 100%; font-size: 13px; padding: 10px 16px; }
+    .search-result { bottom: 70px; right: 12px; font-size: 12px; padding: 4px 12px; }
 }

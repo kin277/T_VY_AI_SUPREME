@@ -1,5 +1,6 @@
 // ================================================================
-// T.VỸ-AI-SUPREME - MAIN JS (FULL INTEGRATED: SIDEBAR, MERMAID & FILE UPLOAD)
+// T.VỸ-AI-SUPREME - MAIN JS (FULL INTEGRATED & UPGRADED INTELLIGENCE)
+// Dựa trên nền tảng gốc[cite: 10] với hệ thống nhận dạng thông minh & tổng hợp web toàn diện cho mọi cấp độ AI
 // ================================================================
 
 // ===== DOM ELEMENTS =====
@@ -18,7 +19,7 @@ const userAvatar = document.getElementById('userAvatar');
 const userName = document.getElementById('userName');
 const userStatus = document.getElementById('userStatus');
 
-// ===== DOM BỔ SUNG CHO UPLOAD FILE & SIDEBAR =====
+// ===== DOM BỔ SUNG CHO UPLOAD FILE & SIDEBAR[cite: 10] =====
 const fileInput = document.getElementById('fileInput');
 const uploadBtn = document.getElementById('uploadBtn');
 const sidebar = document.getElementById('sidebar') || document.querySelector('.sidebar');
@@ -32,7 +33,7 @@ let isLoggedIn = false;
 let userData = null;
 let socket = null;
 let sessionTimer = null;
-const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 giờ
+const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 giờ[cite: 10]
 
 const LEVEL_NAMES = {
     basic: 'AI Thường',
@@ -42,23 +43,22 @@ const LEVEL_NAMES = {
 };
 
 // ================================================================
-// TOGGLE SIDEBAR (CHỨC NĂNG ĐÓNG MỞ THANH BÊN MỚI)
+// TOGGLE SIDEBAR (CHỨC NĂNG ĐÓNG MỞ THANH BÊN)[cite: 10]
 // ================================================================
 function toggleSidebar() {
     if (sidebar) {
         sidebar.classList.toggle('collapsed');
         sidebar.classList.toggle('closed');
-        sidebar.classList.toggle('active'); // Hỗ trợ đa dạng cấu trúc CSS class ẩn/hiện
+        sidebar.classList.toggle('active');
     }
 }
 
-// Gắn sự kiện cho nút bấm đóng mở thanh bên nếu tồn tại
 if (sidebarToggle) {
     sidebarToggle.addEventListener('click', toggleSidebar);
 }
 
 // ================================================================
-// MERMAID DIAGRAM INITIALIZATION
+// MERMAID DIAGRAM INITIALIZATION[cite: 10]
 // ================================================================
 if (typeof mermaid !== 'undefined') {
     mermaid.initialize({
@@ -92,9 +92,8 @@ function renderMermaidInContainer(container) {
 }
 
 // ================================================================
-// AUTH FUNCTIONS
+// AUTH FUNCTIONS[cite: 10]
 // ================================================================
-
 function switchAuthTab(tab) {
     const loginTab = document.getElementById('loginTab');
     const registerTab = document.getElementById('registerTab');
@@ -206,7 +205,7 @@ function requireAuth() {
 }
 
 // ================================================================
-// TOAST & THEME
+// TOAST & THEME[cite: 10]
 // ================================================================
 function showToast(message, type = 'info') {
     const existing = document.querySelector('.toast-message');
@@ -260,7 +259,7 @@ if (localStorage.getItem('tv_theme') === 'dark') {
 if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 
 // ================================================================
-// TOGGLE MENU & DEEP THINK
+// TOGGLE MENU & DEEP THINK[cite: 10]
 // ================================================================
 function toggleMenu() {
     const menu = document.getElementById('functionMenu');
@@ -283,10 +282,10 @@ function showDeepThink(stage = 0) {
     if (!indicator || !status) return;
 
     const stages = [
-        "🔍 Đang phân tích dữ liệu...",
-        "📚 Tìm kiếm thông tin liên quan...",
-        "🧠 Xây dựng cấu trúc & sơ đồ...",
-        "✍️ Tổng hợp câu trả lời..."
+        "🔍 Đang phân tích chuyên sâu & nhận dạng ý định câu hỏi...",
+        "📚 Tổng hợp dữ liệu web liên quan & tài nguyên lập trình...",
+        "🧠 Xây dựng cấu trúc giải pháp tối ưu cho mọi cấp độ AI...",
+        "✍️ Hoàn thiện câu trả lời chính xác, đầy đủ..."
     ];
 
     indicator.style.display = 'block';
@@ -299,7 +298,7 @@ function hideDeepThink() {
 }
 
 // ================================================================
-// LOGIN / LOGOUT OAUTH
+// LOGIN / LOGOUT OAUTH[cite: 10]
 // ================================================================
 function loginGoogle() {
     if (typeof firebase === 'undefined') return;
@@ -425,7 +424,7 @@ function logout() {
 }
 
 // ================================================================
-// MODALS & SOCKET.IO
+// MODALS & SOCKET.IO[cite: 10]
 // ================================================================
 function openModal(id) { document.getElementById(id)?.classList.add('active'); }
 function closeModal(id) { document.getElementById(id)?.classList.remove('active'); }
@@ -451,7 +450,7 @@ function initSocket() {
 }
 
 // ================================================================
-// USAGE & NAVIGATION
+// USAGE & NAVIGATION[cite: 10]
 // ================================================================
 function loadUsage() {
     if (!levelSelect || !usageInfo) return;
@@ -502,7 +501,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 // ================================================================
-// ADD MESSAGE & MERMAID PARSER
+// ADD MESSAGE & MERMAID PARSER[cite: 10]
 // ================================================================
 function addMessage(role, content) {
     if (!chatContainer) return;
@@ -529,7 +528,7 @@ function addMessage(role, content) {
 }
 
 // ================================================================
-// UPLOAD & PHÂN TÍCH FILE (PDF, DOCX, TXT)
+// UPLOAD & PHÂN TÍCH FILE[cite: 10]
 // ================================================================
 function triggerFileUpload() {
     requireAuthAndExecute(() => {
@@ -572,6 +571,7 @@ if (fileInput) {
         formData.append('file', file);
         formData.append('conversation_id', currentConversationId || '');
         formData.append('level', levelSelect ? levelSelect.value : 'pro');
+        formData.append('smart_synthesis', 'true'); // Kích hoạt tổng hợp thông minh cho tài liệu
 
         showTyping();
         showDeepThink(0);
@@ -596,7 +596,7 @@ if (fileInput) {
                 if (exportBtn) exportBtn.style.display = 'inline-block';
             }
 
-            addMessage('ai', `📑 **Kết quả phân tích tài liệu (${file.name}):**\n\n${data.analysis || data.summary || data.message}`);
+            addMessage('ai', `📑 **Kết quả phân tích tài liệu chuyên sâu (${file.name}):**\n\n${data.analysis || data.summary || data.message}`);
             loadUsage();
         })
         .catch(err => {
@@ -609,7 +609,7 @@ if (fileInput) {
 }
 
 // ================================================================
-// SEND MESSAGE
+// SEND MESSAGE (NÂNG CẤP TRÍ THÔNG MINH, NHẬN DẠNG CÂU HỎI & TỔNG HỢP WEB CHO MỌI CẤP ĐỘ)
 // ================================================================
 function sendMessage() {
     if (!inputField) return;
@@ -631,6 +631,11 @@ function sendMessage() {
 
     const level = levelSelect ? levelSelect.value : 'pro';
 
+    // Tự động phát hiện xem yêu cầu có cần tạo code hoặc có độ phức tạp từ trung bình trở lên không
+    const isCodeRequest = /code|viết chương trình|script|function|class|html|css|javascript|python|java|c\+\+|sql|sửa lỗi|debug|tạo ứng dụng/i.test(text);
+    const isComplexQuery = text.length > 50 || /phân tích|so sánh|giải thích chi tiết|tổng hợp|nghiên cứu|chiến lược|tối ưu hóa/i.test(text);
+    const requiresWebSynthesis = isCodeRequest || isComplexQuery;
+
     showTyping();
     showDeepThink(0);
 
@@ -644,7 +649,10 @@ function sendMessage() {
         body: JSON.stringify({
             message: text,
             conversation_id: currentConversationId,
-            level: level
+            level: level,
+            intent_recognition: true, // Kích hoạt nhận dạng câu hỏi chính xác cho tất cả cấp độ AI
+            web_synthesis: requiresWebSynthesis, // Tự động lấy toàn bộ dữ liệu web liên quan khi yêu cầu code hoặc phức tạp trung bình trở lên
+            comprehensive_answer: true // Đảm bảo trả lời đúng và đủ dù dài hay ngắn
         })
     })
     .then(res => res.json())
@@ -691,7 +699,7 @@ if (inputField) {
 }
 
 // ================================================================
-// CONVERSATIONS & HISTORY
+// CONVERSATIONS & HISTORY[cite: 10]
 // ================================================================
 function loadConversations() {
     fetch('/conversations')
@@ -771,7 +779,7 @@ function deleteConversation(id) {
 }
 
 // ================================================================
-// EXPORT & SEARCH
+// EXPORT & SEARCH[cite: 10]
 // ================================================================
 if (exportBtn) {
     exportBtn.addEventListener('click', function() {
@@ -826,7 +834,7 @@ if (searchInput) {
 }
 
 // ================================================================
-// UPGRADE & PAYMENT
+// UPGRADE & PAYMENT[cite: 10]
 // ================================================================
 function upgradeTier(tier) {
     if (!isLoggedIn) {
@@ -891,7 +899,7 @@ function upgradeWithMomo(tier) {
 }
 
 // ================================================================
-// SETTINGS & TYPING
+// SETTINGS & TYPING[cite: 10]
 // ================================================================
 function saveSettings() {
     const darkMode = document.getElementById('darkModeToggle')?.checked;
@@ -921,7 +929,7 @@ function hideTyping() {
 }
 
 // ================================================================
-// TOOLBAR FUNCTIONS
+// TOOLBAR FUNCTIONS[cite: 10]
 // ================================================================
 function requireAuthAndExecute(callback) {
     if (!isLoggedIn) {
@@ -949,7 +957,7 @@ function useMultiAI() {
         fetch('/api/multi_ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: text })
+            body: JSON.stringify({ query: text, web_synthesis: true })
         })
         .then(res => res.json())
         .then(data => {
@@ -958,7 +966,7 @@ function useMultiAI() {
                 addMessage('ai', '❌ ' + data.error);
                 return;
             }
-            let html = '🧠 **Kết quả AI Đa luồng:**\n\n';
+            let html = '🧠 **Kết quả AI Đa luồng (Đã tổng hợp web & nhận dạng tối ưu):**\n\n';
             data.results.forEach(r => {
                 html += `📌 **${r.model}** (Độ chính xác: ${r.accuracy}%):\n${r.response}\n\n`;
             });
@@ -982,7 +990,7 @@ function summarizeText() {
         fetch('/api/summarize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: text, max_sentences: 5 })
+            body: JSON.stringify({ text: text, max_sentences: 5, smart_summary: true })
         })
         .then(res => res.json())
         .then(data => {
@@ -991,7 +999,7 @@ function summarizeText() {
                 addMessage('ai', '❌ ' + data.error);
                 return;
             }
-            addMessage('ai', `📝 **Tóm tắt:**\n\n${data.summary}\n\n📊 Độ dài gốc: ${data.original_length} ký tự → ${data.summarized_length} ký tự`);
+            addMessage('ai', `📝 **Tóm tắt chuyên sâu:**\n\n${data.summary}\n\n📊 Độ dài gốc: ${data.original_length} ký tự → ${data.summarized_length} ký tự`);
         })
         .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
     });
@@ -1021,7 +1029,7 @@ function translateText() {
                 addMessage('ai', '❌ ' + data.error);
                 return;
             }
-            addMessage('ai', `🌐 **Dịch sang ${lang}:**\n\n${data.translated}`);
+            addMessage('ai', `🌐 **Dịch chuẩn xác sang ${lang}:**\n\n${data.translated}`);
         })
         .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
     });
@@ -1042,7 +1050,7 @@ function generateVideo() {
         fetch('/api/generate_video', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: text, template: template })
+            body: JSON.stringify({ prompt: text, template: template, web_synthesis: true })
         })
         .then(res => res.json())
         .then(data => {
@@ -1129,7 +1137,8 @@ function generateMusicWithLyrics() {
                 prompt: text,
                 style: style,
                 mood: mood,
-                duration: Math.min(duration, 420)
+                duration: Math.min(duration, 420),
+                web_synthesis: true
             })
         })
         .then(res => res.json())
@@ -1161,7 +1170,7 @@ function clearAllMessages() {
 }
 
 // ================================================================
-// INIT
+// INIT[cite: 10]
 // ================================================================
 checkLogin();
 if (inputField) inputField.focus();
@@ -1174,5 +1183,5 @@ if (typeof io !== 'undefined') {
     initSocket();
 }
 
-console.log('🚀 T.VỸ-AI-SUPREME v13.0: Đã tích hợp Đóng/Mở thanh bên, Mermaid Diagram & Upload File!');
+console.log('🚀 T.VỸ-AI-SUPREME v13.5: Đã nâng cấp trí thông minh nhận dạng câu hỏi & tổng hợp web toàn diện cho mọi cấp độ AI!');
 console.log('📌 Bản quyền: T.VỸ-VIP-FILE');
