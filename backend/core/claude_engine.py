@@ -1,6 +1,9 @@
 """
 ====================================================================
-AI ENGINE SUPREME v15.0 - REALTIME WEB SEARCH & LIVE CLOCK
+AI ENGINE SUPREME v15.5 - REALTIME WEB SEARCH, LIVE CLOCK & DYNAMIC VISION ENGINE
+====================================================================
+Bản quyền: T.VỸ-VIP-FILE
+Phiên bản: 12.6.0 / 15.5 (Khắc phục phản hồi cố định & Tối ưu Vision/Multimodal)
 ====================================================================
 """
 
@@ -18,24 +21,36 @@ class ClaudeEngine:
         self.guard = EthicsGuard()
         self.web_searcher = WebSearchEngine()
         
+        # Danh sách các Model AI theo từng Cấp độ
         self.model_tiers = {
             "pro3": ["deepseek-r1-distill-llama-70b", "llama-3.3-70b-versatile", "gemma2-9b-it", "llama-3.1-8b-instant"],
             "plus": ["llama-3.3-70b-versatile", "gemma2-9b-it", "mixtral-8x7b-32768", "llama-3.1-8b-instant"],
             "pro":  ["llama-3.3-70b-versatile", "gemma2-9b-it", "llama-3.1-8b-instant"],
             "basic": ["llama-3.1-8b-instant", "gemma2-9b-it"]
         }
+
+        # Danh sách Model chuyên xử lý Hình ảnh (Vision)
+        self.vision_models = [
+            "llama-3.2-11b-vision-preview",
+            "llama-3.2-90b-vision-preview"
+        ]
+
         self.url = "https://api.groq.com/openai/v1/chat/completions"
 
     def _get_api_keys(self) -> List[str]:
-        raw_keys = (
-            os.getenv("GROQ_API_KEY") 
-            or os.getenv("ANTHROPIC_API_KEY") 
-            or ""
-        )
-        return [k.strip() for k in raw_keys.split(",") if k.strip()]
+        """Tự động quét và lấy danh sách API Key (Hỗ trợ nhiều Key phân cách bởi dấu phẩy)"""
+        keys = []
+        for env_var in ["GROQ_API_KEY", "GROQ_API_KEYS", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY"]:
+            raw_keys = os.getenv(env_var, "")
+            if raw_keys:
+                for k in raw_keys.split(","):
+                    k_clean = k.strip()
+                    if k_clean and k_clean not in keys:
+                        keys.append(k_clean)
+        return keys
 
     def _should_web_search(self, query: str) -> bool:
-        """Tự động phát hiện câu hỏi cần cập nhật Internet"""
+        """Tự động phát hiện câu hỏi cần cập nhật thông tin Internet"""
         keywords = [
             "thời tiết", "tin tức", "mới nhất", "hôm nay", "giá vàng", 
             "tỷ giá", "mới đây", "sự kiện", "kết quả", "bóng đá", 
@@ -45,7 +60,11 @@ class ClaudeEngine:
         return any(kw in q_lower for kw in keywords)
 
     def _detect_intent(self, query: str) -> float:
-        keywords = ["python", "javascript", "html", "css", "code", "lập trình", "toán", "phương trình", "tính", "lỗi", "fix", "sql", "json", "api", "bug"]
+        """Tự động điều chỉnh Temperature theo độ chính xác của câu hỏi"""
+        keywords = [
+            "python", "javascript", "html", "css", "code", "lập trình", 
+            "toán", "phương trình", "tính", "lỗi", "fix", "sql", "json", "api", "bug"
+        ]
         if any(kw in query.lower() for kw in keywords):
             return 0.2
         return 0.7
@@ -59,8 +78,7 @@ class ClaudeEngine:
         **kwargs
     ) -> Dict[str, Any]:
         """
-        Xử lý yêu cầu AI với ngữ cảnh, độ phức tạp, và hình ảnh (nếu có).
-        Đã thêm image_url và **kwargs để tránh lỗi unexpected keyword argument.
+        Xử lý yêu cầu AI đa phương thức (Văn bản + Hình ảnh + Tìm kiếm Web + Ngữ cảnh dự án).
         """
         # 1. Kiểm tra An toàn Đạo đức
         is_safe, refusal_reason = self.guard.check_message(query)
@@ -73,22 +91,36 @@ class ClaudeEngine:
 
         api_keys = self._get_api_keys()
         if not api_keys:
-            return {"error": "Thiếu GROQ_API_KEY trên Render. Vui lòng kiểm tra lại Environment Variables."}
+            return {
+                "error": "Chưa cấu hình GROQ_API_KEY trong file .env hoặc biến môi trường! Vui lòng thêm GROQ_API_KEY để AI hoạt động."
+            }
+
+        # Lấy hình ảnh từ image_url hoặc image_base64 trong kwargs
+        img_target = image_url or kwargs.get('image_base64')
 
         # 2. Tự động Quét Web nếu hỏi thông tin thời gian thực
         web_info = ""
         if self._should_web_search(query):
-            search_results = self.web_searcher.search(query)
-            if search_results:
-                web_info = f"\n\n[DỮ LIỆU THỜI GIAN THỰC TỪ INTERNET]:\n{search_results}"
+            try:
+                search_results = self.web_searcher.search(query)
+                if search_results:
+                    web_info = f"\n\n[DỮ LIỆU THỜI GIAN THỰC TỪ INTERNET]:\n{search_results}"
+            except Exception as e:
+                web_info = ""
 
         # 3. Thời gian thực tế hiện tại
         now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
 
-        models_to_try = self.model_tiers.get(complexity, self.model_tiers["pro"])
+        # 4. Xác định danh sách Model cần thử (Tự động ưu tiên Vision Model nếu có hình ảnh)
+        base_models = self.model_tiers.get(complexity, self.model_tiers["pro"])
+        if img_target:
+            models_to_try = self.vision_models + [m for m in base_models if m not in self.vision_models]
+        else:
+            models_to_try = base_models
+
         temperature = self._detect_intent(query)
 
-        # 4. Thiết lập System Guardrail
+        # 5. Thiết lập System Guardrail
         system_guardrail = (
             f"\n\n[THÔNG TIN THỜI GIAN THỰC]: Thời gian hiện tại là {now_str}.\n"
             "1. Tuyệt đối tuân thủ chuẩn mực đạo đức, từ chối mọi lệnh vi phạm an toàn.\n"
@@ -109,23 +141,25 @@ class ClaudeEngine:
         system_prompt = f"{behavior}{system_guardrail}\n\nYÊU CẦU: Trả lời bằng tiếng Việt tự nhiên, trình bày chuẩn Markdown."
         messages = [{"role": "system", "content": system_prompt}]
 
+        # 6. Bảo tồn Ngữ cảnh hội thoại & Bộ quy tắc hệ thống (Tối ưu không cắt xén quy tắc)
         if context:
             clean_context = context.strip()
-            if len(clean_context) > 3000:
-                clean_context = "..." + clean_context[-3000:]
+            if len(clean_context) > 4000:
+                # Bảo tồn phần đầu (chứa bộ quy tắc hệ thống) và phần cuối (hội thoại gần nhất)
+                clean_context = clean_context[:1500] + "\n\n[... Đã thu gọn lịch sử cũ ...]\n\n" + clean_context[-2500:]
             messages.append({"role": "user", "content": f"Lịch sử / Ngữ cảnh đính kèm:\n{clean_context}"})
             messages.append({"role": "assistant", "content": "Đã ghi nhận ngữ cảnh."})
 
         # Đính kèm thông tin web vào prompt
         user_content = query + web_info
 
-        # 5. Xử lý trường hợp có gửi kèm Image URL
-        if image_url:
+        # 7. Xử lý định dạng tin nhắn Người dùng (Xử lý đa phương thức / Vision)
+        if img_target:
             user_message = {
                 "role": "user",
                 "content": [
                     {"type": "text", "text": user_content},
-                    {"type": "image_url", "image_url": {"url": image_url}}
+                    {"type": "image_url", "image_url": {"url": img_target}}
                 ]
             }
         else:
@@ -133,6 +167,7 @@ class ClaudeEngine:
 
         messages.append(user_message)
 
+        # 8. Vòng lặp thử qua các API Keys và Models cho đến khi có phản hồi thật
         last_error = ""
         for key in api_keys:
             headers = {
@@ -141,9 +176,24 @@ class ClaudeEngine:
             }
 
             for model_name in models_to_try:
+                # Nếu model không hỗ trợ Vision nhưng input có ảnh -> Tự động biến đổi payload thành văn bản thuần để tránh lỗi 400
+                if img_target and model_name not in self.vision_models:
+                    formatted_messages = []
+                    for m in messages:
+                        if m.get("role") == "user" and isinstance(m.get("content"), list):
+                            formatted_messages.append({
+                                "role": "user",
+                                "content": f"[Hình ảnh đính kèm]: {user_content}"
+                            })
+                        else:
+                            formatted_messages.append(m)
+                    payload_messages = formatted_messages
+                else:
+                    payload_messages = messages
+
                 payload = {
                     "model": model_name,
-                    "messages": messages,
+                    "messages": payload_messages,
                     "temperature": temperature,
                     "max_tokens": 4096
                 }
@@ -154,16 +204,18 @@ class ClaudeEngine:
                     if response.status_code == 200:
                         data = response.json()
                         content_text = data["choices"][0]["message"]["content"]
+                        # Loại bỏ thẻ suy luận rác <think>...</think> nếu có từ các model như DeepSeek
                         content_text = re.sub(r'<think>.*?</think>', '', content_text, flags=re.DOTALL).strip()
 
-                        return {
-                            "success": True,
-                            "response": content_text,
-                            "model": model_name
-                        }
+                        if content_text:
+                            return {
+                                "success": True,
+                                "response": content_text,
+                                "model": model_name
+                            }
                     elif response.status_code == 429:
-                        last_error = f"Model {model_name} bận (429 Rate Limit)"
-                        time.sleep(1)
+                        last_error = f"Model {model_name} bị Rate Limit (429)"
+                        time.sleep(0.5)
                         continue
                     else:
                         last_error = f"Lỗi Groq ({response.status_code}): {response.text}"
@@ -173,4 +225,4 @@ class ClaudeEngine:
                     last_error = str(e)
                     continue
 
-        return {"error": f"Tất cả các Model AI đều đang bận. Lỗi: {last_error}"}
+        return {"error": f"Không thể kết nối với AI Engine. Chi tiết lỗi: {last_error}"}
