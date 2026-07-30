@@ -580,7 +580,7 @@ def chat():
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
                     "HTTP-Referer": "https://tvy-ai-supreme.local",
-                    "X-Title": "T.VỸ-AI SUPREME"
+                    "X-Title": "TVY-AI SUPREME"  # Đã đổi thành không dấu để tránh lỗi mã hóa HTTP Header
                 }
                 
                 # Sử dụng openrouter/free để hệ thống tự động chọn model miễn phí tốt nhất
