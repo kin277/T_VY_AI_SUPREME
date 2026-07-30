@@ -1,10 +1,9 @@
 #====================================================================
-#T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (BẢN HOÀN CHỈNH - FULL MULTIMODAL & AUTO CODE ENGINE)
+# T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (BẢN HOÀN CHỈNH - FULL MULTIMODAL & AUTO CODE ENGINE)
 #====================================================================
-#Bản quyền: T.VỸ-VIP-FILE
-#Phiên bản: 12.6.0 (Vision, Multimodal, Auto Code Extension & Multilingual Adaptation)
+# Bản quyền: T.VỸ-VIP-FILE
+# Phiên bản: 12.6.0 (Vision, Multimodal, Auto Code Extension & Multilingual Adaptation)
 #====================================================================
-"""
 
 import base64
 import datetime
@@ -473,7 +472,7 @@ def github_callback_route():
         return f"""
         <html>
         <body style="font-family:Arial;text-align:center;padding:50px;background:#0f172a;color:#fff;">
-            "<h2>✅ Đăng nhập thành công!</h2>"
+            <h2>✅ Đăng nhập thành công!</h2>
             <p>Chào mừng <strong>{result['name']}</strong> trở lại!</p>
             <script>
                 setTimeout(() => {{
@@ -885,7 +884,7 @@ def optimize_prompt():
     if not original_prompt:
         return jsonify({"error": "Câu lệnh không được để trống"}), 400
 
-    optimized = f" Hãy đóng vai là một chuyên gia hàng đầu, phân tích chi tiết và đưa ra câu trả lời xuất sắc cho câu hỏi: '{original_prompt}'. Yêu cầu trình trình bày mạch lạc, cấu trúc rõ ràng với Markdown."
+    optimized = f"Hãy đóng vai là một chuyên gia hàng đầu, phân tích chi tiết và đưa ra câu trả lời xuất sắc cho câu hỏi: '{original_prompt}'. Yêu cầu trình bày mạch lạc, cấu trúc rõ ràng với Markdown."
     return jsonify({"success": True, "original": original_prompt, "optimized": optimized})
 
 @app.route('/api/tts', methods=['POST'])
@@ -1095,13 +1094,13 @@ if __name__ == '__main__':
     port = int(os.getenv("PORT", 5000))
     host = os.getenv("HOST", "0.0.0.0")
 
-    print(f"""
-#╔═══════════════════════════════════════════════════════════════════════╗
-#  T.VỸ-AI-SUPREME v12.6.0 (SMART CODE & MULTILINGUAL AUTO ENGINE)       ║
-#║  Bản quyền: T.VỸ-VIP-FILE                                             ║
-#║  🌐 Tự động phản hồi theo đúng ngôn ngữ người dùng gửi câu hỏi        ║
-#║  📦 Tự động phân chia dự án lớn thành 4-5 file/lượt & Vòng lặp Tiếp tục║
-#║  ⏹️ Tích hợp AbortController Ngắt Mạng & Sửa Tin Nhắn Tự Cắt Dưới     ║
-#╚═══════════════════════════════════════════════════════════════════════╝
+    print("""
+╔═══════════════════════════════════════════════════════════════════════╗
+║  T.VỸ-AI-SUPREME v12.6.0 (SMART CODE & MULTILINGUAL AUTO ENGINE)       ║
+║  Bản quyền: T.VỸ-VIP-FILE                                             ║
+║  🌐 Tự động phản hồi theo đúng ngôn ngữ người dùng gửi câu hỏi        ║
+║  📦 Tự động phân chia dự án lớn thành 4-5 file/lượt & Vòng lặp Tiếp tục║
+║  ⏹️ Tích hợp AbortController Ngắt Mạng & Sửa Tin Nhắn Tự Cắt Dưới     ║
+╚═══════════════════════════════════════════════════════════════════════╝
     """)
     socketio.run(app, debug=app.config['DEBUG'], host=host, port=port, allow_unsafe_werkzeug=True)
