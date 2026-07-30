@@ -1,8 +1,8 @@
 #====================================================================
-T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (BẢN HOÀN CHỈNH - FULL MULTIMODAL & AUTO CODE ENGINE)
+#T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (BẢN HOÀN CHỈNH - FULL MULTIMODAL & AUTO CODE ENGINE)
 #====================================================================
-Bản quyền: T.VỸ-VIP-FILE
-Phiên bản: 12.6.0 (Vision, Multimodal, Auto Code Extension & Multilingual Adaptation)
+#Bản quyền: T.VỸ-VIP-FILE
+#Phiên bản: 12.6.0 (Vision, Multimodal, Auto Code Extension & Multilingual Adaptation)
 #====================================================================
 """
 
