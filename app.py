@@ -17,7 +17,7 @@ import re
 import sys
 import time
 import traceback
-import requests  # <-- Đã thêm thư viện requests để gọi API Gemini
+import requests
 from io import BytesIO
 from pathlib import Path
 
@@ -56,7 +56,7 @@ POSSIBLE_TEMPLATE_DIRS = [
     BASE_DIR
 ]
 
-TEMPLATE_DIR = NEXT_TEMPLATE_DIR = POSSIBLE_TEMPLATE_DIRS[0]
+TEMPLATE_DIR = POSSIBLE_TEMPLATE_DIRS[0]
 for p in POSSIBLE_TEMPLATE_DIRS:
     if (p / 'index.html').exists():
         TEMPLATE_DIR = p
@@ -490,10 +490,9 @@ def github_callback_route():
     return "❌ Lỗi hệ thống", 400
 
 # ================================================================
-# CHAT ROUTES (TÍCH HỢP GEMINI CHUẨN BẢO MẬT BACKEND)
+# CHAT ROUTES (TÍCH HỢP OPENROUTER & ĐỊNH VỊ THỜI GIAN THỰC)
 # ================================================================
 
-from datetime import datetime
 @app.route('/chat', methods=['POST'])
 @app.route('/api/chat', methods=['POST'])
 def chat():
@@ -538,41 +537,11 @@ def chat():
                 messages = parse_messages(conv.get('messages', []))
             else:
                 name = message[:30] or "Hội thoại mới"
-                
-        # 1. Lấy thời gian thực tế từ hệ thống máy chủ
-        now = datetime.now()
-        current_time_info = f"Hôm nay là ngày {now.strftime('%d/%m/%Y')}, giờ hiện tại là {now.strftime('%H:%M')}."
 
-        # 2. Kết hợp với context_str (đảm bảo context_str đã có giá trị ở đây)
-        system_content = f"{current_time_info}\n{context_str}"
-
-        # 3. Đưa vào payload gửi sang OpenRouter
-        payload = {
-            "model": "openrouter/free", 
-            "messages": [
-                {"role": "system", "content": system_content},
-                {"role": "user", "content": enhanced_query}
-            ]
-        }
-
-        # TÍCH HỢP SYSTEM PROMPT NÂNG CẤP VÀO NGỮ CẢNH
-        context_parts = [SMART_CODE_SYSTEM_PROMPT]
-        for msg in messages:
-            role = "Người dùng" if msg.get("role") == "user" else "AI"
-            context_parts.append(f"{role}: {msg.get('content', '')}")
-        context_str = "\n".join(context_parts)
-
-        # Đính kèm URL hình ảnh nếu có
+        # Đính kèm URL hình ảnh vào tin nhắn nếu có
         user_content = message
         if image_url and f"![ảnh]({image_url})" not in user_content:
             user_content = f"![Hình ảnh đính kèm]({image_url})\n\n{message}"
-
-        messages.append({
-            "role": "user",
-            "content": user_content,
-            "image_url": image_url,
-            "time": datetime.datetime.now().isoformat()
-        })
 
         # KIỂM TRA PHẢN HỒI TIẾP TỤC (CONTINUATION LOOP)
         is_continuation = bool(re.search(r'^\s*(tiếp|tiếp tục|ok|continue|tiếp đi|yes)\b', message.lower()))
@@ -586,7 +555,27 @@ def chat():
                 f"\"Vì dự án khá dài nên không thể chỉ bằng 1 dòng tin nhắn là xong được. Bạn có muốn tiếp tục không?\""
             )
 
-        # 🚀 GỌI AI ENGINE THÔNG QUA OPENROUTER API (HOÀN TOÀN MIỄN PHÍ)
+        # 1. TÍCH HỢP SYSTEM PROMPT VÀ LỊCH SỬ CHAT VÀO CONTEXT
+        context_parts = [SMART_CODE_SYSTEM_PROMPT]
+        for msg in messages:
+            role = "Người dùng" if msg.get("role") == "user" else "AI"
+            context_parts.append(f"{role}: {msg.get('content', '')}")
+        context_str = "\n".join(context_parts)
+
+        # 2. LẤY THỜI GIAN THỰC TẾ VÀ GHẾP VÀO SYSTEM CONTENT (TRÁNH LỖI NAMEERROR)
+        now = datetime.datetime.now()
+        current_time_info = f"Hôm nay là ngày {now.strftime('%d/%m/%Y')}, giờ hiện tại là {now.strftime('%H:%M')}."
+        system_content = f"{current_time_info}\n\n{context_str}"
+
+        # 3. LƯU CÂU HỎI MỚI CỦA USER VÀO DANH SÁCH MESSAGES
+        messages.append({
+            "role": "user",
+            "content": user_content,
+            "image_url": image_url,
+            "time": datetime.datetime.now().isoformat()
+        })
+
+        # 🚀 4. GỌI OPENROUTER API MIỄN PHÍ
         api_key = os.environ.get('OPENROUTER_API_KEY') or os.environ.get('GEMINI_API_KEY')
         ai_response = ""
 
@@ -597,14 +586,13 @@ def chat():
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
                     "HTTP-Referer": "https://tvy-ai-supreme.local",
-                    "X-Title": "TVY-AI SUPREME"  # Đã đổi thành không dấu để tránh lỗi mã hóa HTTP Header
+                    "X-Title": "TVY-AI SUPREME"  # Đổi thành ASCII không dấu để tránh lỗi mã hóa Header
                 }
                 
-                # Sử dụng openrouter/free để hệ thống tự động chọn model miễn phí tốt nhất
                 payload = {
                     "model": "openrouter/free", 
                     "messages": [
-                        {"role": "system", "content": context_str},
+                        {"role": "system", "content": system_content},
                         {"role": "user", "content": enhanced_query}
                     ]
                 }
@@ -1090,7 +1078,7 @@ if __name__ == '__main__':
 ║  Bản quyền: T.VỸ-VIP-FILE                                           ║
 ║  🚀 Tự động nhận diện đuôi file (.glsl, .vsh, .fsh, .py, .js,...)     ║
 ║  📦 Tự động phân chia dự án lớn thành 4-5 file/lượt & Vòng lặp Tiếp tục║
-║  🖼️ TÍCH HỢP GEMINI API TRỰC TIẾP TỪ BACKEND (SIÊU BẢO MẬT)          ║
+║  🌐 TÍCH HỢP OPENROUTER FREE API TRỰC TIẾP TỪ BACKEND                 ║
 ╚═══════════════════════════════════════════════════════════════════════╝
     """)
     socketio.run(app, debug=app.config['DEBUG'], host=host, port=port, allow_unsafe_werkzeug=True)
