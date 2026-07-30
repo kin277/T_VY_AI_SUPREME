@@ -473,7 +473,7 @@ def github_callback_route():
         return f"""
         <html>
         <body style="font-family:Arial;text-align:center;padding:50px;background:#0f172a;color:#fff;">
-            <h2>✅ Đăng nhập thành công!</h2>
+            "<h2>✅ Đăng nhập thành công!</h2>"
             <p>Chào mừng <strong>{result['name']}</strong> trở lại!</p>
             <script>
                 setTimeout(() => {{
