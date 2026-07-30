@@ -114,24 +114,6 @@ IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'}
 DOC_EXTENSIONS = {'txt', 'pdf', 'docx', 'doc', 'csv', 'md', 'json'}
 ALLOWED_EXTENSIONS = DOC_EXTENSIONS | IMAGE_EXTENSIONS
 
-from datetime import datetime
-
-# 1. Lấy thời gian thực tế từ hệ thống máy chủ
-now = datetime.now()
-current_time_info = f"Hôm nay là ngày {now.strftime('%d/%m/%Y')}, giờ hiện tại là {now.strftime('%H:%M')}."
-
-# 2. Đưa thông tin này gộp vào system prompt (hoặc context_str)
-system_content = f"{current_time_info}\n{context_str}"
-
-# 3. Gửi payload sang OpenRouter
-payload = {
-    "model": "openrouter/free", 
-    "messages": [
-        {"role": "system", "content": system_content},
-        {"role": "user", "content": enhanced_query}
-    ]
-}
-
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -511,6 +493,7 @@ def github_callback_route():
 # CHAT ROUTES (TÍCH HỢP GEMINI CHUẨN BẢO MẬT BACKEND)
 # ================================================================
 
+from datetime import datetime
 @app.route('/chat', methods=['POST'])
 @app.route('/api/chat', methods=['POST'])
 def chat():
@@ -555,6 +538,22 @@ def chat():
                 messages = parse_messages(conv.get('messages', []))
             else:
                 name = message[:30] or "Hội thoại mới"
+                
+        # 1. Lấy thời gian thực tế từ hệ thống máy chủ
+        now = datetime.now()
+        current_time_info = f"Hôm nay là ngày {now.strftime('%d/%m/%Y')}, giờ hiện tại là {now.strftime('%H:%M')}."
+
+        # 2. Kết hợp với context_str (đảm bảo context_str đã có giá trị ở đây)
+        system_content = f"{current_time_info}\n{context_str}"
+
+        # 3. Đưa vào payload gửi sang OpenRouter
+        payload = {
+            "model": "openrouter/free", 
+            "messages": [
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": enhanced_query}
+            ]
+        }
 
         # TÍCH HỢP SYSTEM PROMPT NÂNG CẤP VÀO NGỮ CẢNH
         context_parts = [SMART_CODE_SYSTEM_PROMPT]
