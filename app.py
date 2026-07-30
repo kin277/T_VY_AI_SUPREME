@@ -579,7 +579,7 @@ def chat():
                 genai.configure(api_key=api_key)
                 
                 # Khởi tạo model chuẩn của Google
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('gemini-2.0-flash')
                 
                 gemini_prompt = f"{context_str}\n\n[Người dùng]: {enhanced_query}"
                 
