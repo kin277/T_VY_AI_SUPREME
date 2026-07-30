@@ -569,58 +569,43 @@ def chat():
                 f"\"Vì dự án khá dài nên không thể chỉ bằng 1 dòng tin nhắn là xong được. Bạn có muốn tiếp tục không?\""
             )
 
-        # 🚀 GỌI AI ENGINE BẰNG THỨ VIỆN CHÍNH THỨC CỦA GOOGLE
-        api_key = os.environ.get('GEMINI_API_KEY')
+        # 🚀 GỌI AI ENGINE THÔNG QUA OPENROUTER API (HOÀN TOÀN MIỄN PHÍ)
+        api_key = os.environ.get('OPENROUTER_API_KEY') or os.environ.get('GEMINI_API_KEY')
         ai_response = ""
 
         if api_key:
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=api_key)
+                url = "https://openrouter.ai/api/v1/chat/completions"
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://tvy-ai-supreme.local",
+                    "X-Title": "T.VỸ-AI SUPREME"
+                }
                 
-                # Khởi tạo model chuẩn của Google
-                model = genai.GenerativeModel('gemini-2.0-flash')
+                # Sử dụng openrouter/free để hệ thống tự động chọn model miễn phí tốt nhất
+                payload = {
+                    "model": "openrouter/free", 
+                    "messages": [
+                        {"role": "system", "content": context_str},
+                        {"role": "user", "content": enhanced_query}
+                    ]
+                }
                 
-                gemini_prompt = f"{context_str}\n\n[Người dùng]: {enhanced_query}"
+                resp = requests.post(url, json=payload, headers=headers, timeout=60)
                 
-                # Chuẩn bị nội dung gửi đi (Hỗ trợ cả text và hình ảnh)
-                content_payload = [gemini_prompt]
-                
-                if image_base64:
-                    try:
-                        mime_type = image_base64.split(';')[0].split(':')[1]
-                        raw_b64 = image_base64.split(',')[1]
-                        image_bytes = base64.b64decode(raw_b64)
-                        
-                        # Đính kèm ảnh theo định dạng chuẩn của SDK
-                        content_payload.append({
-                            'mime_type': mime_type,
-                            'data': image_bytes
-                        })
-                    except Exception as img_err:
-                        logger.error(f"Lỗi xử lý ảnh: {img_err}")
-                
-                # Gửi yêu cầu đến Google Gemini
-                response = model.generate_content(content_payload)
-                ai_response = response.text
-                
-            except ImportError:
-                ai_response = "⚠️ Thiếu thư viện `google-generativeai`. Hãy chạy lệnh `pip install google-generativeai` trong terminal."
+                if resp.status_code == 200:
+                    res_data = resp.json()
+                    ai_response = res_data['choices'][0]['message']['content']
+                else:
+                    logger.error(f"Lỗi OpenRouter: {resp.text}")
+                    ai_response = f"⚠️ Lỗi từ OpenRouter API ({resp.status_code}): {resp.text}"
+                    
             except Exception as e:
-                logger.error(f"Lỗi Gemini SDK: {traceback.format_exc()}")
-                ai_response = f"⚠️ Lỗi từ Google Gemini API: {str(e)}"
-                
-        elif 'ai_engine' in globals():
-            result = ai_engine.process(
-                query=enhanced_query,
-                context=context_str,
-                complexity=level,
-                image_url=image_url,
-                image_base64=image_base64
-            )
-            ai_response = result.get("response", "Đã xử lý xong.") if not result.get("error") else f"⚠️ Lỗi kết nối AI Engine: {result['error']}"
+                logger.error(f"Lỗi Exception OpenRouter: {traceback.format_exc()}")
+                ai_response = f"⚠️ Lỗi kết nối đến OpenRouter: {str(e)}"
         else:
-            ai_response = f"⚠️ Máy chủ chưa được cấu hình GEMINI_API_KEY ở Environment Variables."
+            ai_response = f"⚠️ Máy chủ chưa được cấu hình OPENROUTER_API_KEY ở Environment Variables."
 
         messages.append({
             "role": "ai",
