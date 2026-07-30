@@ -569,55 +569,47 @@ def chat():
                 f"\"Vì dự án khá dài nên không thể chỉ bằng 1 dòng tin nhắn là xong được. Bạn có muốn tiếp tục không?\""
             )
 
-        # 🚀 GỌI AI ENGINE (ƯU TIÊN GEMINI TỪ BIẾN MÔI TRƯỜNG)
+        # 🚀 GỌI AI ENGINE BẰNG THỨ VIỆN CHÍNH THỨC CỦA GOOGLE
         api_key = os.environ.get('GEMINI_API_KEY')
         ai_response = ""
 
         if api_key:
             try:
-                # Cấu hình gọi thẳng tới Google Gemini (2.5 Flash)
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-                headers = {'Content-Type': 'application/json'}
+                import google.generativeai as genai
+                genai.configure(api_key=api_key)
                 
-                # Gộp lịch sử ngữ cảnh + Câu hỏi mới nhất
+                # Khởi tạo model chuẩn của Google
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                
                 gemini_prompt = f"{context_str}\n\n[Người dùng]: {enhanced_query}"
                 
-                parts = []
+                # Chuẩn bị nội dung gửi đi (Hỗ trợ cả text và hình ảnh)
+                content_payload = [gemini_prompt]
                 
-                # Nâng cấp: Xử lý hình ảnh (Vision) truyền thẳng vào Gemini nếu người dùng đính kèm ảnh
                 if image_base64:
                     try:
                         mime_type = image_base64.split(';')[0].split(':')[1]
                         raw_b64 = image_base64.split(',')[1]
-                        parts.append({
-                            "inline_data": {
-                                "mime_type": mime_type,
-                                "data": raw_b64
-                            }
+                        image_bytes = base64.b64decode(raw_b64)
+                        
+                        # Đính kèm ảnh theo định dạng chuẩn của SDK
+                        content_payload.append({
+                            'mime_type': mime_type,
+                            'data': image_bytes
                         })
-                    except Exception as e:
-                        logger.error(f"Lỗi phân tích hình ảnh cho Gemini: {e}")
+                    except Exception as img_err:
+                        logger.error(f"Lỗi xử lý ảnh: {img_err}")
                 
-                # Thêm văn bản câu hỏi vào
-                parts.append({"text": gemini_prompt})
+                # Gửi yêu cầu đến Google Gemini
+                response = model.generate_content(content_payload)
+                ai_response = response.text
                 
-                payload = {
-                    "contents": [{"parts": parts}]
-                }
-                
-                resp = requests.post(url, json=payload, headers=headers)
-                
-                if resp.status_code == 200:
-                    ai_response = resp.json()['candidates'][0]['content']['parts'][0]['text']
-                else:
-                    logger.error(f"Lỗi Gemini: {resp.text}")
-                    ai_response = f"⚠️ Lỗi từ máy chủ Google Gemini: {resp.status_code}"
-                    
+            except ImportError:
+                ai_response = "⚠️ Thiếu thư viện `google-generativeai`. Hãy chạy lệnh `pip install google-generativeai` trong terminal."
             except Exception as e:
-                logger.error(f"Lỗi Exception Gemini: {traceback.format_exc()}")
-                ai_response = f"⚠️ Lỗi kết nối đến Google Gemini: {str(e)}"
+                logger.error(f"Lỗi Gemini SDK: {traceback.format_exc()}")
+                ai_response = f"⚠️ Lỗi từ Google Gemini API: {str(e)}"
                 
-        # Nếu không cài GEMINI_API_KEY, tự động lùi về mô hình cũ (ClaudeEngine)
         elif 'ai_engine' in globals():
             result = ai_engine.process(
                 query=enhanced_query,
