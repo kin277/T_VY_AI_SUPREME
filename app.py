@@ -1096,12 +1096,12 @@ if __name__ == '__main__':
     host = os.getenv("HOST", "0.0.0.0")
 
     print(f"""
-╔═══════════════════════════════════════════════════════════════════════╗
-║  T.VỸ-AI-SUPREME v12.6.0 (SMART CODE & MULTILINGUAL AUTO ENGINE)      ║
-║  Bản quyền: T.VỸ-VIP-FILE                                           ║
-║  🌐 Tự động phản hồi theo đúng ngôn ngữ người dùng gửi câu hỏi        ║
-║  📦 Tự động phân chia dự án lớn thành 4-5 file/lượt & Vòng lặp Tiếp tục║
-║  ⏹️ Tích hợp AbortController Ngắt Mạng & Sửa Tin Nhắn Tự Cắt Dưới     ║
-╚═══════════════════════════════════════════════════════════════════════╝
+#╔═══════════════════════════════════════════════════════════════════════╗
+#  T.VỸ-AI-SUPREME v12.6.0 (SMART CODE & MULTILINGUAL AUTO ENGINE)       ║
+#║  Bản quyền: T.VỸ-VIP-FILE                                             ║
+#║  🌐 Tự động phản hồi theo đúng ngôn ngữ người dùng gửi câu hỏi        ║
+#║  📦 Tự động phân chia dự án lớn thành 4-5 file/lượt & Vòng lặp Tiếp tục║
+#║  ⏹️ Tích hợp AbortController Ngắt Mạng & Sửa Tin Nhắn Tự Cắt Dưới     ║
+#╚═══════════════════════════════════════════════════════════════════════╝
     """)
     socketio.run(app, debug=app.config['DEBUG'], host=host, port=port, allow_unsafe_werkzeug=True)
