@@ -3,7 +3,7 @@
 T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (BẢN HOÀN CHỈNH - FULL MULTIMODAL & AUTO CODE ENGINE)
 ====================================================================
 Bản quyền: T.VỸ-VIP-FILE
-Phiên bản: 12.6.0 (Vision, Multimodal, Auto Code Extension & Smart Project Continuation)
+Phiên bản: 12.6.0 (Vision, Multimodal, Auto Code Extension & Multilingual Adaptation)
 ====================================================================
 """
 
@@ -49,7 +49,6 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # ===== TỰ ĐỘNG NHẬN DIỆN VÀ TỐI ƯU THƯ MỤC CẤU HÌNH =====
 BASE_DIR = Path(__file__).resolve().parent
 
-# Khắc phục triệt để lỗi TemplateNotFound bằng cách quét danh sách vị trí tiềm năng
 POSSIBLE_TEMPLATE_DIRS = [
     BASE_DIR / 'frontend' / 'public',
     BASE_DIR / 'templates',
@@ -129,24 +128,28 @@ def parse_messages(raw_messages):
     return []
 
 # ================================================================
-# SYSTEM PROMPT BỘ QUY TẮC NÂNG CẤP LẬP TRÌNH TỰ ĐỘNG
+# SYSTEM PROMPT BỘ QUY TẮC NÂNG CẤP LẬP TRÌNH & ĐA NGÔN NGỮ TỰ ĐỘNG
 # ================================================================
 SMART_CODE_SYSTEM_PROMPT = """
 [BỘ QUY TẮC XỬ LÝ NÂNG CẤP CỦA T.VỸ-AI SUPREME]
 
-1. TỰ ĐỘNG NHẬN DIỆN NGÔN NGỮ & ĐUÔI FILE CODE:
+1. TỰ ĐỘNG THÍCH ỨNG NGÔN NGỮ GIAO TIẾP (MULTILINGUAL ADAPTATION):
+   - Tự động nhận diện ngôn ngữ người dùng sử dụng trong câu hỏi/yêu cầu (Tiếng Việt, Tiếng Anh, Tiếng Trung, Tiếng Nhật, Tiếng Hàn, Tiếng Pháp, Tiếng Đức,...).
+   - BẮT BUỘC trả lời hoàn toàn bằng chính ngôn ngữ đó để người dùng đọc hiểu một cách tự nhiên nhất.
+   - Các từ khóa kỹ thuật, tên biến, hoặc mã nguồn lập trình vẫn giữ nguyên chuẩn định dạng quốc tế.
+
+2. TỰ ĐỘNG NHẬN DIỆN NGÔN NGỮ & ĐUÔI FILE CODE:
    - Tự động nhận diện ngôn ngữ lập trình và đuôi file tương ứng (.glsl, .vsh, .fsh, .py, .js, .cpp, .html, .css, .java, .kt, .c, .cs, .ts, .php, .go, .rs, .json, .yaml,...).
    - Nếu người dùng chỉ nêu mục đích công việc (ví dụ: "làm shader minecraft", "tạo bot discord", "làm game 2D"), bạn PHẢI TỰ PHÂN TÍCH mục đích và chọn chính xác cấu trúc cũng như đuôi file phù hợp nhất.
 
-2. TỔNG HỢP TRI THỨC THÔNG MINH:
+3. TỔNG HỢP TRI THỨC THÔNG MINH:
    - AI tổng hợp thông tin, đưa ra câu trả lời chuẩn xác tuyệt đối dù câu trả lời rất ngắn hay cực kỳ dài.
 
-3. CƠ CHẾ CHIA NHỎ DỰ ÁN (4 - 5 FILE MỖI LƯỢT):
+4. CƠ CHẾ CHIA NHỎ DỰ ÁN (4 - 5 FILE MỖI LƯỢT):
    - Đối với dự án cần nhiều file, bạn hãy xuất trước 4 - 5 file chính của dự án.
-   - Ở CUỐI CÙNG của câu trả lời, BẮT BUỘC đính kèm đúng câu thoại sau:
-     "Vì dự án khá dài nên không thể chỉ bằng 1 dòng tin nhắn là xong được. Bạn có muốn tiếp tục không?"
+   - Ở CUỐI CÙNG của câu trả lời, BẮT BUỘC đính kèm câu hỏi tiếp tục bằng đúng ngôn ngữ người dùng đang hỏi (Ví dụ Tiếng Việt: "Vì dự án khá dài nên không thể chỉ bằng 1 dòng tin nhắn là xong được. Bạn có muốn tiếp tục không?", Tiếng Anh: "Since the project is quite long, it cannot be completed in a single message. Would you like to continue?").
 
-4. VÒNG LẶP TỰ ĐỘNG TIẾP TỤC (CONTINUATION LOOP):
+5. VÒNG LẶP TỰ ĐỘNG TIẾP TỤC (CONTINUATION LOOP):
    - Khi nhận phản hồi từ người dùng chứa các từ khóa tiếp tục ("tiếp", "tiếp tục", "ok", "continue", "tiếp đi", "yes",...), bạn sẽ tự động sinh các file tiếp theo của dự án còn dở dang.
    - Tiếp tục lặp lại quy trình chia nhỏ 4-5 file kèm câu hỏi trên cho đến khi hoàn thành toàn bộ 100% dự án.
 """
@@ -505,7 +508,6 @@ def chat():
         image_base64 = data.get('image_base64', None)
         user_id = session.get('user_id')
 
-        # Dự phòng User Guest nếu chưa thiết lập session đăng nhập
         if not user_id:
             user_id = data.get('user_id', 'guest_user')
 
@@ -514,7 +516,6 @@ def chat():
 
         user = get_user_by_id(user_id) if user_id != 'guest_user' else {'role': 'user', 'id': 'guest_user'}
         
-        # Kiểm tra giới hạn lượt dùng
         if user and user.get('role') != 'admin' and user_id != 'guest_user':
             max_uses = {'basic': 999999, 'pro': 5, 'plus': 2, 'pro3': 0}.get(level, 0)
             used = get_usage_count(user_id, level)
@@ -538,12 +539,10 @@ def chat():
             else:
                 name = message[:30] or "Hội thoại mới"
 
-        # Đính kèm URL hình ảnh vào tin nhắn nếu có
         user_content = message
         if image_url and f"![ảnh]({image_url})" not in user_content:
             user_content = f"![Hình ảnh đính kèm]({image_url})\n\n{message}"
 
-        # KIỂM TRA PHẢN HỒI TIẾP TỤC (CONTINUATION LOOP)
         is_continuation = bool(re.search(r'^\s*(tiếp|tiếp tục|ok|continue|tiếp đi|yes)\b', message.lower()))
         
         enhanced_query = message
@@ -551,8 +550,7 @@ def chat():
             enhanced_query = (
                 f"{message}\n\n[HỆ THỐNG]: Người dùng yêu cầu TIẾP TỤC dự án. "
                 f"Hãy tạo tiếp 4 - 5 file tiếp theo của dự án còn dở dang. "
-                f"Nếu vẫn chưa xong hết toàn bộ dự án, ở cuối tin nhắn BẮT BUỘC lặp lại đúng câu hỏi: "
-                f"\"Vì dự án khá dài nên không thể chỉ bằng 1 dòng tin nhắn là xong được. Bạn có muốn tiếp tục không?\""
+                f"Nếu vẫn chưa xong hết toàn bộ dự án, ở cuối tin nhắn BẮT BUỘC lặp lại đúng câu hỏi tiếp tục theo ngôn ngữ đang sử dụng."
             )
 
         # 1. TÍCH HỢP SYSTEM PROMPT VÀ LỊCH SỬ CHAT VÀO CONTEXT
@@ -562,12 +560,11 @@ def chat():
             context_parts.append(f"{role}: {msg.get('content', '')}")
         context_str = "\n".join(context_parts)
 
-        # 2. LẤY THỜI GIAN THỰC TẾ VÀ GHẾP VÀO SYSTEM CONTENT (TRÁNH LỖI NAMEERROR)
+        # 2. LẤY THỜI GIAN THỰC TẾ VÀ GHẾP VÀO SYSTEM CONTENT
         now = datetime.datetime.now()
         current_time_info = f"Hôm nay là ngày {now.strftime('%d/%m/%Y')}, giờ hiện tại là {now.strftime('%H:%M')}."
         system_content = f"{current_time_info}\n\n{context_str}"
 
-        # 3. LƯU CÂU HỎI MỚI CỦA USER VÀO DANH SÁCH MESSAGES
         messages.append({
             "role": "user",
             "content": user_content,
@@ -575,7 +572,7 @@ def chat():
             "time": datetime.datetime.now().isoformat()
         })
 
-        # 🚀 4. GỌI OPENROUTER API MIỄN PHÍ
+        # 🚀 3. GỌI OPENROUTER API
         api_key = os.environ.get('OPENROUTER_API_KEY') or os.environ.get('GEMINI_API_KEY')
         ai_response = ""
 
@@ -586,7 +583,7 @@ def chat():
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
                     "HTTP-Referer": "https://tvy-ai-supreme.local",
-                    "X-Title": "TVY-AI SUPREME"  # Đổi thành ASCII không dấu để tránh lỗi mã hóa Header
+                    "X-Title": "TVY-AI SUPREME"
                 }
                 
                 payload = {
@@ -721,7 +718,6 @@ def upload_doc():
         ext = original_filename.rsplit('.', 1)[1].lower() if '.' in original_filename else ''
         file_bytes = file.read()
 
-        # 🟢 1. XỬ LÝ NẾU TỆP LÀ HÌNH ẢNH (PNG, JPG, WEBP, GIF,...)
         if ext in IMAGE_EXTENSIONS:
             timestamp = int(time.time())
             saved_filename = f"img_{timestamp}_{original_filename}"
@@ -755,7 +751,6 @@ def upload_doc():
                 "content": content_preview
             })
 
-        # 🟢 2. XỬ LÝ TÀI LIỆU VĂN BẢN THÔNG THƯỜNG (PDF, DOCX, TXT)
         try:
             if 'DocumentParser' in globals():
                 extracted_text = DocumentParser.parse_file(original_filename, file_bytes)
@@ -1074,11 +1069,10 @@ if __name__ == '__main__':
 
     print(f"""
 ╔═══════════════════════════════════════════════════════════════════════╗
-║  T.VỸ-AI-SUPREME v12.6.0 (SMART CODE & MULTI-FILE PROJECT ENGINE)     ║
+║  T.VỸ-AI-SUPREME v12.6.0 (SMART CODE & MULTILINGUAL AUTO ENGINE)      ║
 ║  Bản quyền: T.VỸ-VIP-FILE                                           ║
-║  🚀 Tự động nhận diện đuôi file (.glsl, .vsh, .fsh, .py, .js,...)     ║
+║  🌐 Tự động phản hồi theo đúng ngôn ngữ người dùng gửi câu hỏi        ║
 ║  📦 Tự động phân chia dự án lớn thành 4-5 file/lượt & Vòng lặp Tiếp tục║
-║  🌐 TÍCH HỢP OPENROUTER FREE API TRỰC TIẾP TỪ BACKEND                 ║
 ╚═══════════════════════════════════════════════════════════════════════╝
     """)
     socketio.run(app, debug=app.config['DEBUG'], host=host, port=port, allow_unsafe_werkzeug=True)
