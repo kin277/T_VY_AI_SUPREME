@@ -1,4 +1,3 @@
-"""
 ====================================================================
 T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (BẢN HOÀN CHỈNH - FULL MULTIMODAL & AUTO CODE ENGINE)
 ====================================================================
@@ -493,7 +492,7 @@ def github_callback_route():
     return "❌ Lỗi hệ thống", 400
 
 # ================================================================
-# CHAT ROUTES (TÍCH HỢP OPENROUTER & ĐỊNH VỊ THỜI GIAN THỰC)
+# CHAT ROUTES (TÍCH HỢP SỬA TIN NHẮN, TỰ CẮT BỚT BÊN DƯỚI & ABORT)
 # ================================================================
 
 @app.route('/chat', methods=['POST'])
@@ -506,6 +505,7 @@ def chat():
         level = data.get('level', 'pro')
         image_url = data.get('image_url', None)
         image_base64 = data.get('image_base64', None)
+        edit_index = data.get('edit_index', None)  # Chỉ số tin nhắn được sửa (nếu có)
         user_id = session.get('user_id')
 
         if not user_id:
@@ -539,6 +539,12 @@ def chat():
             else:
                 name = message[:30] or "Hội thoại mới"
 
+        # ⚡ CƠ CHẾ SỬA TIN NHẮN & CẮT BỎ CÁC TIN NHẮN BÊN DƯỚI ⚡
+        if edit_index is not None and isinstance(edit_index, int) and edit_index >= 0:
+            if edit_index < len(messages):
+                # Giữ lại các tin nhắn đứng TRƯỚC vị trí sửa, xóa toàn bộ từ edit_index trở về sau
+                messages = messages[:edit_index]
+
         user_content = message
         if image_url and f"![ảnh]({image_url})" not in user_content:
             user_content = f"![Hình ảnh đính kèm]({image_url})\n\n{message}"
@@ -565,6 +571,7 @@ def chat():
         current_time_info = f"Hôm nay là ngày {now.strftime('%d/%m/%Y')}, giờ hiện tại là {now.strftime('%H:%M')}."
         system_content = f"{current_time_info}\n\n{context_str}"
 
+        # Thêm câu hỏi mới (đã sửa hoặc mới hoàn toàn)
         messages.append({
             "role": "user",
             "content": user_content,
@@ -638,11 +645,32 @@ def chat():
             "response": ai_response,
             "conversation_id": conv_id,
             "conversations": convs_list,
+            "messages": messages,
             "level": level
         })
     except Exception as e:
         logger.error(f"❌ Lỗi xử lý Chat (500): {traceback.format_exc()}")
         return jsonify({"success": False, "error": f"Lỗi nội bộ máy chủ khi xử lý câu hỏi: {str(e)}"}), 500
+
+# API RIÊNG BIỆT DÀNH CHO VIỆC SỬA TIN NHẮN & LỰA CHỌN CẮT TIN NHẮN BÊN DƯỚI
+@app.route('/api/conversation/message/edit', methods=['POST'])
+def edit_message_api():
+    try:
+        data = request.get_json(silent=True) or {}
+        conv_id = data.get('conversation_id')
+        msg_index = data.get('message_index')
+        new_text = data.get('new_text', '').strip()
+        level = data.get('level', 'pro')
+        user_id = session.get('user_id') or 'guest_user'
+
+        if not conv_id or msg_index is None or not new_text:
+            return jsonify({"error": "Thiếu tham số conversation_id, message_index hoặc new_text"}), 400
+
+        # Gọi lại route /api/chat với tham số edit_index
+        return chat()
+    except Exception as e:
+        logger.error(f"Lỗi API Edit Message: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/conversations')
 def get_conversations():
@@ -857,7 +885,7 @@ def optimize_prompt():
     if not original_prompt:
         return jsonify({"error": "Câu lệnh không được để trống"}), 400
 
-    optimized = f" Hãy đóng vai là một chuyên gia hàng đầu, phân tích chi tiết và đưa ra câu trả lời xuất sắc cho câu hỏi: '{original_prompt}'. Yêu cầu trình bày mạch lạc, cấu trúc rõ ràng với Markdown."
+    optimized = f" Hãy đóng vai là một chuyên gia hàng đầu, phân tích chi tiết và đưa ra câu trả lời xuất sắc cho câu hỏi: '{original_prompt}'. Yêu cầu trình trình bày mạch lạc, cấu trúc rõ ràng với Markdown."
     return jsonify({"success": True, "original": original_prompt, "optimized": optimized})
 
 @app.route('/api/tts', methods=['POST'])
@@ -1073,6 +1101,7 @@ if __name__ == '__main__':
 ║  Bản quyền: T.VỸ-VIP-FILE                                           ║
 ║  🌐 Tự động phản hồi theo đúng ngôn ngữ người dùng gửi câu hỏi        ║
 ║  📦 Tự động phân chia dự án lớn thành 4-5 file/lượt & Vòng lặp Tiếp tục║
+║  ⏹️ Tích hợp AbortController Ngắt Mạng & Sửa Tin Nhắn Tự Cắt Dưới     ║
 ╚═══════════════════════════════════════════════════════════════════════╝
     """)
     socketio.run(app, debug=app.config['DEBUG'], host=host, port=port, allow_unsafe_werkzeug=True)

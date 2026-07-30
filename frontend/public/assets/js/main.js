@@ -1,6 +1,7 @@
 // ================================================================
 // T.VỸ-AI-SUPREME - MAIN JS (FULL INTEGRATED & UPGRADED INTELLIGENCE)
 // Dựa trên nền tảng gốc với hệ thống nhận dạng thông minh & tổng hợp web toàn diện cho mọi cấp độ AI
+// CẬP NHẬT: Thêm tính năng Chặn input khi chờ, Nút Dừng, Copy & Edit tin nhắn.
 // ================================================================
 
 // ===== DOM ELEMENTS =====
@@ -25,6 +26,18 @@ const uploadBtn = document.getElementById('uploadBtn');
 const sidebar = document.getElementById('sidebar') || document.querySelector('.sidebar');
 const sidebarToggle = document.getElementById('sidebarToggle') || document.getElementById('menuToggleSidebar');
 
+// Tự động thêm Nút Dừng bên cạnh nút gửi (nếu chưa có trong HTML)
+let stopBtn = document.getElementById('stopBtn');
+if (sendBtn && !stopBtn) {
+    stopBtn = document.createElement('button');
+    stopBtn.id = 'stopBtn';
+    stopBtn.innerHTML = '⏹ Dừng';
+    stopBtn.style.display = 'none';
+    stopBtn.className = sendBtn.className;
+    stopBtn.onclick = stopGenerating;
+    sendBtn.parentNode.insertBefore(stopBtn, sendBtn); 
+}
+
 // ===== STATE =====
 let currentConversationId = null;
 let currentLevel = 'pro';
@@ -35,12 +48,51 @@ let socket = null;
 let sessionTimer = null;
 const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 giờ
 
+// BIẾN QUẢN LÝ TRẠNG THÁI CHỜ & HỦY REQUEST
+let isGenerating = false;
+let currentAbortController = null;
+
 const LEVEL_NAMES = {
     basic: 'AI Thường',
     pro: 'AI Pro',
     plus: 'AI Plus',
     pro3: 'AI 3.0 Pro'
 };
+
+// ================================================================
+// QUẢN LÝ UI KHI ĐANG GENERATING (KHÓA/MỞ & DỪNG)
+// ================================================================
+function lockUI() {
+    isGenerating = true;
+    if (inputField) {
+        inputField.disabled = true;
+        inputField.placeholder = "Đang chờ AI phản hồi...";
+    }
+    if (sendBtn) sendBtn.style.display = 'none';
+    if (stopBtn) stopBtn.style.display = 'inline-block';
+}
+
+function unlockUI() {
+    isGenerating = false;
+    if (inputField) {
+        inputField.disabled = false;
+        inputField.placeholder = "Nhập tin nhắn của bạn...";
+        inputField.focus();
+    }
+    if (sendBtn) sendBtn.style.display = 'inline-block';
+    if (stopBtn) stopBtn.style.display = 'none';
+    hideTyping();
+}
+
+function stopGenerating() {
+    if (currentAbortController) {
+        currentAbortController.abort();
+        currentAbortController = null;
+    }
+    unlockUI();
+    addMessage('system', '⚠️ Đã dừng câu trả lời. Bạn có thể hỏi tiếp hoặc chỉnh sửa tin nhắn phía trên.');
+}
+
 
 // ================================================================
 // TOGGLE SIDEBAR (CHỨC NĂNG ĐÓNG MỞ THANH BÊN)
@@ -488,7 +540,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 // ================================================================
-// ADD MESSAGE & MERMAID PARSER
+// ADD MESSAGE & EDIT/COPY CỦA NGƯỜI DÙNG
 // ================================================================
 function addMessage(role, content) {
     if (!chatContainer) return;
@@ -498,6 +550,10 @@ function addMessage(role, content) {
 
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message ' + role;
+    
+    // Tạo ID ngẫu nhiên để quản lý cho chức năng Edit/Copy
+    const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
+    msgDiv.id = msgId;
 
     let formattedContent = content;
     const mermaidRegex = /```mermaid\s*([\s\S]*?)\s*```/g;
@@ -505,7 +561,21 @@ function addMessage(role, content) {
         return `<pre class="mermaid-code">${code}</pre>`;
     });
 
-    msgDiv.innerHTML = formattedContent + `<span class="time">${new Date().toLocaleTimeString()}</span>`;
+    if (role === 'user') {
+        // Lưu lại dữ liệu thô vào dataset để dùng khi sửa
+        msgDiv.dataset.rawText = content;
+        
+        msgDiv.innerHTML = `
+            <div class="msg-content" id="content-${msgId}">${formattedContent}</div>
+            <div class="msg-actions" style="margin-top: 8px; font-size: 0.85em; display: flex; gap: 15px; opacity: 0.8;">
+                <span style="cursor:pointer;" onclick="copyMessage('${msgId}')">📋 Copy</span>
+                <span style="cursor:pointer;" onclick="editMessage('${msgId}')">✏️ Sửa</span>
+            </div>
+            <span class="time">${new Date().toLocaleTimeString()}</span>
+        `;
+    } else {
+        msgDiv.innerHTML = formattedContent + `<span class="time">${new Date().toLocaleTimeString()}</span>`;
+    }
 
     wrapper.appendChild(msgDiv);
     chatContainer.appendChild(wrapper);
@@ -514,10 +584,98 @@ function addMessage(role, content) {
     renderMermaidInContainer(msgDiv);
 }
 
+// Chức năng Copy tin nhắn
+function copyMessage(msgId) {
+    const msgDiv = document.getElementById(msgId);
+    if (msgDiv && msgDiv.dataset.rawText) {
+        navigator.clipboard.writeText(msgDiv.dataset.rawText).then(() => {
+            showToast('✅ Đã copy tin nhắn!', 'success');
+        });
+    }
+}
+
+// Chức năng chuyển sang giao diện Sửa
+function editMessage(msgId) {
+    if (isGenerating) {
+        showToast('⚠️ Vui lòng đợi AI trả lời xong hoặc bấm "Dừng" trước khi sửa!', 'warning');
+        return;
+    }
+
+    const msgDiv = document.getElementById(msgId);
+    if (!msgDiv) return;
+    
+    const rawText = msgDiv.dataset.rawText;
+    const contentDiv = document.getElementById(`content-${msgId}`);
+    
+    contentDiv.innerHTML = `
+        <textarea id="edit-input-${msgId}" style="width: 100%; min-height: 80px; padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); font-family: inherit; font-size: inherit;">${rawText}</textarea>
+        <div style="display: flex; gap: 8px;">
+            <button onclick="saveEdit('${msgId}')" style="padding: 6px 12px; background: #4a6ee0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">Lưu & Gửi lại</button>
+            <button onclick="cancelEdit('${msgId}')" style="padding: 6px 12px; background: transparent; color: var(--color-text); border: 1px solid var(--color-border); border-radius: 4px; cursor: pointer; font-size: 13px;">Hủy</button>
+        </div>
+    `;
+    
+    msgDiv.querySelector('.msg-actions').style.display = 'none'; // Ẩn nút sửa/copy tạm thời
+}
+
+// Hủy chỉnh sửa và quay về trạng thái cũ
+function cancelEdit(msgId) {
+    const msgDiv = document.getElementById(msgId);
+    if (!msgDiv) return;
+    const rawText = msgDiv.dataset.rawText;
+    const contentDiv = document.getElementById(`content-${msgId}`);
+    
+    let formattedContent = rawText.replace(/```mermaid\s*([\s\S]*?)\s*```/g, (match, code) => {
+        return `<pre class="mermaid-code">${code}</pre>`;
+    });
+    contentDiv.innerHTML = formattedContent;
+    msgDiv.querySelector('.msg-actions').style.display = 'flex'; // Hiện lại
+    renderMermaidInContainer(contentDiv);
+}
+
+// Lưu và gửi câu hỏi mới
+function saveEdit(msgId) {
+    const textarea = document.getElementById(`edit-input-${msgId}`);
+    if (!textarea) return;
+    const newText = textarea.value.trim();
+    
+    if (!newText) {
+        showToast('❌ Nội dung không được để trống!', 'error');
+        return;
+    }
+
+    const msgDiv = document.getElementById(msgId);
+    msgDiv.dataset.rawText = newText; // Cập nhật lại data mới
+
+    let formattedContent = newText.replace(/```mermaid\s*([\s\S]*?)\s*```/g, (match, code) => {
+        return `<pre class="mermaid-code">${code}</pre>`;
+    });
+    document.getElementById(`content-${msgId}`).innerHTML = formattedContent;
+    msgDiv.querySelector('.msg-actions').style.display = 'flex';
+    renderMermaidInContainer(msgDiv);
+
+    // XÓA TẤT CẢ CÁC TIN NHẮN SAU TIN NHẮN ĐANG SỬA NÀY (để tạo flow đúng logic)
+    let wrapper = msgDiv.parentElement;
+    let nextWrapper = wrapper.nextElementSibling;
+    while(nextWrapper) {
+        let toRemove = nextWrapper;
+        nextWrapper = nextWrapper.nextElementSibling;
+        toRemove.remove();
+    }
+
+    // Gửi yêu cầu lại lên server
+    sendMessageInternal(newText, true); 
+}
+
 // ================================================================
 // UPLOAD & PHÂN TÍCH FILE
 // ================================================================
 function triggerFileUpload() {
+    if (isGenerating) {
+        showToast('⚠️ Vui lòng đợi AI xử lý xong trước khi tải file lên!', 'warning');
+        return;
+    }
+
     requireAuthAndExecute(() => {
         if (fileInput) {
             fileInput.click();
@@ -561,6 +719,7 @@ if (fileInput) {
         formData.append('smart_synthesis', 'true');
 
         showTyping();
+        lockUI(); // Khóa UI khi upload
 
         fetch('/api/upload_and_analyze', {
             method: 'POST',
@@ -568,7 +727,7 @@ if (fileInput) {
         })
         .then(res => res.json())
         .then(data => {
-            hideTyping();
+            unlockUI();
             fileInput.value = '';
 
             if (data.error) {
@@ -585,7 +744,7 @@ if (fileInput) {
             loadUsage();
         })
         .catch(err => {
-            hideTyping();
+            unlockUI();
             fileInput.value = '';
             addMessage('ai', '❌ Lỗi tải hoặc phân tích file: ' + err.message);
         });
@@ -593,10 +752,10 @@ if (fileInput) {
 }
 
 // ================================================================
-// SEND MESSAGE (NÂNG CẤP TẬP TRUNG 100% VÀO BÀI TOÁN - TẠO CODE ĐẦY ĐỦ, CHUẨN XÁC)
+// SEND MESSAGE (NÂNG CẤP CHẶN, CANCEL & EDIT TRUYỀN LẠI)
 // ================================================================
 function sendMessage() {
-    if (!inputField) return;
+    if (!inputField || isGenerating) return; 
     const text = inputField.value.trim();
     if (!text) return;
 
@@ -610,17 +769,27 @@ function sendMessage() {
         return;
     }
 
-    addMessage('user', text);
     inputField.value = '';
+    sendMessageInternal(text, false);
+}
+
+// Hàm xử lý trung tâm cho cả gửi lần đầu & gửi do Sửa câu hỏi
+function sendMessageInternal(text, isResend = false) {
+    if (!isResend) {
+        addMessage('user', text);
+    }
 
     const level = levelSelect ? levelSelect.value : 'pro';
 
-    // Nhận dạng chính xác yêu cầu lập trình / tạo code / viết file
+    // Nhận dạng chính xác yêu cầu lập trình
     const isCodeRequest = /code|viết chương trình|script|function|class|html|css|javascript|python|java|c\+\+|c#|sql|sửa lỗi|debug|tạo ứng dụng|shader|tạo file|file/i.test(text);
     const isComplexQuery = text.length > 50 || /phân tích|so sánh|giải thích chi tiết|tổng hợp|nghiên cứu|chiến lược|tối ưu hóa/i.test(text);
     const requiresWebSynthesis = isCodeRequest || isComplexQuery;
 
     showTyping();
+    lockUI(); // Gọi chức năng Khóa và hiện Nút Dừng
+    
+    currentAbortController = new AbortController(); // Đăng ký khả năng ngắt ngang
 
     fetch('/chat', {
         method: 'POST',
@@ -632,20 +801,20 @@ function sendMessage() {
             intent_recognition: true,
             web_synthesis: requiresWebSynthesis,
             comprehensive_answer: true,
-            full_code: true, // Trả về code đầy đủ không cắt bớt
-            
-            // ===== NÂNG CẤP CHỨC NĂNG TẬP TRUNG 100% VÀO BÀI TOÁN =====
-            strict_code_focus: isCodeRequest, // Yêu cầu backend tập trung 100% vào bài toán
-            no_ai_self_description: true,    // Tuyệt đối không viết mô tả tự xưng của AI
-            direct_output_only: true,        // Trả kết quả trực tiếp không dài dòng
-            auto_format_language: true,      // Tự động áp dụng chuẩn cú pháp & ngôn ngữ
-            ethical_safety_check: true,      // Đảm bảo tuân thủ tiêu chuẩn an toàn
-            untruncated_code: true           // Không rút gọn hay bỏ bớt bất kỳ đoạn code nào
-        })
+            full_code: true, 
+            strict_code_focus: isCodeRequest, 
+            no_ai_self_description: true,    
+            direct_output_only: true,        
+            auto_format_language: true,      
+            ethical_safety_check: true,      
+            untruncated_code: true           
+        }),
+        signal: currentAbortController.signal // Gắn cờ Signal Abort
     })
     .then(res => res.json())
     .then(data => {
-        hideTyping();
+        unlockUI(); // Nhả khóa an toàn
+        
         if (data.error) {
             addMessage('ai', '❌ ' + data.error);
             if (data.limit_reached) {
@@ -669,7 +838,11 @@ function sendMessage() {
         }
     })
     .catch(err => {
-        hideTyping();
+        if (err.name === 'AbortError') {
+            // Không in gì thêm vì hàm stopGenerating() đã in thông báo Dừng.
+            return;
+        }
+        unlockUI();
         addMessage('ai', '❌ Lỗi kết nối: ' + err.message);
     });
 }
@@ -678,6 +851,7 @@ if (sendBtn) sendBtn.addEventListener('click', sendMessage);
 if (inputField) {
     inputField.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
+            if (e.shiftKey) return; // Nếu giữ shift thì xuống dòng bình thường
             e.preventDefault();
             sendMessage();
         }
@@ -723,6 +897,11 @@ function loadHistory() {
 }
 
 function loadConversation(id) {
+    if (isGenerating) {
+        showToast('Vui lòng đợi AI phản hồi xong trước khi chuyển phòng!', 'warning');
+        return;
+    }
+
     fetch(`/conversation/${id}`)
         .then(res => res.json())
         .then(data => {
@@ -931,6 +1110,7 @@ function requireAuthAndExecute(callback) {
 }
 
 function useMultiAI() {
+    if (isGenerating) { showToast('⚠️ Đang chờ AI phản hồi...', 'warning'); return; }
     requireAuthAndExecute(() => {
         const text = inputField ? inputField.value.trim() : '';
         if (!text) {
@@ -940,6 +1120,7 @@ function useMultiAI() {
         addMessage('user', '🧠 Yêu cầu AI Đa luồng: ' + text);
         inputField.value = '';
         showTyping();
+        lockUI();
         fetch('/api/multi_ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -947,7 +1128,7 @@ function useMultiAI() {
         })
         .then(res => res.json())
         .then(data => {
-            hideTyping();
+            unlockUI();
             if (data.error) {
                 addMessage('ai', '❌ ' + data.error);
                 return;
@@ -959,11 +1140,12 @@ function useMultiAI() {
             html += `🏆 **Kết quả tốt nhất:** ${data.best.model}`;
             addMessage('ai', html);
         })
-        .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối'); });
     });
 }
 
 function summarizeText() {
+    if (isGenerating) { showToast('⚠️ Đang chờ AI phản hồi...', 'warning'); return; }
     requireAuthAndExecute(() => {
         const text = inputField ? inputField.value.trim() : '';
         if (!text) {
@@ -973,6 +1155,7 @@ function summarizeText() {
         addMessage('user', '📝 Yêu cầu tóm tắt: ' + text);
         inputField.value = '';
         showTyping();
+        lockUI();
         fetch('/api/summarize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -980,18 +1163,19 @@ function summarizeText() {
         })
         .then(res => res.json())
         .then(data => {
-            hideTyping();
+            unlockUI();
             if (data.error) {
                 addMessage('ai', '❌ ' + data.error);
                 return;
             }
             addMessage('ai', `📝 **Tóm tắt chuyên sâu:**\n\n${data.summary}\n\n📊 Độ dài gốc: ${data.original_length} ký tự → ${data.summarized_length} ký tự`);
         })
-        .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối'); });
     });
 }
 
 function translateText() {
+    if (isGenerating) { showToast('⚠️ Đang chờ AI phản hồi...', 'warning'); return; }
     requireAuthAndExecute(() => {
         const text = inputField ? inputField.value.trim() : '';
         if (!text) {
@@ -1003,6 +1187,7 @@ function translateText() {
         addMessage('user', `🌐 Yêu cầu dịch sang ${lang}: ${text}`);
         inputField.value = '';
         showTyping();
+        lockUI();
         fetch('/api/translate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1010,18 +1195,19 @@ function translateText() {
         })
         .then(res => res.json())
         .then(data => {
-            hideTyping();
+            unlockUI();
             if (data.error) {
                 addMessage('ai', '❌ ' + data.error);
                 return;
             }
             addMessage('ai', `🌐 **Dịch chuẩn xác sang ${lang}:**\n\n${data.translated}`);
         })
-        .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối'); });
     });
 }
 
 function generateVideo() {
+    if (isGenerating) { showToast('⚠️ Đang chờ AI phản hồi...', 'warning'); return; }
     requireAuthAndExecute(() => {
         const text = inputField ? inputField.value.trim() : '';
         if (!text) {
@@ -1033,6 +1219,7 @@ function generateVideo() {
         addMessage('user', `🎬 Yêu cầu tạo video (${template}): ${text}`);
         inputField.value = '';
         showTyping();
+        lockUI();
         fetch('/api/generate_video', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1040,18 +1227,19 @@ function generateVideo() {
         })
         .then(res => res.json())
         .then(data => {
-            hideTyping();
+            unlockUI();
             if (data.error) {
                 addMessage('ai', '❌ ' + data.error);
                 return;
             }
             addMessage('ai', `🎬 **Video đang được tạo:**\n\n📌 Tiêu đề: ${data.title}\n⏱️ Thời lượng: ${data.duration}s\n📐 Độ phân giải: ${data.resolution}\n🎨 Phong cách: ${data.style}\n🔗 Link: ${data.url}\n\n⏳ Trạng thái: ${data.status}`);
         })
-        .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối'); });
     });
 }
 
 function analyzeData() {
+    if (isGenerating) { showToast('⚠️ Đang chờ AI phản hồi...', 'warning'); return; }
     requireAuthAndExecute(() => {
         const text = inputField ? inputField.value.trim() : '';
         if (!text) {
@@ -1059,6 +1247,8 @@ function analyzeData() {
             return;
         }
         const numbers = text.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
+        
+        lockUI();
         if (numbers.length > 1) {
             addMessage('user', '📊 Yêu cầu phân tích số: ' + text);
             inputField.value = '';
@@ -1070,14 +1260,14 @@ function analyzeData() {
             })
             .then(res => res.json())
             .then(data => {
-                hideTyping();
+                unlockUI();
                 if (data.error) {
                     addMessage('ai', '❌ ' + data.error);
                     return;
                 }
                 addMessage('ai', `📊 **Phân tích dữ liệu số:**\n\n📌 Số lượng: ${data.count}\n📉 Nhỏ nhất: ${data.min}\n📈 Lớn nhất: ${data.max}\n📊 Trung bình: ${data.mean}\n📏 Trung vị: ${data.median}\n📐 Tổng: ${data.sum}`);
             })
-            .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+            .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối'); });
         } else {
             addMessage('user', '📊 Yêu cầu phân tích văn bản: ' + text);
             inputField.value = '';
@@ -1089,19 +1279,20 @@ function analyzeData() {
             })
             .then(res => res.json())
             .then(data => {
-                hideTyping();
+                unlockUI();
                 if (data.error) {
                     addMessage('ai', '❌ ' + data.error);
                     return;
                 }
                 addMessage('ai', `📊 **Phân tích văn bản:**\n\n📌 Số từ: ${data.word_count}\n📝 Số câu: ${data.sentence_count}\n📏 Độ dài trung bình từ: ${data.avg_word_length}\n🔤 Số từ độc nhất: ${data.unique_words}\n📖 Độ dễ đọc: ${data.readability}`);
             })
-            .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+            .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối'); });
         }
     });
 }
 
 function generateMusicWithLyrics() {
+    if (isGenerating) { showToast('⚠️ Đang chờ AI phản hồi...', 'warning'); return; }
     requireAuthAndExecute(() => {
         const text = inputField ? inputField.value.trim() : '';
         if (!text) {
@@ -1116,6 +1307,7 @@ function generateMusicWithLyrics() {
         addMessage('user', `🎵 Yêu cầu tạo nhạc (${style}, ${mood}, ${duration}s): ${text}`);
         inputField.value = '';
         showTyping();
+        lockUI();
         fetch('/api/generate_music', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1129,7 +1321,7 @@ function generateMusicWithLyrics() {
         })
         .then(res => res.json())
         .then(data => {
-            hideTyping();
+            unlockUI();
             if (data.error) {
                 addMessage('ai', '❌ ' + data.error);
                 return;
@@ -1143,11 +1335,12 @@ function generateMusicWithLyrics() {
             html += `🔊 Tải nhạc: <a href="${data.download_url}" download style="color:var(--color-primary);text-decoration:underline;">${data.music_file}</a>`;
             addMessage('ai', html);
         })
-        .catch(() => { hideTyping(); addMessage('ai', '❌ Lỗi kết nối'); });
+        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối'); });
     });
 }
 
 function clearAllMessages() {
+    if (isGenerating) { showToast('Vui lòng đợi hệ thống xử lý xong!', 'warning'); return; }
     if (!confirm('Xóa toàn bộ tin nhắn trong chat hiện tại?')) return;
     if (chatContainer) chatContainer.innerHTML = '';
     addMessage('ai', '🗑️ Chat đã được xóa. Hãy bắt đầu trò chuyện mới!');
@@ -1169,5 +1362,5 @@ if (typeof io !== 'undefined') {
     initSocket();
 }
 
-console.log('🚀 T.VỸ-AI-SUPREME v14.0: Đã nâng cấp chế độ xuất code tập trung 100%, không văn bản rườm rà & đầy đủ 100%!');
+console.log('🚀 T.VỸ-AI-SUPREME v15.0: Nâng cấp luồng hội thoại & giao diện chống spam hoàn hảo!');
 console.log('📌 Bản quyền: T.VỸ-VIP-FILE');

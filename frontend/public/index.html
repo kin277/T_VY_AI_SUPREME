@@ -1308,7 +1308,7 @@
                     <div class="name" id="userName">Khách</div>
                     <div class="status" id="userStatus">Chế độ khách</div>
                 </div>
-                <button id="logoutBtn" style="display:none;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;" title="Đăng xuất"><i class="fa-solid fa-right-from-bracket"></i></button>
+                <button id="logoutBtn" style="display:none;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;" title="Đăng xuất" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
         </aside>
 
@@ -1498,7 +1498,7 @@
             <div>
                 <p style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-color);">
                     <span>Chế độ tối</span>
-                    <input type="checkbox" id="darkModeToggle" checked />
+                    <input type="checkbox" id="darkModeToggle" checked onchange="toggleTheme()" />
                 </p>
                 <p style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-color);">
                     <span>Ngôn ngữ</span>
@@ -1578,14 +1578,12 @@
     <div class="search-result" id="searchResult" style="position:fixed;bottom:90px;right:20px;background:var(--bg-card);padding:10px 16px;border-radius:var(--radius-md);border:1px solid var(--border-color);font-size:13px;z-index:999;display:none;"></div>
 
     <!-- ============================================================ -->
-    <!-- JAVASCRIPT CHÍNH (ĐÃ UPGRADE HỆ THỐNG AI THẬT) -->
+    <!-- JAVASCRIPT CHÍNH (HOÀN THIỆN ĐỒNG BỘ BACKEND & UI) -->
     <!-- ============================================================ -->
     <script>
         // ---------------------------------------------------------
-        // BƯỚC 1: CẤU HÌNH API KEY (THAY BẰNG KEY GEMINI CỦA BẠN ĐỂ CHẠY THẬT)
-        // Lấy key miễn phí tại: https://aistudio.google.com/app/apikey
+        // 1. CẤU HÌNH CƠ BẢN & FIREBASE INIT
         // ---------------------------------------------------------
-        
         const firebaseConfig = {
             apiKey: "AIzaSyA4rZOgKFKKt3_b1XChI7i3c6cZ6mVkz6A",
             authDomain: "ltv-pro-applock.firebaseapp.com",
@@ -1597,10 +1595,17 @@
             measurementId: "G-9J6X4WL6WS"
         };
 
-        if (typeof firebase !== 'undefined') {
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
             const auth = firebase.auth();
             auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
+            
+            // Tự động kiểm tra trạng thái đăng nhập
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    updateUserUI(user.displayName || user.email.split('@')[0], 'Thành viên Pro', user.photoURL);
+                }
+            });
         }
 
         if (typeof marked !== 'undefined') {
@@ -1615,6 +1620,7 @@
             });
         }
 
+        // DOM elements
         const chatContainer = document.getElementById('chatContainer');
         const inputField = document.getElementById('inputField');
         const sendBtn = document.getElementById('sendBtn');
@@ -1629,21 +1635,21 @@
         const userAvatar = document.getElementById('userAvatar');
         const userName = document.getElementById('userName');
         const userStatus = document.getElementById('userStatus');
+        const authButtons = document.getElementById('authButtons');
+        const userInfo = document.getElementById('userInfo');
+        const headerUserName = document.getElementById('headerUserName');
+        const headerUserRole = document.getElementById('headerUserRole');
         const appContainer = document.getElementById('appContainer');
         const dragOverlay = document.getElementById('dragOverlay');
 
-        let currentConversationId = null;
+        // State global
+        window.currentConversationId = null;
         let currentLevel = 'pro';
         let isDark = true;
         let isLoggedIn = false;
-        let userData = null;
-        let socket = null;
         let attachedFiles = [];
         let recognition = null;
         let isRecording = false;
-        
-        // Lưu trữ ngữ cảnh (Context) để AI nhớ lịch sử trò chuyện
-        let conversationHistory = [];
 
         const LEVEL_NAMES = {
             basic: 'AI Thường',
@@ -1652,6 +1658,7 @@
             pro3: 'AI 3.0 Pro'
         };
 
+        // Textarea tự nâng chiều cao
         if (inputField) {
             inputField.addEventListener('input', function() {
                 this.style.height = 'auto';
@@ -1806,6 +1813,7 @@
 
         function exportChatMarkdown() {
             const messages = document.querySelectorAll('.message-wrapper');
+            if (messages.length === 0) return showToast('⚠️ Chưa có dữ liệu chat để xuất!', 'warning');
             let mdText = `# Nhật ký trò chuyện T.VỸ-AI\n\n`;
             messages.forEach(m => {
                 mdText += `### ${m.classList.contains('user') ? '👤 User' : '🤖 AI'}:\n${m.querySelector('.message').innerText}\n\n---\n\n`;
@@ -1814,8 +1822,10 @@
         }
 
         function exportChatTXT() {
+            const messages = document.querySelectorAll('.message-wrapper');
+            if (messages.length === 0) return showToast('⚠️ Chưa có dữ liệu chat để xuất!', 'warning');
             let txtText = `NHẬT KÝ TRÒ CHUYỆN T.VỸ-AI\n\n`;
-            document.querySelectorAll('.message-wrapper').forEach(m => {
+            messages.forEach(m => {
                 txtText += `[${m.classList.contains('user') ? 'USER' : 'AI'}]\n${m.querySelector('.message').innerText}\n\n-----------------\n\n`;
             });
             downloadFile(txtText, `Chat_${Date.now()}.txt`, 'text/plain');
@@ -1840,22 +1850,62 @@
         function openLoginModal() { switchAuthTab('login'); openModal('loginModal'); }
         function openRegisterModal() { switchAuthTab('register'); openModal('loginModal'); }
 
+        function updateUserUI(name, role = 'Thành viên Pro', photo = null) {
+            isLoggedIn = true;
+            userName.textContent = name;
+            userStatus.textContent = role;
+            headerUserName.textContent = name;
+            headerUserRole.textContent = role;
+            if (photo) userAvatar.innerHTML = `<img src="${photo}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
+            else userAvatar.textContent = name.charAt(0).toUpperCase();
+
+            authButtons.style.display = 'none';
+            userInfo.style.display = 'flex';
+            logoutBtn.style.display = 'block';
+            exportBtn.style.display = 'flex';
+            document.getElementById('upgradeRequired').style.display = 'none';
+        }
+
         function loginLocal() {
+            const u = document.getElementById('localLoginUser').value.trim();
+            if (!u) return showToast('❌ Vui lòng nhập tài khoản/email!', 'error');
+            updateUserUI(u, 'Thành viên Cục bộ');
             showToast('✅ Đăng nhập thành công!', 'success');
             closeModal('loginModal');
         }
 
         function registerLocal() {
+            const u = document.getElementById('localRegUser').value.trim();
+            const p = document.getElementById('localRegPass').value;
+            const cp = document.getElementById('localRegConfirmPass').value;
+            if (!u || !p) return showToast('❌ Vui lòng điền đủ thông tin!', 'error');
+            if (p !== cp) return showToast('❌ Mật khẩu xác nhận không khớp!', 'error');
+            updateUserUI(u, 'Thành viên mới');
             showToast('✅ Đăng ký thành công!', 'success');
             closeModal('loginModal');
         }
 
-        function loginGoogle() { showToast('⏳ Đang kết nối Google...', 'info'); }
-        function loginFacebook() { showToast('⏳ Đang kết nối Facebook...', 'info'); }
-        function loginGitHub() { showToast('⏳ Đang kết nối GitHub...', 'info'); }
+        function loginGoogle() {
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                firebase.auth().signInWithPopup(provider).then(res => {
+                    updateUserUI(res.user.displayName, 'Thành viên VIP', res.user.photoURL);
+                    showToast('✅ Đăng nhập Google thành công!', 'success');
+                    closeModal('loginModal');
+                }).catch(err => showToast(`❌ Lỗi: ${err.message}`, 'error'));
+            } else {
+                showToast('⏳ Chế độ Demo: Đã giả lập kết nối Google', 'info');
+                updateUserUI('Google User', 'Google VIP');
+                closeModal('loginModal');
+            }
+        }
+
+        function loginFacebook() { showToast('⏳ Đang kết nối Facebook Auth...', 'info'); }
+        function loginGitHub() { showToast('⏳ Đang kết nối GitHub Auth...', 'info'); }
 
         function logout() {
             if (!confirm('Đăng xuất khỏi tài khoản?')) return;
+            if (typeof firebase !== 'undefined' && firebase.auth) firebase.auth().signOut();
             location.reload();
         }
 
@@ -1867,6 +1917,8 @@
         function toggleTheme() {
             isDark = !isDark;
             document.documentElement.toggleAttribute('data-theme', !isDark);
+            const darkToggleCheck = document.getElementById('darkModeToggle');
+            if(darkToggleCheck) darkToggleCheck.checked = isDark;
             themeToggle.innerHTML = isDark ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
             localStorage.setItem('tv_theme', isDark ? 'dark' : 'light');
         }
@@ -1874,7 +1926,19 @@
         if (localStorage.getItem('tv_theme') === 'light') toggleTheme();
         themeToggle.addEventListener('click', toggleTheme);
 
-        function toggleMenu() { document.getElementById('functionMenu').classList.toggle('show'); }
+        function toggleMenu() { 
+            const menu = document.getElementById('functionMenu');
+            if (menu) menu.classList.toggle('show'); 
+        }
+
+        // Tự đóng dropdown menu khi bấm ra ngoài
+        document.addEventListener('click', function(e) {
+            const menuWrapper = document.querySelector('.toolbar .menu-wrapper');
+            if (menuWrapper && !menuWrapper.contains(e.target)) {
+                const menu = document.getElementById('functionMenu');
+                if (menu) menu.classList.remove('show');
+            }
+        });
 
         // --- Hệ thống UI Suy Nghĩ sâu đa luồng ---
         let thinkInterval;
@@ -1894,6 +1958,7 @@
                 chatContainer.scrollTop = chatContainer.scrollHeight;
                 
                 if (status) status.textContent = stages[0];
+                if (thinkInterval) clearInterval(thinkInterval);
                 thinkInterval = setInterval(() => {
                     stageIndex = (stageIndex + 1) % stages.length;
                     if(status) status.textContent = stages[stageIndex];
@@ -1915,6 +1980,7 @@
             currentLevel = this.value;
             levelBadge.textContent = chatName.textContent = LEVEL_NAMES[currentLevel];
             loadUsage();
+            showToast(`⚙️ Đã chuyển sang cấp độ: ${LEVEL_NAMES[currentLevel]}`, 'info');
         });
 
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -1935,9 +2001,9 @@
 
         function clearAllMessages() {
             if (!confirm('Xóa sạch lịch sử trò chuyện?')) return;
-            conversationHistory = []; // Reset bộ nhớ AI
+            window.currentConversationId = null;
             chatContainer.innerHTML = `
-                <div class="upgrade-required" id="upgradeRequired">
+                <div class="upgrade-required" id="upgradeRequired" style="display:${isLoggedIn ? 'none' : 'none'};">
                     <strong>🔒 Chức năng này yêu cầu đăng nhập!</strong>
                     <p style="margin:4px 0;font-size:13px;">Vui lòng đăng nhập hoặc đăng ký tài khoản để sử dụng.</p>
                     <button class="btn-upgrade" onclick="openLoginModal()">Đăng nhập</button>
@@ -1976,101 +2042,92 @@
                     </div>
                 </div>
             `;
-            currentConversationId = null;
+            showToast('🧹 Đã xóa toàn bộ cuộc trò chuyện!', 'info');
         }
 
         // --- NÂNG CẤP API: GIAO TIẾP VỚI BACKEND BẢO MẬT T.VỸ-AI ---
-		async function generateAIResponse(promptText, fileDataArray) {
-			// 1. Xử lý gộp file đính kèm vào tin nhắn (như cũ)
-			let fullPrompt = promptText;
-			if (fileDataArray && fileDataArray.length > 0) {
-				fullPrompt += "\n\n[Dữ liệu đính kèm cần xử lý]:\n";
-				fileDataArray.forEach(file => {
-					fullPrompt += `\n--- Bắt đầu nội dung file: ${file.name} ---\n${file.content}\n--- Kết thúc file ---\n`;
-				});
-			}
+        async function generateAIResponse(promptText, fileDataArray) {
+            let fullPrompt = promptText;
+            if (fileDataArray && fileDataArray.length > 0) {
+                fullPrompt += "\n\n[Dữ liệu đính kèm cần xử lý]:\n";
+                fileDataArray.forEach(file => {
+                    fullPrompt += `\n--- Bắt đầu nội dung file: ${file.name} ---\n${file.content}\n--- Kết thúc file ---\n`;
+                });
+            }
 
-			try {
-				// 2. GỌI VỀ BACKEND CỦA BẠN (Thay vì gọi thẳng API Google lộ Key)
-				// Lưu ý: window.currentConversationId dùng để server biết đây là đoạn chat nào và tự động nối lịch sử.
-				const response = await fetch('/api/chat', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						message: fullPrompt,
-						conversation_id: window.currentConversationId || null, 
-						level: "pro" 
-					})
-				});
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: fullPrompt,
+                        conversation_id: window.currentConversationId || null, 
+                        level: currentLevel 
+                    })
+                });
 
-				const data = await response.json();
-				
-				// 3. Bắt lỗi từ server nếu có
-				if (!data.success) {
-					throw new Error(data.error || "Lỗi không xác định từ Backend.");
-				}
+                if (!response.ok) {
+                    throw new Error(`Server trả về mã lỗi HTTP ${response.status}`);
+                }
 
-				// 4. Lưu lại ID cuộc trò chuyện để giữ ngữ cảnh cho các tin nhắn sau
-				if (data.conversation_id) {
-					window.currentConversationId = data.conversation_id;
-				}
+                const data = await response.json();
+                
+                if (data.success === false) {
+                    throw new Error(data.error || "Lỗi không xác định từ Backend.");
+                }
 
-				// Trả kết quả AI đã xử lý về UI
-				return data.message;
+                if (data.conversation_id) {
+                    window.currentConversationId = data.conversation_id;
+                }
 
-			} catch (error) {
-				console.error("API Error:", error);
-				return `❌ **Lỗi hệ thống Backend:**\n\`\`\`\n${error.message}\n\`\`\`\nVui lòng kiểm tra lại kết nối mạng hoặc xem server app.py đã chạy chưa.`;
-			}
-		}
+                return data.message || data.response || "Không nhận được phản hồi từ máy chủ.";
 
-        // --- XỬ LÝ GỬI TIN NHẮN (BẤT ĐỒNG BỘ MỚI) ---
-		async function sendMessage() {
-			let text = inputField.value.trim();
-			if (!text && attachedFiles.length === 0) return;
+            } catch (error) {
+                console.error("API Error:", error);
+                return `❌ **Lỗi hệ thống Backend:**\n\`\`\`\n${error.message}\n\`\`\`\nVui lòng kiểm tra lại kết nối mạng hoặc xem server Python/Flask app.py đã được bật chưa.`;
+            }
+        }
 
-			// Xóa màn hình chào mừng nếu có
-			document.getElementById('welcomeHero')?.remove();
+        // --- XỬ LÝ GỬI TIN NHẮN ---
+        async function sendMessage() {
+            let text = inputField.value.trim();
+            if (!text && attachedFiles.length === 0) return;
 
-			let userMsg = text;
-			if (attachedFiles.length > 0) {
-				userMsg += (userMsg ? '\n\n' : '') + `📎 **Đã đính kèm (${attachedFiles.length} file):**\n` + 
-						   attachedFiles.map(f => `- \`${f.name}\` (${f.size})`).join('\n');
-			}
+            document.getElementById('welcomeHero')?.remove();
 
-			// Ghi nhận file và in ra UI
-			const filesToProcess = [...attachedFiles];
-			addMessage('user', userMsg);
-			
-			// Xóa input
-			inputField.value = '';
-			inputField.style.height = 'auto';
-			attachedFiles = [];
-			if (typeof renderFilePreview === "function") renderFilePreview();
+            let userMsg = text;
+            if (attachedFiles.length > 0) {
+                userMsg += (userMsg ? '\n\n' : '') + `📎 **Đã đính kèm (${attachedFiles.length} file):**\n` + 
+                           attachedFiles.map(f => `- \`${f.name}\` (${f.size})`).join('\n');
+            }
 
-			// Hiển thị tiến trình UI Suy Nghĩ Mới
-			if (typeof showDeepThink === "function") showDeepThink();
+            const filesToProcess = [...attachedFiles];
+            addMessage('user', userMsg);
+            
+            inputField.value = '';
+            inputField.style.height = 'auto';
+            attachedFiles = [];
+            renderFilePreview();
 
-			// Đợi phản hồi từ Backend
-			const aiReplyText = await generateAIResponse(text || "Vui lòng phân tích file đính kèm", filesToProcess);
-			
-			// Ẩn tiến trình và render HTML Markdown
-			if (typeof hideDeepThink === "function") hideDeepThink();
-			addMessage('ai', aiReplyText);
-		}
+            showDeepThink();
 
-		// Bắt sự kiện gửi tin nhắn
-		if (typeof sendBtn !== 'undefined') {
-			sendBtn.addEventListener('click', sendMessage);
-		}
-		if (typeof inputField !== 'undefined') {
-			inputField.addEventListener('keydown', e => { 
-				if (e.key === 'Enter' && !e.shiftKey) { 
-					e.preventDefault(); 
-					sendMessage(); 
-				} 
-			});
-		}
+            const aiReplyText = await generateAIResponse(text || "Vui lòng phân tích file đính kèm", filesToProcess);
+            
+            hideDeepThink();
+            addMessage('ai', aiReplyText);
+        }
+
+        if (sendBtn) {
+            sendBtn.addEventListener('click', sendMessage);
+        }
+        if (inputField) {
+            inputField.addEventListener('keydown', e => { 
+                if (e.key === 'Enter' && !e.shiftKey) { 
+                    e.preventDefault(); 
+                    sendMessage(); 
+                } 
+            });
+        }
 
         function addMessage(role, content) {
             const wrapper = document.createElement('div');
@@ -2179,7 +2236,7 @@
         function upgradeWithMomo(tier) { window.open('https://momo.vn', '_blank'); showToast('💳 Đang chuyển đến cổng thanh toán MoMo...', 'info'); }
         function saveSettings() { showToast('✅ Đã lưu cài đặt!', 'success'); closeModal('settingsModal'); }
 
-        // --- CÁC CÔNG CỤ TÍCH HỢP TỰ ĐỘNG GỌI API THẬT ---
+        // --- CÁC CÔNG CỤ TÍCH HỢP TỰ ĐỘNG GỌI API ---
         function useMultiAI() {
             setInputAndSend("Hãy đóng vai 3 chuyên gia AI xuất sắc nhất thế giới, lần lượt cung cấp góc nhìn và giải pháp phân tích sâu sắc về vấn đề tôi sắp hỏi. Sẵn sàng chưa?");
         }
