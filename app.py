@@ -114,6 +114,24 @@ IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'}
 DOC_EXTENSIONS = {'txt', 'pdf', 'docx', 'doc', 'csv', 'md', 'json'}
 ALLOWED_EXTENSIONS = DOC_EXTENSIONS | IMAGE_EXTENSIONS
 
+from datetime import datetime
+
+# 1. Lấy thời gian thực tế từ hệ thống máy chủ
+now = datetime.now()
+current_time_info = f"Hôm nay là ngày {now.strftime('%d/%m/%Y')}, giờ hiện tại là {now.strftime('%H:%M')}."
+
+# 2. Đưa thông tin này gộp vào system prompt (hoặc context_str)
+system_content = f"{current_time_info}\n{context_str}"
+
+# 3. Gửi payload sang OpenRouter
+payload = {
+    "model": "openrouter/free", 
+    "messages": [
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": enhanced_query}
+    ]
+}
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
