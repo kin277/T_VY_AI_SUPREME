@@ -776,7 +776,6 @@
             background: var(--accent-gradient);
             color: #ffffff;
             border-top-right-radius: 4px;
-            white-space: pre-wrap;
         }
 
         .message.ai {
@@ -862,10 +861,71 @@
             color: var(--accent-primary);
         }
 
+        .message.user .message-tools .tool-btn {
+            color: rgba(255, 255, 255, 0.85);
+        }
+        .message.user .message-tools .tool-btn:hover {
+            color: #ffffff;
+        }
+
         .message .time {
             font-size: 10px;
             opacity: 0.7;
             margin-left: auto;
+        }
+
+        /* Inline Edit UI */
+        .edit-box {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            margin-top: 4px;
+        }
+        .edit-textarea {
+            width: 100%;
+            min-height: 80px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border-highlight);
+            border-radius: var(--radius-sm);
+            color: inherit;
+            padding: 8px;
+            font-size: 13.5px;
+            font-family: inherit;
+            outline: none;
+            resize: vertical;
+        }
+        .edit-buttons {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+        .btn-edit-save {
+            background: var(--accent-primary);
+            color: #fff;
+            border: none;
+            padding: 4px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .btn-edit-save:hover {
+            background: var(--accent-hover);
+        }
+        .btn-edit-cancel {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 4px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .btn-edit-cancel:hover {
+            color: var(--text-main);
         }
 
         .mermaid {
@@ -1045,6 +1105,31 @@
             transition: var(--transition);
             box-shadow: var(--shadow-glow);
             flex-shrink: 0;
+        }
+
+        /* Nút Dừng (AbortController) Style */
+        .btn-stop-gen {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border: none;
+            border-radius: 50%;
+            color: #ffffff;
+            font-size: 14px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+            flex-shrink: 0;
+            animation: pulse-stop 1.5s infinite;
+        }
+
+        @keyframes pulse-stop {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+            70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
         .footer {
@@ -1420,7 +1505,9 @@
                         <i class="fa-solid fa-microphone"></i>
                     </button>
 
+                    <!-- Nút Gửi & Nút Dừng (AbortController) -->
                     <button class="send-btn" id="sendBtn" title="Gửi tin nhắn"><i class="fa-solid fa-paper-plane"></i></button>
+                    <button class="btn-stop-gen" id="stopBtn" title="Dừng tạo trả lời" onclick="stopGeneration()"><i class="fa-solid fa-square"></i></button>
                 </div>
             </div>
 
@@ -1624,6 +1711,7 @@
         const chatContainer = document.getElementById('chatContainer');
         const inputField = document.getElementById('inputField');
         const sendBtn = document.getElementById('sendBtn');
+        const stopBtn = document.getElementById('stopBtn');
         const levelSelect = document.getElementById('levelSelect');
         const levelBadge = document.getElementById('levelBadge');
         const chatName = document.getElementById('chatName');
@@ -1642,7 +1730,7 @@
         const appContainer = document.getElementById('appContainer');
         const dragOverlay = document.getElementById('dragOverlay');
 
-        // State global
+        // State global & AbortController
         window.currentConversationId = null;
         let currentLevel = 'pro';
         let isDark = true;
@@ -1650,6 +1738,7 @@
         let attachedFiles = [];
         let recognition = null;
         let isRecording = false;
+        let currentAbortController = null; // Dùng hủy API Request
 
         const LEVEL_NAMES = {
             basic: 'AI Thường',
@@ -1666,7 +1755,7 @@
             });
         }
 
-        // --- Drag & Drop file attachment listener ---
+        // Drag & Drop file attachment listener
         if (appContainer && dragOverlay) {
             ['dragenter', 'dragover'].forEach(eventName => {
                 appContainer.addEventListener(eventName, (e) => {
@@ -1931,7 +2020,6 @@
             if (menu) menu.classList.toggle('show'); 
         }
 
-        // Tự đóng dropdown menu khi bấm ra ngoài
         document.addEventListener('click', function(e) {
             const menuWrapper = document.querySelector('.toolbar .menu-wrapper');
             if (menuWrapper && !menuWrapper.contains(e.target)) {
@@ -1940,7 +2028,7 @@
             }
         });
 
-        // --- Hệ thống UI Suy Nghĩ sâu đa luồng ---
+        // --- UI Suy Nghĩ Sâu ---
         let thinkInterval;
         function showDeepThink() {
             const ind = document.getElementById('deepThinkIndicator');
@@ -2045,7 +2133,30 @@
             showToast('🧹 Đã xóa toàn bộ cuộc trò chuyện!', 'info');
         }
 
-        // --- NÂNG CẤP API: GIAO TIẾP VỚI BACKEND BẢO MẬT T.VỸ-AI ---
+        // ---------------------------------------------------------
+        // 2. XỬ LÝ ABORTCONTROLLER (NÚT DỪNG) & TRẠNG THÁI UI
+        // ---------------------------------------------------------
+        function setGeneratingState(isGenerating) {
+            if (isGenerating) {
+                if (sendBtn) sendBtn.style.display = 'none';
+                if (stopBtn) stopBtn.style.display = 'flex';
+            } else {
+                if (sendBtn) sendBtn.style.display = 'flex';
+                if (stopBtn) stopBtn.style.display = 'none';
+            }
+        }
+
+        function stopGeneration() {
+            if (currentAbortController) {
+                currentAbortController.abort();
+                currentAbortController = null;
+                showToast('🛑 Đã dừng tạo câu trả lời!', 'warning');
+            }
+            hideDeepThink();
+            setGeneratingState(false);
+        }
+
+        // API Request hỗ trợ Signal ngắt dòng
         async function generateAIResponse(promptText, fileDataArray) {
             let fullPrompt = promptText;
             if (fileDataArray && fileDataArray.length > 0) {
@@ -2056,9 +2167,11 @@
             }
 
             try {
+                currentAbortController = new AbortController();
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    signal: currentAbortController.signal,
                     body: JSON.stringify({
                         message: fullPrompt,
                         conversation_id: window.currentConversationId || null, 
@@ -2083,12 +2196,18 @@
                 return data.message || data.response || "Không nhận được phản hồi từ máy chủ.";
 
             } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.log("Đã hủy yêu cầu thành công bởi AbortController.");
+                    return "⚠️ *Đã dừng tạo câu trả lời theo yêu cầu.*";
+                }
                 console.error("API Error:", error);
                 return `❌ **Lỗi hệ thống Backend:**\n\`\`\`\n${error.message}\n\`\`\`\nVui lòng kiểm tra lại kết nối mạng hoặc xem server Python/Flask app.py đã được bật chưa.`;
+            } finally {
+                currentAbortController = null;
             }
         }
 
-        // --- XỬ LÝ GỬI TIN NHẮN ---
+        // Xử lý Gửi tin nhắn
         async function sendMessage() {
             let text = inputField.value.trim();
             if (!text && attachedFiles.length === 0) return;
@@ -2109,11 +2228,13 @@
             attachedFiles = [];
             renderFilePreview();
 
+            setGeneratingState(true);
             showDeepThink();
 
             const aiReplyText = await generateAIResponse(text || "Vui lòng phân tích file đính kèm", filesToProcess);
             
             hideDeepThink();
+            setGeneratingState(false);
             addMessage('ai', aiReplyText);
         }
 
@@ -2129,6 +2250,163 @@
             });
         }
 
+        // ---------------------------------------------------------
+        // 3. TÍCH HỢP BỘ CÔNG CỤ TẠO VĂN BẢN, EDIT VÀ COPY
+        // ---------------------------------------------------------
+        function copyTextToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('📋 Đã sao chép nội dung!', 'success');
+            }).catch(() => {
+                showToast('❌ Không thể sao chép văn bản', 'error');
+            });
+        }
+
+        function escapeAttrText(str) {
+            if (!str) return '';
+            return str.replace(/\\/g, '\\\\')
+                      .replace(/`/g, '\\`')
+                      .replace(/"/g, '&quot;')
+                      .replace(/\${/g, '\\${');
+        }
+
+        function triggerEditMessage(btn, role) {
+            const msgDiv = btn.closest('.message');
+            const rawText = msgDiv.dataset.rawText || '';
+            editMessageInline(msgDiv, role, rawText);
+        }
+
+        function editMessageInline(msgDiv, role, originalContent) {
+            if (msgDiv.querySelector('.edit-box')) return;
+
+            const currentInner = msgDiv.innerHTML;
+            msgDiv.dataset.originalHtml = currentInner;
+
+            const editBox = document.createElement('div');
+            editBox.className = 'edit-box';
+
+            const textarea = document.createElement('textarea');
+            textarea.className = 'edit-textarea';
+            textarea.value = originalContent;
+
+            const editButtons = document.createElement('div');
+            editButtons.className = 'edit-buttons';
+
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'btn-edit-save';
+            saveBtn.innerHTML = role === 'user' ? '<i class="fa-solid fa-paper-plane"></i> Lưu & Gửi lại' : '<i class="fa-solid fa-check"></i> Lưu';
+            
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'btn-edit-cancel';
+            cancelBtn.innerHTML = 'Hủy';
+
+            cancelBtn.onclick = () => {
+                msgDiv.innerHTML = msgDiv.dataset.originalHtml;
+                delete msgDiv.dataset.originalHtml;
+            };
+
+            saveBtn.onclick = async () => {
+                const newContent = textarea.value.trim();
+                if (!newContent) return showToast('⚠️ Nội dung không được để trống!', 'warning');
+
+                if (role === 'user') {
+                    msgDiv.dataset.rawText = newContent;
+                    renderUserMessageContent(msgDiv, newContent);
+                    
+                    // Gửi lại prompt để AI trả lời lại
+                    setGeneratingState(true);
+                    showDeepThink();
+                    const aiReply = await generateAIResponse(newContent, []);
+                    hideDeepThink();
+                    setGeneratingState(false);
+                    addMessage('ai', aiReply);
+                } else {
+                    msgDiv.dataset.rawText = newContent;
+                    renderAIMessageContent(msgDiv, newContent);
+                    showToast('✅ Đã cập nhật nội dung tin nhắn!', 'success');
+                }
+            };
+
+            editButtons.appendChild(cancelBtn);
+            editButtons.appendChild(saveBtn);
+            editBox.appendChild(textarea);
+            editBox.appendChild(editButtons);
+
+            msgDiv.innerHTML = '';
+            msgDiv.appendChild(editBox);
+            textarea.focus();
+        }
+
+        function renderUserMessageContent(msgDiv, rawContent) {
+            msgDiv.innerHTML = rawContent.replace(/\n/g, '<br>');
+            const tools = document.createElement('div');
+            tools.className = 'message-tools';
+            tools.innerHTML = `
+                <button class="tool-btn" onclick="copyTextToClipboard(\`${escapeAttrText(rawContent)}\`)"><i class="fa-regular fa-copy"></i> Sao chép</button>
+                <button class="tool-btn" onclick="triggerEditMessage(this, 'user')"><i class="fa-solid fa-pen-to-square"></i> Sửa</button>
+                <span class="time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            `;
+            msgDiv.appendChild(tools);
+        }
+
+        function renderAIMessageContent(msgDiv, rawContent) {
+            msgDiv.innerHTML = marked.parse(rawContent);
+
+            // Xử lý khối Code & Mermaid
+            msgDiv.querySelectorAll('pre code').forEach(block => {
+                if (block.className.includes('language-mermaid') || block.className.includes('mermaid')) {
+                    const container = document.createElement('div');
+                    container.className = 'mermaid';
+                    container.textContent = block.innerText;
+                    block.parentNode.parentNode.replaceChild(container, block.parentNode);
+                } else {
+                    const pre = block.parentNode;
+                    const container = document.createElement('div');
+                    container.className = 'code-container';
+                    
+                    const header = document.createElement('div');
+                    header.className = 'code-header';
+                    let lang = block.className.replace('language-', '') || 'code';
+                    header.innerHTML = `<span>${lang}</span>`;
+                    
+                    const actions = document.createElement('div');
+                    actions.className = 'code-actions';
+                    
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'code-copy-btn';
+                    copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i> Sao chép';
+                    copyBtn.onclick = () => copyCodeSnippet(copyBtn, block.innerText);
+                    actions.appendChild(copyBtn);
+
+                    if (block.className.includes('html') || block.className.includes('javascript') || block.className.includes('css')) {
+                        const runBtn = document.createElement('button');
+                        runBtn.className = 'code-run-btn';
+                        runBtn.innerHTML = '<i class="fa-solid fa-play"></i> Chạy thử';
+                        runBtn.onclick = () => runCodeSnippet(block.innerText);
+                        actions.appendChild(runBtn);
+                    }
+
+                    header.appendChild(actions);
+                    pre.parentNode.insertBefore(container, pre);
+                    container.appendChild(header);
+                    container.appendChild(pre);
+                }
+            });
+
+            if (window.mermaid) {
+                try { mermaid.init(undefined, msgDiv.querySelectorAll('.mermaid')); } catch(e) { console.error(e); }
+            }
+
+            const tools = document.createElement('div');
+            tools.className = 'message-tools';
+            tools.innerHTML = `
+                <button class="tool-btn" onclick="speakText(this, \`${escapeAttrText(rawContent)}\`)"><i class="fa-solid fa-volume-high"></i> Đọc</button>
+                <button class="tool-btn" onclick="copyTextToClipboard(\`${escapeAttrText(rawContent)}\`)"><i class="fa-regular fa-copy"></i> Sao chép</button>
+                <button class="tool-btn" onclick="triggerEditMessage(this, 'ai')"><i class="fa-solid fa-pen-to-square"></i> Sửa</button>
+                <span class="time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            `;
+            msgDiv.appendChild(tools);
+        }
+
         function addMessage(role, content) {
             const wrapper = document.createElement('div');
             wrapper.className = `message-wrapper ${role}`;
@@ -2139,70 +2417,12 @@
 
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${role}`;
-            
+            msgDiv.dataset.rawText = content;
+
             if (role === 'ai') {
-                msgDiv.innerHTML = marked.parse(content);
-                
-                // Xử lý khối Code & Mermaid
-                msgDiv.querySelectorAll('pre code').forEach(block => {
-                    if (block.className.includes('language-mermaid') || block.className.includes('mermaid')) {
-                        const container = document.createElement('div');
-                        container.className = 'mermaid';
-                        container.textContent = block.innerText;
-                        block.parentNode.parentNode.replaceChild(container, block.parentNode);
-                    } else {
-                        const pre = block.parentNode;
-                        const container = document.createElement('div');
-                        container.className = 'code-container';
-                        
-                        const header = document.createElement('div');
-                        header.className = 'code-header';
-                        let lang = block.className.replace('language-', '') || 'code';
-                        header.innerHTML = `<span>${lang}</span>`;
-                        
-                        const actions = document.createElement('div');
-                        actions.className = 'code-actions';
-                        
-                        const copyBtn = document.createElement('button');
-                        copyBtn.className = 'code-copy-btn';
-                        copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i> Sao chép';
-                        copyBtn.onclick = () => copyCodeSnippet(copyBtn, block.innerText);
-                        actions.appendChild(copyBtn);
-
-                        if (block.className.includes('html') || block.className.includes('javascript') || block.className.includes('css')) {
-                            const runBtn = document.createElement('button');
-                            runBtn.className = 'code-run-btn';
-                            runBtn.innerHTML = '<i class="fa-solid fa-play"></i> Chạy thử';
-                            runBtn.onclick = () => runCodeSnippet(block.innerText);
-                            actions.appendChild(runBtn);
-                        }
-
-                        header.appendChild(actions);
-                        pre.parentNode.insertBefore(container, pre);
-                        container.appendChild(header);
-                        container.appendChild(pre);
-                    }
-                });
-
-                // Render Mermaid sơ đồ nếu có
-                if (window.mermaid) {
-                    try {
-                        mermaid.init(undefined, msgDiv.querySelectorAll('.mermaid'));
-                    } catch(e) { console.error(e); }
-                }
-
-                // Thêm thanh công cụ phía dưới câu trả lời AI
-                const tools = document.createElement('div');
-                tools.className = 'message-tools';
-                tools.innerHTML = `
-                    <button class="tool-btn" onclick="speakText(this, \`${content.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`)"><i class="fa-solid fa-volume-high"></i> Đọc</button>
-                    <button class="tool-btn" onclick="navigator.clipboard.writeText(\`${content.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`); showToast('📋 Đã sao chép câu trả lời!', 'success');"><i class="fa-regular fa-copy"></i> Sao chép</button>
-                    <span class="time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                `;
-                msgDiv.appendChild(tools);
-
+                renderAIMessageContent(msgDiv, content);
             } else {
-                msgDiv.innerHTML = content.replace(/\n/g, '<br>');
+                renderUserMessageContent(msgDiv, content);
             }
 
             wrapper.appendChild(avatar);
@@ -2236,7 +2456,7 @@
         function upgradeWithMomo(tier) { window.open('https://momo.vn', '_blank'); showToast('💳 Đang chuyển đến cổng thanh toán MoMo...', 'info'); }
         function saveSettings() { showToast('✅ Đã lưu cài đặt!', 'success'); closeModal('settingsModal'); }
 
-        // --- CÁC CÔNG CỤ TÍCH HỢP TỰ ĐỘNG GỌI API ---
+        // CÁC CÔNG CỤ TÍCH HỢP
         function useMultiAI() {
             setInputAndSend("Hãy đóng vai 3 chuyên gia AI xuất sắc nhất thế giới, lần lượt cung cấp góc nhìn và giải pháp phân tích sâu sắc về vấn đề tôi sắp hỏi. Sẵn sàng chưa?");
         }

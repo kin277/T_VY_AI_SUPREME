@@ -1,7 +1,7 @@
 // ================================================================
 // T.VỸ-AI-SUPREME - MAIN JS (FULL INTEGRATED & UPGRADED INTELLIGENCE)
 // Dựa trên nền tảng gốc với hệ thống nhận dạng thông minh & tổng hợp web toàn diện cho mọi cấp độ AI
-// CẬP NHẬT: Thêm tính năng Chặn input khi chờ, Nút Dừng, Copy & Edit tin nhắn.
+// CẬP NHẬT: Thêm tính năng Chặn input khi chờ, Nút Dừng, Copy & Edit tin nhắn chuẩn xác.
 // ================================================================
 
 // ===== DOM ELEMENTS =====
@@ -92,7 +92,6 @@ function stopGenerating() {
     unlockUI();
     addMessage('system', '⚠️ Đã dừng câu trả lời. Bạn có thể hỏi tiếp hoặc chỉnh sửa tin nhắn phía trên.');
 }
-
 
 // ================================================================
 // TOGGLE SIDEBAR (CHỨC NĂNG ĐÓNG MỞ THANH BÊN)
@@ -311,7 +310,7 @@ if (localStorage.getItem('tv_theme') === 'dark') {
 if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 
 // ================================================================
-// TOGGLE MENU & ẨN DÒNG SUY NGHĨ THEO YÊU CẦU
+// TOGGLE MENU & DÒNG SUY NGHĨ
 // ================================================================
 function toggleMenu() {
     const menu = document.getElementById('functionMenu');
@@ -328,13 +327,8 @@ document.addEventListener('click', function(event) {
     }
 });
 
-function showDeepThink(stage = 0) {
-    // Giữ lại hàm rỗng để tránh lỗi gọi ở các module khác
-}
-
-function hideDeepThink() {
-    // Giữ lại hàm rỗng
-}
+function showDeepThink(stage = 0) {}
+function hideDeepThink() {}
 
 // ================================================================
 // LOGIN / LOGOUT OAUTH
@@ -540,7 +534,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 // ================================================================
-// ADD MESSAGE & EDIT/COPY CỦA NGƯỜI DÙNG
+// ADD MESSAGE & EDIT/COPY CỦA NGƯỜI DÙNG & AI
 // ================================================================
 function addMessage(role, content) {
     if (!chatContainer) return;
@@ -551,9 +545,10 @@ function addMessage(role, content) {
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message ' + role;
     
-    // Tạo ID ngẫu nhiên để quản lý cho chức năng Edit/Copy
+    // Tạo ID ngẫu nhiên cho từng block tin nhắn
     const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
     msgDiv.id = msgId;
+    msgDiv.dataset.rawText = content; // Lưu dữ liệu thô vào dataset
 
     let formattedContent = content;
     const mermaidRegex = /```mermaid\s*([\s\S]*?)\s*```/g;
@@ -562,19 +557,25 @@ function addMessage(role, content) {
     });
 
     if (role === 'user') {
-        // Lưu lại dữ liệu thô vào dataset để dùng khi sửa
-        msgDiv.dataset.rawText = content;
-        
         msgDiv.innerHTML = `
             <div class="msg-content" id="content-${msgId}">${formattedContent}</div>
-            <div class="msg-actions" style="margin-top: 8px; font-size: 0.85em; display: flex; gap: 15px; opacity: 0.8;">
+            <div class="msg-actions" style="margin-top: 8px; font-size: 0.85em; display: flex; gap: 15px; opacity: 0.85;">
                 <span style="cursor:pointer;" onclick="copyMessage('${msgId}')">📋 Copy</span>
                 <span style="cursor:pointer;" onclick="editMessage('${msgId}')">✏️ Sửa</span>
             </div>
             <span class="time">${new Date().toLocaleTimeString()}</span>
         `;
+    } else if (role === 'system') {
+        msgDiv.innerHTML = `<div class="msg-content">${formattedContent}</div>`;
     } else {
-        msgDiv.innerHTML = formattedContent + `<span class="time">${new Date().toLocaleTimeString()}</span>`;
+        // Role AI
+        msgDiv.innerHTML = `
+            <div class="msg-content" id="content-${msgId}">${formattedContent}</div>
+            <div class="msg-actions" style="margin-top: 8px; font-size: 0.85em; display: flex; gap: 15px; opacity: 0.85;">
+                <span style="cursor:pointer;" onclick="copyMessage('${msgId}')">📋 Copy</span>
+            </div>
+            <span class="time">${new Date().toLocaleTimeString()}</span>
+        `;
     }
 
     wrapper.appendChild(msgDiv);
@@ -587,9 +588,12 @@ function addMessage(role, content) {
 // Chức năng Copy tin nhắn
 function copyMessage(msgId) {
     const msgDiv = document.getElementById(msgId);
-    if (msgDiv && msgDiv.dataset.rawText) {
-        navigator.clipboard.writeText(msgDiv.dataset.rawText).then(() => {
-            showToast('✅ Đã copy tin nhắn!', 'success');
+    if (msgDiv) {
+        const textToCopy = msgDiv.dataset.rawText || msgDiv.innerText;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            showToast('✅ Đã copy tin nhắn vào khay nhớ tạm!', 'success');
+        }).catch(err => {
+            showToast('❌ Lỗi khi copy: ' + err, 'error');
         });
     }
 }
@@ -608,14 +612,15 @@ function editMessage(msgId) {
     const contentDiv = document.getElementById(`content-${msgId}`);
     
     contentDiv.innerHTML = `
-        <textarea id="edit-input-${msgId}" style="width: 100%; min-height: 80px; padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); font-family: inherit; font-size: inherit;">${rawText}</textarea>
+        <textarea id="edit-input-${msgId}" style="width: 100%; min-height: 80px; padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); font-family: inherit; font-size: inherit; resize: vertical;">${rawText}</textarea>
         <div style="display: flex; gap: 8px;">
             <button onclick="saveEdit('${msgId}')" style="padding: 6px 12px; background: #4a6ee0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">Lưu & Gửi lại</button>
             <button onclick="cancelEdit('${msgId}')" style="padding: 6px 12px; background: transparent; color: var(--color-text); border: 1px solid var(--color-border); border-radius: 4px; cursor: pointer; font-size: 13px;">Hủy</button>
         </div>
     `;
     
-    msgDiv.querySelector('.msg-actions').style.display = 'none'; // Ẩn nút sửa/copy tạm thời
+    const actionsDiv = msgDiv.querySelector('.msg-actions');
+    if (actionsDiv) actionsDiv.style.display = 'none'; // Ẩn tạm nút sửa/copy
 }
 
 // Hủy chỉnh sửa và quay về trạng thái cũ
@@ -629,7 +634,9 @@ function cancelEdit(msgId) {
         return `<pre class="mermaid-code">${code}</pre>`;
     });
     contentDiv.innerHTML = formattedContent;
-    msgDiv.querySelector('.msg-actions').style.display = 'flex'; // Hiện lại
+
+    const actionsDiv = msgDiv.querySelector('.msg-actions');
+    if (actionsDiv) actionsDiv.style.display = 'flex';
     renderMermaidInContainer(contentDiv);
 }
 
@@ -645,16 +652,18 @@ function saveEdit(msgId) {
     }
 
     const msgDiv = document.getElementById(msgId);
-    msgDiv.dataset.rawText = newText; // Cập nhật lại data mới
+    msgDiv.dataset.rawText = newText; // Cập nhật data mới
 
     let formattedContent = newText.replace(/```mermaid\s*([\s\S]*?)\s*```/g, (match, code) => {
         return `<pre class="mermaid-code">${code}</pre>`;
     });
     document.getElementById(`content-${msgId}`).innerHTML = formattedContent;
-    msgDiv.querySelector('.msg-actions').style.display = 'flex';
+
+    const actionsDiv = msgDiv.querySelector('.msg-actions');
+    if (actionsDiv) actionsDiv.style.display = 'flex';
     renderMermaidInContainer(msgDiv);
 
-    // XÓA TẤT CẢ CÁC TIN NHẮN SAU TIN NHẮN ĐANG SỬA NÀY (để tạo flow đúng logic)
+    // XÓA TẤT CẢ CÁC TIN NHẮN SAU TIN NHẮN ĐANG SỬA
     let wrapper = msgDiv.parentElement;
     let nextWrapper = wrapper.nextElementSibling;
     while(nextWrapper) {
@@ -719,7 +728,7 @@ if (fileInput) {
         formData.append('smart_synthesis', 'true');
 
         showTyping();
-        lockUI(); // Khóa UI khi upload
+        lockUI();
 
         fetch('/api/upload_and_analyze', {
             method: 'POST',
@@ -781,15 +790,15 @@ function sendMessageInternal(text, isResend = false) {
 
     const level = levelSelect ? levelSelect.value : 'pro';
 
-    // Nhận dạng chính xác yêu cầu lập trình
+    // Nhận dạng chính xác yêu cầu lập trình / phức tạp
     const isCodeRequest = /code|viết chương trình|script|function|class|html|css|javascript|python|java|c\+\+|c#|sql|sửa lỗi|debug|tạo ứng dụng|shader|tạo file|file/i.test(text);
     const isComplexQuery = text.length > 50 || /phân tích|so sánh|giải thích chi tiết|tổng hợp|nghiên cứu|chiến lược|tối ưu hóa/i.test(text);
     const requiresWebSynthesis = isCodeRequest || isComplexQuery;
 
     showTyping();
-    lockUI(); // Gọi chức năng Khóa và hiện Nút Dừng
+    lockUI(); // Khóa UI và hiện Nút Dừng
     
-    currentAbortController = new AbortController(); // Đăng ký khả năng ngắt ngang
+    currentAbortController = new AbortController(); // Khởi tạo Controller ngắt kết nối
 
     fetch('/chat', {
         method: 'POST',
@@ -809,11 +818,11 @@ function sendMessageInternal(text, isResend = false) {
             ethical_safety_check: true,      
             untruncated_code: true           
         }),
-        signal: currentAbortController.signal // Gắn cờ Signal Abort
+        signal: currentAbortController.signal
     })
     .then(res => res.json())
     .then(data => {
-        unlockUI(); // Nhả khóa an toàn
+        unlockUI();
         
         if (data.error) {
             addMessage('ai', '❌ ' + data.error);
@@ -839,8 +848,7 @@ function sendMessageInternal(text, isResend = false) {
     })
     .catch(err => {
         if (err.name === 'AbortError') {
-            // Không in gì thêm vì hàm stopGenerating() đã in thông báo Dừng.
-            return;
+            return; // Người dùng chủ động bấm Dừng, đã xử lý trong stopGenerating()
         }
         unlockUI();
         addMessage('ai', '❌ Lỗi kết nối: ' + err.message);
@@ -851,7 +859,7 @@ if (sendBtn) sendBtn.addEventListener('click', sendMessage);
 if (inputField) {
     inputField.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
-            if (e.shiftKey) return; // Nếu giữ shift thì xuống dòng bình thường
+            if (e.shiftKey) return;
             e.preventDefault();
             sendMessage();
         }
