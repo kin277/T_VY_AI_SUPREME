@@ -1022,7 +1022,7 @@
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-lg);
             padding: 8px;
-            min-width: 230px;
+            min-width: 250px;
             z-index: 100;
             backdrop-filter: blur(16px);
         }
@@ -1515,19 +1515,14 @@
                     <button class="menu-btn" id="menuToggle" onclick="toggleMenu()">
                         <i class="fa-solid fa-sparkles" style="color:var(--accent-primary);"></i> Công cụ AI <i class="fa-solid fa-chevron-up" style="font-size:10px;"></i>
                     </button>
+                    <!-- MENU ĐÃ ĐƯỢC GỘP NHÓM GỌN GÀNG -->
                     <div class="dropdown-menu" id="functionMenu">
-                        <button onclick="useMultiAI()"><i class="fa-solid fa-network-wired"></i> AI Đa luồng</button>
-                        <button onclick="summarizeText()"><i class="fa-solid fa-file-contract"></i> Tóm tắt văn bản</button>
-                        <button onclick="translateText()"><i class="fa-solid fa-language"></i> Dịch đa ngôn ngữ</button>
-                        <button onclick="generateVideo()"><i class="fa-solid fa-film"></i> Tạo kịch bản Video</button>
-                        <button onclick="analyzeData()"><i class="fa-solid fa-chart-pie"></i> Phân tích dữ liệu</button>
-                        <button onclick="generateMusicWithLyrics()"><i class="fa-solid fa-music"></i> Sáng tác nhạc & lời</button>
-                        <button onclick="writeEmail()"><i class="fa-solid fa-envelope"></i> Viết Email Chuyên nghiệp</button>
-                        <button onclick="fixCode()"><i class="fa-solid fa-bug"></i> Sửa lỗi & Tối ưu Code</button>
-                        <button onclick="enhancePrompt()"><i class="fa-solid fa-wand-magic-sparkles"></i> Nâng cấp Prompt</button>
+                        <button onclick="aiTextAndEmail()"><i class="fa-solid fa-file-pen"></i> Trợ lý Văn bản & Email</button>
+                        <button onclick="aiCreativeAndMedia()"><i class="fa-solid fa-wand-magic-sparkles"></i> Sáng tạo Kịch bản & Âm nhạc</button>
+                        <button onclick="aiDevAndData()"><i class="fa-solid fa-code-compare"></i> Lập trình & Phân tích Dữ liệu</button>
+                        <button onclick="aiMultiAndPrompt()"><i class="fa-solid fa-network-wired"></i> AI Đa luồng & Nâng cấp Prompt</button>
                         <hr>
-                        <button onclick="exportChatMarkdown()"><i class="fa-solid fa-file-code"></i> Tải về (.MD)</button>
-                        <button onclick="exportChatTXT()"><i class="fa-solid fa-file-lines"></i> Tải về (.TXT)</button>
+                        <button onclick="exportChatCombined()"><i class="fa-solid fa-file-export"></i> Tải về nhật ký Chat (.MD / .TXT)</button>
                         <hr>
                         <button class="danger" onclick="clearAllMessages()"><i class="fa-solid fa-trash"></i> Xóa toàn bộ chat</button>
                     </div>
@@ -2636,7 +2631,46 @@
         function upgradeWithMomo(tier) { window.open('https://momo.vn', '_blank'); showToast('💳 Đang chuyển đến cổng thanh toán MoMo...', 'info'); }
         function saveSettings() { showToast('✅ Đã lưu cài đặt!', 'success'); closeModal('settingsModal'); }
 
-        // --- CÁC CÔNG CỤ TÍCH HỢP MỞ RỘNG ---
+        // ---------------------------------------------------------
+        // 5. CÁC HÀM CÔNG CỤ AI ĐÃ ĐƯỢC GỘP NHÓM THÔNG MINH
+        // ---------------------------------------------------------
+        function aiTextAndEmail() {
+            toggleMenu();
+            const choice = prompt("Chức năng Văn bản & Email:\n1: Tóm tắt văn bản\n2: Dịch đa ngôn ngữ\n3: Viết Email Chuyên nghiệp", "1");
+            if (choice === "1") summarizeText();
+            else if (choice === "2") translateText();
+            else if (choice === "3") writeEmail();
+        }
+
+        function aiCreativeAndMedia() {
+            toggleMenu();
+            const choice = prompt("Chức năng Sáng tạo & Truyền thông:\n1: Tạo kịch bản Video (TikTok/Reels/Shorts)\n2: Sáng tác Nhạc & Lời bài hát", "1");
+            if (choice === "1") generateVideo();
+            else if (choice === "2") generateMusicWithLyrics();
+        }
+
+        function aiDevAndData() {
+            toggleMenu();
+            const choice = prompt("Chức năng Lập trình & Dữ liệu:\n1: Sửa lỗi & Tối ưu Code\n2: Phân tích Dữ liệu", "1");
+            if (choice === "1") fixCode();
+            else if (choice === "2") analyzeData();
+        }
+
+        function aiMultiAndPrompt() {
+            toggleMenu();
+            const choice = prompt("Chức năng AI Nâng cao:\n1: Trò chuyện AI Đa luồng (3 Chuyên gia)\n2: Nâng cấp Master Prompt", "1");
+            if (choice === "1") useMultiAI();
+            else if (choice === "2") enhancePrompt();
+        }
+
+        function exportChatCombined() {
+            toggleMenu();
+            const choice = prompt("Tải nhật ký trò chuyện:\n1: Định dạng Markdown (.MD)\n2: Định dạng Văn bản (.TXT)", "1");
+            if (choice === "1") exportChatMarkdown();
+            else if (choice === "2") exportChatTXT();
+        }
+
+        // ĐẢM BẢO CÁC HÀM TẠO PROMPT CŨ VẪN HOẠT ĐỘNG HOÀN HẢO 100%
         function useMultiAI() {
             setInputAndSend("Hãy đóng vai 3 chuyên gia AI xuất sắc nhất thế giới, lần lượt cung cấp góc nhìn và giải pháp phân tích sâu sắc về vấn đề tôi sắp hỏi. Sẵn sàng chưa?");
         }
