@@ -1,11 +1,12 @@
+require('dotenv').config(); // 1. Đọc cấu hình từ file .env khi chạy dưới local
 const express = require('express');
 const app = express();
 
 app.use(express.json());
 app.use(express.static('public')); // Chứa giao diện web
 
-// ⚠️ Thay bằng Access Token Hugging Face của bạn
-const HF_API_KEY = "hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"; 
+// 2. Lấy API Key từ Biến Môi Trường (không sợ bị lộ trên GitHub)
+const HF_API_KEY = process.env.HF_API_KEY; 
 
 // Model FLUX.1-schnell (Vẽ siêu nhanh & đẹp)
 const MODEL_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell";
@@ -34,6 +35,11 @@ app.post('/api/generate-image', async (req, res) => {
         const { prompt } = req.body;
         if (!prompt) {
             return res.status(400).json({ error: 'Vui lòng nhập mô tả bức ảnh!' });
+        }
+
+        // Kiểm tra xem đã cài đặt API Key chưa
+        if (!HF_API_KEY) {
+            return res.status(500).json({ error: 'Chưa cấu hình HF_API_KEY trong Biến môi trường (Environment Variable)!' });
         }
 
         // 1. Dịch câu mô tả sang tiếng Anh
@@ -73,6 +79,8 @@ app.post('/api/generate-image', async (req, res) => {
     }
 });
 
-app.listen(3000, () => {
-    console.log('🚀 T_VY_AI Server đang chạy tại: http://localhost:3000');
+// 3. Sử dụng PORT động do Render cấp (hoặc mặc định 3000 ở local)
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 T_VY_AI Server đang chạy tại cổng: ${PORT}`);
 });
