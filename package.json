@@ -1,0 +1,28 @@
+{
+  "name": "t_vy_ai_supreme",
+  "version": "1.0.0",
+  "description": "Trợ lý AI thế hệ mới với ràng buộc đạo đức, hỗ trợ đa lĩnh vực: lập trình, sáng tạo nội dung, tìm kiếm thông tin, tư vấn kỹ thuật.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kin277/T_VY_AI_SUPREME.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/kin277/T_VY_AI_SUPREME/issues"
+  },
+  "homepage": "https://github.com/kin277/T_VY_AI_SUPREME#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

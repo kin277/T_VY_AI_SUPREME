@@ -10,3 +10,4 @@ hf_cache/
 *.wav
 *.mp3
 .DS_Store
+node_modules/

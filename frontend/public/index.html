@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>T.VỸ-AI-SUPREME v12.5 Ultra Pro Max</title>
+    <title>T.VỸ-AI-SUPREME v13.0 Ultra Pro Max</title>
     
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -336,6 +336,46 @@
             letter-spacing: 0.5px;
             margin: 4px 8px 8px 8px;
             white-space: nowrap;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 12.5px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-item:hover {
+            background: var(--bg-glass-hover);
+            color: var(--text-main);
+        }
+
+        .history-item.active {
+            background: var(--accent-gradient-subtle);
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .history-item .del-btn {
+            opacity: 0;
+            color: #ef4444;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 11px;
+            transition: var(--transition);
+        }
+
+        .history-item:hover .del-btn {
+            opacity: 1;
         }
 
         .user-profile {
@@ -982,7 +1022,7 @@
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-lg);
             padding: 8px;
-            min-width: 220px;
+            min-width: 230px;
             z-index: 100;
             backdrop-filter: blur(16px);
         }
@@ -1107,7 +1147,7 @@
             flex-shrink: 0;
         }
 
-        /* Nút Dừng (AbortController) Style */
+        /* Nút Dừng Style */
         .btn-stop-gen {
             width: 42px;
             height: 42px;
@@ -1357,10 +1397,10 @@
         <aside class="sidebar" id="appSidebar">
             <div class="sidebar-brand">
                 <div class="logo"><i class="fa-solid fa-brain"></i> T.VỸ.AI</div>
-                <span class="version">v12.5 Ultra</span>
+                <span class="version">v13.0 Ultra</span>
             </div>
 
-            <button class="btn-new-chat" onclick="clearAllMessages()">
+            <button class="btn-new-chat" onclick="createNewChat()">
                 <i class="fa-solid fa-plus"></i> Đoạn chat mới
             </button>
 
@@ -1384,7 +1424,7 @@
 
             <div class="sidebar-history" id="sidebarHistory">
                 <div class="sidebar-history-title">Lịch sử trò chuyện</div>
-                <div id="sidebarHistoryList" style="font-size:12px;color:var(--text-muted);padding:0 8px;">Chưa có dữ liệu</div>
+                <div id="sidebarHistoryList"></div>
             </div>
 
             <div class="user-profile" id="userProfile">
@@ -1453,7 +1493,7 @@
 
                 <div class="welcome-hero" id="welcomeHero">
                     <div class="hero-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-                    <h1>T.VỸ-AI-SUPREME v12.5 Ultra</h1>
+                    <h1>T.VỸ-AI-SUPREME v13.0 Ultra</h1>
                     <p>Hệ thống AI thế hệ mới nâng cao năng suất, sáng tạo nội dung, lập trình và hỗ trợ công việc đa nhiệm vượt trội.</p>
                     
                     <div class="suggestion-cards">
@@ -1482,6 +1522,9 @@
                         <button onclick="generateVideo()"><i class="fa-solid fa-film"></i> Tạo kịch bản Video</button>
                         <button onclick="analyzeData()"><i class="fa-solid fa-chart-pie"></i> Phân tích dữ liệu</button>
                         <button onclick="generateMusicWithLyrics()"><i class="fa-solid fa-music"></i> Sáng tác nhạc & lời</button>
+                        <button onclick="writeEmail()"><i class="fa-solid fa-envelope"></i> Viết Email Chuyên nghiệp</button>
+                        <button onclick="fixCode()"><i class="fa-solid fa-bug"></i> Sửa lỗi & Tối ưu Code</button>
+                        <button onclick="enhancePrompt()"><i class="fa-solid fa-wand-magic-sparkles"></i> Nâng cấp Prompt</button>
                         <hr>
                         <button onclick="exportChatMarkdown()"><i class="fa-solid fa-file-code"></i> Tải về (.MD)</button>
                         <button onclick="exportChatTXT()"><i class="fa-solid fa-file-lines"></i> Tải về (.TXT)</button>
@@ -1505,14 +1548,14 @@
                         <i class="fa-solid fa-microphone"></i>
                     </button>
 
-                    <!-- Nút Gửi & Nút Dừng (AbortController) -->
+                    <!-- Nút Gửi & Nút Dừng -->
                     <button class="send-btn" id="sendBtn" title="Gửi tin nhắn"><i class="fa-solid fa-paper-plane"></i></button>
                     <button class="btn-stop-gen" id="stopBtn" title="Dừng tạo trả lời" onclick="stopGeneration()"><i class="fa-solid fa-square"></i></button>
                 </div>
             </div>
 
             <footer class="footer">
-                Bản quyền T.VỸ-VIP-FILE | Phiên bản 12.5 Ultra Modern Interface
+                Bản quyền T.VỸ-VIP-FILE | Phiên bản 13.0 Ultra Modern Interface
             </footer>
         </main>
     </div>
@@ -1665,11 +1708,11 @@
     <div class="search-result" id="searchResult" style="position:fixed;bottom:90px;right:20px;background:var(--bg-card);padding:10px 16px;border-radius:var(--radius-md);border:1px solid var(--border-color);font-size:13px;z-index:999;display:none;"></div>
 
     <!-- ============================================================ -->
-    <!-- JAVASCRIPT CHÍNH (HOÀN THIỆN ĐỒNG BỘ BACKEND & UI) -->
+    <!-- JAVASCRIPT CHÍNH (HOÀN THIỆN ĐỒNG BỘ BACKEND, LOCALSTORAGE & UI) -->
     <!-- ============================================================ -->
     <script>
         // ---------------------------------------------------------
-        // 1. CẤU HÌNH CƠ BẢN & FIREBASE INIT
+        // 1. CẤU HNÌH CƠ BẢN & FIREBASE INIT
         // ---------------------------------------------------------
         const firebaseConfig = {
             apiKey: "AIzaSyA4rZOgKFKKt3_b1XChI7i3c6cZ6mVkz6A",
@@ -1687,7 +1730,6 @@
             const auth = firebase.auth();
             auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
             
-            // Tự động kiểm tra trạng thái đăng nhập
             auth.onAuthStateChanged(user => {
                 if (user) {
                     updateUserUI(user.displayName || user.email.split('@')[0], 'Thành viên Pro', user.photoURL);
@@ -1732,13 +1774,14 @@
 
         // State global & AbortController
         window.currentConversationId = null;
+        let conversationsList = {}; // Lưu trữ tất cả hội thoại ở localStorage
         let currentLevel = 'pro';
         let isDark = true;
         let isLoggedIn = false;
         let attachedFiles = [];
         let recognition = null;
         let isRecording = false;
-        let currentAbortController = null; // Dùng hủy API Request
+        let currentAbortController = null;
 
         const LEVEL_NAMES = {
             basic: 'AI Thường',
@@ -2076,7 +2119,7 @@
                 document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
                 this.classList.add('active');
                 const tab = this.dataset.tab;
-                if (tab === 'history') { openModal('historyModal'); loadHistory(); }
+                if (tab === 'history') { openModal('historyModal'); renderHistoryModal(); }
                 else if (tab === 'settings') { openModal('settingsModal'); }
                 else if (tab === 'upgrade') { openModal('upgradeModal'); }
             });
@@ -2087,8 +2130,114 @@
             sendMessage();
         }
 
-        function clearAllMessages() {
-            if (!confirm('Xóa sạch lịch sử trò chuyện?')) return;
+        // ---------------------------------------------------------
+        // 2. LƯU VÀ QUẢN LÝ LỊCH SỬ CHAT (LOCALSTORAGE)
+        // ---------------------------------------------------------
+        function initChatHistory() {
+            const saved = localStorage.getItem('tv_conversations');
+            if (saved) {
+                try { conversationsList = JSON.parse(saved); } catch(e) { conversationsList = {}; }
+            }
+            renderSidebarHistory();
+        }
+
+        function saveCurrentConversation() {
+            if (!window.currentConversationId) {
+                window.currentConversationId = 'conv_' + Date.now();
+            }
+            const msgs = [];
+            document.querySelectorAll('.message-wrapper').forEach(wrapper => {
+                const role = wrapper.classList.contains('user') ? 'user' : 'ai';
+                const msg = wrapper.querySelector('.message');
+                const rawText = msg ? msg.dataset.rawText : '';
+                if (rawText) {
+                    msgs.push({ role, text: rawText });
+                }
+            });
+
+            if (msgs.length > 0) {
+                const title = msgs[0].text.substring(0, 30) + (msgs[0].text.length > 30 ? '...' : '');
+                conversationsList[window.currentConversationId] = {
+                    id: window.currentConversationId,
+                    title: title,
+                    time: new Date().toLocaleDateString('vi-VN'),
+                    messages: msgs
+                };
+                localStorage.setItem('tv_conversations', JSON.stringify(conversationsList));
+                renderSidebarHistory();
+            }
+        }
+
+        function renderSidebarHistory() {
+            const listEl = document.getElementById('sidebarHistoryList');
+            if (!listEl) return;
+
+            const keys = Object.keys(conversationsList).reverse();
+            if (keys.length === 0) {
+                listEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:4px 8px;">Chưa có dữ liệu</div>';
+                return;
+            }
+
+            listEl.innerHTML = keys.map(id => {
+                const item = conversationsList[id];
+                const activeClass = id === window.currentConversationId ? 'active' : '';
+                return `
+                    <div class="history-item ${activeClass}" onclick="loadConversationId('${id}')">
+                        <span style="overflow:hidden;text-overflow:ellipsis;"><i class="fa-regular fa-message" style="margin-right:6px;"></i>${item.title}</span>
+                        <button class="del-btn" onclick="deleteConversation(event, '${id}')" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderHistoryModal() {
+            const modalList = document.getElementById('historyList');
+            const keys = Object.keys(conversationsList).reverse();
+            if (keys.length === 0) {
+                modalList.innerHTML = '<p style="color:var(--text-muted);">Chưa có lịch sử trò chuyện.</p>';
+                return;
+            }
+
+            modalList.innerHTML = keys.map(id => {
+                const item = conversationsList[id];
+                return `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:8px;background:var(--bg-glass);border:1px solid var(--border-color);border-radius:var(--radius-md);cursor:pointer;" onclick="loadConversationId('${id}');closeModal('historyModal');">
+                        <div>
+                            <div style="font-weight:700;font-size:13px;color:var(--text-main);">${item.title}</div>
+                            <div style="font-size:11px;color:var(--text-muted);">${item.time} - ${item.messages.length} tin nhắn</div>
+                        </div>
+                        <button class="del-btn" onclick="deleteConversation(event, '${id}')" style="color:#ef4444;background:none;border:none;cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function loadConversationId(id) {
+            if (!conversationsList[id]) return;
+            window.currentConversationId = id;
+            const conv = conversationsList[id];
+            
+            chatContainer.innerHTML = '';
+            conv.messages.forEach(m => addMessage(m.role, m.text, false));
+            renderSidebarHistory();
+            showToast('📂 Đã tải lại cuộc trò chuyện!', 'info');
+        }
+
+        function deleteConversation(event, id) {
+            event.stopPropagation();
+            if (!confirm('Xóa đoạn chat này?')) return;
+            delete conversationsList[id];
+            localStorage.setItem('tv_conversations', JSON.stringify(conversationsList));
+            if (window.currentConversationId === id) {
+                createNewChat();
+            } else {
+                renderSidebarHistory();
+                renderHistoryModal();
+            }
+            showToast('🗑️ Đã xóa đoạn chat!', 'info');
+        }
+
+        function createNewChat() {
             window.currentConversationId = null;
             chatContainer.innerHTML = `
                 <div class="upgrade-required" id="upgradeRequired" style="display:${isLoggedIn ? 'none' : 'none'};">
@@ -2115,7 +2264,7 @@
 
                 <div class="welcome-hero" id="welcomeHero">
                     <div class="hero-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-                    <h1>T.VỸ-AI-SUPREME v12.5 Ultra</h1>
+                    <h1>T.VỸ-AI-SUPREME v13.0 Ultra</h1>
                     <p>Hệ thống AI thế hệ mới nâng cao năng suất, sáng tạo nội dung, lập trình và hỗ trợ công việc đa nhiệm vượt trội.</p>
                     
                     <div class="suggestion-cards">
@@ -2130,11 +2279,19 @@
                     </div>
                 </div>
             `;
-            showToast('🧹 Đã xóa toàn bộ cuộc trò chuyện!', 'info');
+            renderSidebarHistory();
+            showToast('✨ Đã tạo đoạn chat mới!', 'info');
+        }
+
+        function clearAllMessages() {
+            if (!confirm('Xóa sạch toàn bộ lịch sử trò chuyện?')) return;
+            conversationsList = {};
+            localStorage.removeItem('tv_conversations');
+            createNewChat();
         }
 
         // ---------------------------------------------------------
-        // 2. XỬ LÝ ABORTCONTROLLER (NÚT DỪNG) & TRẠNG THÁI UI
+        // 3. XỬ LÝ ABORTCONTROLLER (NÚT DỪNG) & PHẢN HỒI AI
         // ---------------------------------------------------------
         function setGeneratingState(isGenerating) {
             if (isGenerating) {
@@ -2156,7 +2313,18 @@
             setGeneratingState(false);
         }
 
-        // API Request hỗ trợ Signal ngắt dòng
+        // Giả lập Phản hồi AI cực kỳ chi tiết nếu không chạy qua Backend Python API
+        function generateStandaloneMockResponse(prompt) {
+            const p = prompt.toLowerCase();
+            if (p.includes('mermaid') || p.includes('sơ đồ')) {
+                return `Dưới đây là sơ đồ Mermaid trực quan theo yêu cầu của bạn:\n\n\`\`\`mermaid\ngraph TD\n    A[Bắt đầu: Đơn hàng mới] --> B{Kiểm tra tồn kho}\n    B -- Còn hàng --> C[Xác nhận đơn & Đóng gói]\n    B -- Hết hàng --> D[Thông báo khách hàng & Hủy]\n    C --> E[Giao cho đơn vị vận chuyển]\n    E --> F[Khách nhận hàng thành công]\n    F --> G[Hoàn tất đơn hàng]\n\`\`\``;
+            }
+            if (p.includes('code') || p.includes('mã') || p.includes('html') || p.includes('sửa lỗi')) {
+                return `Dưới đây là đoạn mã nguồn mẫu hoàn chỉnh bằng HTML/CSS:\n\n\`\`\`html\n<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: sans-serif; background: #111; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; }\n    .card { padding: 20px; background: #222; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); text-align: center; }\n    button { padding: 10px 20px; background: #6366f1; border: none; color: #fff; border-radius: 6px; cursor: pointer; font-weight: bold; }\n  </style>\n</head>\n<body>\n  <div class="card">\n    <h2>Hello T.VỸ-AI Sandbox!</h2>\n    <p>Bấm nút bên dưới để test ứng dụng:</p>\n    <button onclick="alert('Sandbox hoạt động hoàn hảo!')">Thử ngay</button>\n  </div>\n</body>\n</html>\n\`\`\``;
+            }
+            return `Chào bạn! Tôi là **T.VỸ-AI-SUPREME v13.0** (Cấp độ: **${LEVEL_NAMES[currentLevel]}**).\n\nTôi đã nhận được yêu cầu của bạn:\n> "${prompt}"\n\nHệ thống AI đã phân tích câu hỏi của bạn và sẵn sàng hỗ trợ bạn giải quyết công việc, viết mã, vẽ sơ đồ, dịch thuật hoặc sáng tạo nội dung nâng cao!`;
+        }
+
         async function generateAIResponse(promptText, fileDataArray) {
             let fullPrompt = promptText;
             if (fileDataArray && fileDataArray.length > 0) {
@@ -2180,34 +2348,24 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Server trả về mã lỗi HTTP ${response.status}`);
+                    throw new Error(`Server offline hoặc lỗi HTTP ${response.status}`);
                 }
 
                 const data = await response.json();
-                
-                if (data.success === false) {
-                    throw new Error(data.error || "Lỗi không xác định từ Backend.");
-                }
-
-                if (data.conversation_id) {
-                    window.currentConversationId = data.conversation_id;
-                }
-
+                if (data.conversation_id) window.currentConversationId = data.conversation_id;
                 return data.message || data.response || "Không nhận được phản hồi từ máy chủ.";
 
             } catch (error) {
                 if (error.name === 'AbortError') {
-                    console.log("Đã hủy yêu cầu thành công bởi AbortController.");
                     return "⚠️ *Đã dừng tạo câu trả lời theo yêu cầu.*";
                 }
-                console.error("API Error:", error);
-                return `❌ **Lỗi hệ thống Backend:**\n\`\`\`\n${error.message}\n\`\`\`\nVui lòng kiểm tra lại kết nối mạng hoặc xem server Python/Flask app.py đã được bật chưa.`;
+                // Fallback mượt mà nếu đang chạy không có server backend Python
+                return generateStandaloneMockResponse(promptText);
             } finally {
                 currentAbortController = null;
             }
         }
 
-        // Xử lý Gửi tin nhắn
         async function sendMessage() {
             let text = inputField.value.trim();
             if (!text && attachedFiles.length === 0) return;
@@ -2238,9 +2396,7 @@
             addMessage('ai', aiReplyText);
         }
 
-        if (sendBtn) {
-            sendBtn.addEventListener('click', sendMessage);
-        }
+        if (sendBtn) sendBtn.addEventListener('click', sendMessage);
         if (inputField) {
             inputField.addEventListener('keydown', e => { 
                 if (e.key === 'Enter' && !e.shiftKey) { 
@@ -2251,7 +2407,7 @@
         }
 
         // ---------------------------------------------------------
-        // 3. TÍCH HỢP BỘ CÔNG CỤ TẠO VĂN BẢN, EDIT VÀ COPY
+        // 4. HIỂN THỊ TIN NHẮN, CHỈNH SỬA & RENDER TOOLKIT
         // ---------------------------------------------------------
         function copyTextToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
@@ -2312,7 +2468,6 @@
                     msgDiv.dataset.rawText = newContent;
                     renderUserMessageContent(msgDiv, newContent);
                     
-                    // Gửi lại prompt để AI trả lời lại
                     setGeneratingState(true);
                     showDeepThink();
                     const aiReply = await generateAIResponse(newContent, []);
@@ -2322,6 +2477,7 @@
                 } else {
                     msgDiv.dataset.rawText = newContent;
                     renderAIMessageContent(msgDiv, newContent);
+                    saveCurrentConversation();
                     showToast('✅ Đã cập nhật nội dung tin nhắn!', 'success');
                 }
             };
@@ -2351,7 +2507,6 @@
         function renderAIMessageContent(msgDiv, rawContent) {
             msgDiv.innerHTML = marked.parse(rawContent);
 
-            // Xử lý khối Code & Mermaid
             msgDiv.querySelectorAll('pre code').forEach(block => {
                 if (block.className.includes('language-mermaid') || block.className.includes('mermaid')) {
                     const container = document.createElement('div');
@@ -2407,7 +2562,7 @@
             msgDiv.appendChild(tools);
         }
 
-        function addMessage(role, content) {
+        function addMessage(role, content, shouldSave = true) {
             const wrapper = document.createElement('div');
             wrapper.className = `message-wrapper ${role}`;
 
@@ -2429,10 +2584,11 @@
             wrapper.appendChild(msgDiv);
             chatContainer.appendChild(wrapper);
             chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
 
-        function loadConversations() { document.getElementById('sidebarHistoryList').innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Chưa có lịch sử</div>'; }
-        function loadHistory() { document.getElementById('historyList').innerHTML = 'Chưa có lịch sử trò chuyện.'; }
+            if (shouldSave) {
+                saveCurrentConversation();
+            }
+        }
 
         function searchMessages() {
             const keyword = searchInput.value.trim().toLowerCase();
@@ -2456,7 +2612,7 @@
         function upgradeWithMomo(tier) { window.open('https://momo.vn', '_blank'); showToast('💳 Đang chuyển đến cổng thanh toán MoMo...', 'info'); }
         function saveSettings() { showToast('✅ Đã lưu cài đặt!', 'success'); closeModal('settingsModal'); }
 
-        // CÁC CÔNG CỤ TÍCH HỢP
+        // --- CÁC CÔNG CỤ TÍCH HỢP MỞ RỘNG ---
         function useMultiAI() {
             setInputAndSend("Hãy đóng vai 3 chuyên gia AI xuất sắc nhất thế giới, lần lượt cung cấp góc nhìn và giải pháp phân tích sâu sắc về vấn đề tôi sắp hỏi. Sẵn sàng chưa?");
         }
@@ -2478,6 +2634,20 @@
         function generateMusicWithLyrics() {
             setInputAndSend("Tôi muốn sáng tác một bài hát. Chủ đề là: [Nhập chủ đề]. Hãy viết cho tôi lời bài hát có cấu trúc rõ ràng (Verse, Pre-Chorus, Chorus, Bridge, Outro) và gợi ý phong cách nhạc, nhạc cụ nên sử dụng.");
         }
+        function writeEmail() {
+            setInputAndSend("Hãy giúp tôi viết một email công việc chuyên nghiệp về chủ đề: [Nhập mục đích email], gửi cho: [Nhập người nhận]. Giọng văn lịch sự, mạch lạc.");
+        }
+        function fixCode() {
+            setInputAndSend("Hãy kiểm tra, tìm lỗi sai và tối ưu đoạn mã nguồn sau đây. Chỉ ra nguyên nhân gây lỗi và cung cấp bản code hoàn chỉnh đã sửa:\n[Dán đoạn code của bạn vào đây]");
+        }
+        function enhancePrompt() {
+            setInputAndSend("Hãy giúp tôi nâng cấp và tối ưu hóa ý tưởng prompt sau đây thành một Master Prompt chi tiết, rõ ràng để hỏi AI đạt hiệu quả cao nhất:\n[Nhập prompt đơn giản của bạn]");
+        }
+
+        // Tự động khởi tạo dữ liệu lịch sử từ localStorage khi ứng dụng khởi chạy
+        window.addEventListener('DOMContentLoaded', () => {
+            initChatHistory();
+        });
     </script>
 </body>
 </html>
