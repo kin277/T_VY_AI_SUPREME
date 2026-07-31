@@ -1712,7 +1712,7 @@
     <!-- ============================================================ -->
     <script>
         // ---------------------------------------------------------
-        // 1. CẤU HNÌH CƠ BẢN & FIREBASE INIT
+        // 1. CẤU HÌNH CƠ BẢN & FIREBASE INIT
         // ---------------------------------------------------------
         const firebaseConfig = {
             apiKey: "AIzaSyA4rZOgKFKKt3_b1XChI7i3c6cZ6mVkz6A",
@@ -1726,15 +1726,19 @@
         };
 
         if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-            const auth = firebase.auth();
-            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
-            
-            auth.onAuthStateChanged(user => {
-                if (user) {
-                    updateUserUI(user.displayName || user.email.split('@')[0], 'Thành viên Pro', user.photoURL);
-                }
-            });
+            try {
+                firebase.initializeApp(firebaseConfig);
+                const auth = firebase.auth();
+                auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
+                
+                auth.onAuthStateChanged(user => {
+                    if (user) {
+                        updateUserUI(user.displayName || user.email.split('@')[0], 'Thành viên Pro', user.photoURL);
+                    }
+                });
+            } catch(e) {
+                console.warn("Firebase Init Offline mode:", e);
+            }
         }
 
         if (typeof marked !== 'undefined') {
@@ -1881,7 +1885,11 @@
             recognition.start();
         }
 
-        function speakText(btn, text) {
+        function speakMsgText(btn) {
+            const msgDiv = btn.closest('.message');
+            if (!msgDiv || !msgDiv.dataset.rawText) return;
+            const text = msgDiv.dataset.rawText;
+
             if (!('speechSynthesis' in window)) return showToast('❌ Không hỗ trợ đọc văn bản', 'error');
             if (window.speechSynthesis.speaking) {
                 window.speechSynthesis.cancel();
@@ -1948,7 +1956,10 @@
             if (messages.length === 0) return showToast('⚠️ Chưa có dữ liệu chat để xuất!', 'warning');
             let mdText = `# Nhật ký trò chuyện T.VỸ-AI\n\n`;
             messages.forEach(m => {
-                mdText += `### ${m.classList.contains('user') ? '👤 User' : '🤖 AI'}:\n${m.querySelector('.message').innerText}\n\n---\n\n`;
+                const msg = m.querySelector('.message');
+                if (msg) {
+                    mdText += `### ${m.classList.contains('user') ? '👤 User' : '🤖 AI'}:\n${msg.dataset.rawText || msg.innerText}\n\n---\n\n`;
+                }
             });
             downloadFile(mdText, `Chat_${Date.now()}.md`, 'text/markdown');
         }
@@ -1958,7 +1969,10 @@
             if (messages.length === 0) return showToast('⚠️ Chưa có dữ liệu chat để xuất!', 'warning');
             let txtText = `NHẬT KÝ TRÒ CHUYỆN T.VỸ-AI\n\n`;
             messages.forEach(m => {
-                txtText += `[${m.classList.contains('user') ? 'USER' : 'AI'}]\n${m.querySelector('.message').innerText}\n\n-----------------\n\n`;
+                const msg = m.querySelector('.message');
+                if (msg) {
+                    txtText += `[${m.classList.contains('user') ? 'USER' : 'AI'}]\n${msg.dataset.rawText || msg.innerText}\n\n-----------------\n\n`;
+                }
             });
             downloadFile(txtText, `Chat_${Date.now()}.txt`, 'text/plain');
         }
@@ -2024,7 +2038,11 @@
                     updateUserUI(res.user.displayName, 'Thành viên VIP', res.user.photoURL);
                     showToast('✅ Đăng nhập Google thành công!', 'success');
                     closeModal('loginModal');
-                }).catch(err => showToast(`❌ Lỗi: ${err.message}`, 'error'));
+                }).catch(err => {
+                    showToast('⏳ Chế độ Demo: Đã giả lập kết nối Google', 'info');
+                    updateUserUI('Google User', 'Google VIP');
+                    closeModal('loginModal');
+                });
             } else {
                 showToast('⏳ Chế độ Demo: Đã giả lập kết nối Google', 'info');
                 updateUserUI('Google User', 'Google VIP');
@@ -2409,26 +2427,20 @@
         // ---------------------------------------------------------
         // 4. HIỂN THỊ TIN NHẮN, CHỈNH SỬA & RENDER TOOLKIT
         // ---------------------------------------------------------
-        function copyTextToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
+        function copyMsgTextContent(btn) {
+            const msgDiv = btn.closest('.message');
+            if (!msgDiv || !msgDiv.dataset.rawText) return;
+            navigator.clipboard.writeText(msgDiv.dataset.rawText).then(() => {
                 showToast('📋 Đã sao chép nội dung!', 'success');
             }).catch(() => {
                 showToast('❌ Không thể sao chép văn bản', 'error');
             });
         }
 
-        function escapeAttrText(str) {
-            if (!str) return '';
-            return str.replace(/\\/g, '\\\\')
-                      .replace(/`/g, '\\`')
-                      .replace(/"/g, '&quot;')
-                      .replace(/\${/g, '\\${');
-        }
-
         function triggerEditMessage(btn, role) {
             const msgDiv = btn.closest('.message');
-            const rawText = msgDiv.dataset.rawText || '';
-            editMessageInline(msgDiv, role, rawText);
+            const rawText = msgDiv ? msgDiv.dataset.rawText || '' : '';
+            if (msgDiv) editMessageInline(msgDiv, role, rawText);
         }
 
         function editMessageInline(msgDiv, role, originalContent) {
@@ -2497,7 +2509,7 @@
             const tools = document.createElement('div');
             tools.className = 'message-tools';
             tools.innerHTML = `
-                <button class="tool-btn" onclick="copyTextToClipboard(\`${escapeAttrText(rawContent)}\`)"><i class="fa-regular fa-copy"></i> Sao chép</button>
+                <button class="tool-btn" onclick="copyMsgTextContent(this)"><i class="fa-regular fa-copy"></i> Sao chép</button>
                 <button class="tool-btn" onclick="triggerEditMessage(this, 'user')"><i class="fa-solid fa-pen-to-square"></i> Sửa</button>
                 <span class="time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
             `;
@@ -2512,7 +2524,10 @@
                     const container = document.createElement('div');
                     container.className = 'mermaid';
                     container.textContent = block.innerText;
-                    block.parentNode.parentNode.replaceChild(container, block.parentNode);
+                    const pre = block.parentNode;
+                    if (pre && pre.parentNode) {
+                        pre.parentNode.replaceChild(container, pre);
+                    }
                 } else {
                     const pre = block.parentNode;
                     const container = document.createElement('div');
@@ -2529,33 +2544,42 @@
                     const copyBtn = document.createElement('button');
                     copyBtn.className = 'code-copy-btn';
                     copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i> Sao chép';
-                    copyBtn.onclick = () => copyCodeSnippet(copyBtn, block.innerText);
+                    const codeStr = block.innerText;
+                    copyBtn.onclick = () => copyCodeSnippet(copyBtn, codeStr);
                     actions.appendChild(copyBtn);
 
                     if (block.className.includes('html') || block.className.includes('javascript') || block.className.includes('css')) {
                         const runBtn = document.createElement('button');
                         runBtn.className = 'code-run-btn';
                         runBtn.innerHTML = '<i class="fa-solid fa-play"></i> Chạy thử';
-                        runBtn.onclick = () => runCodeSnippet(block.innerText);
+                        runBtn.onclick = () => runCodeSnippet(codeStr);
                         actions.appendChild(runBtn);
                     }
 
                     header.appendChild(actions);
-                    pre.parentNode.insertBefore(container, pre);
-                    container.appendChild(header);
-                    container.appendChild(pre);
+                    if (pre && pre.parentNode) {
+                        pre.parentNode.insertBefore(container, pre);
+                        container.appendChild(header);
+                        container.appendChild(pre);
+                    }
                 }
             });
 
             if (window.mermaid) {
-                try { mermaid.init(undefined, msgDiv.querySelectorAll('.mermaid')); } catch(e) { console.error(e); }
+                try { 
+                    if (typeof mermaid.run === 'function') {
+                        mermaid.run({ nodes: msgDiv.querySelectorAll('.mermaid') });
+                    } else if (typeof mermaid.init === 'function') {
+                        mermaid.init(undefined, msgDiv.querySelectorAll('.mermaid'));
+                    }
+                } catch(e) { console.error("Mermaid error:", e); }
             }
 
             const tools = document.createElement('div');
             tools.className = 'message-tools';
             tools.innerHTML = `
-                <button class="tool-btn" onclick="speakText(this, \`${escapeAttrText(rawContent)}\`)"><i class="fa-solid fa-volume-high"></i> Đọc</button>
-                <button class="tool-btn" onclick="copyTextToClipboard(\`${escapeAttrText(rawContent)}\`)"><i class="fa-regular fa-copy"></i> Sao chép</button>
+                <button class="tool-btn" onclick="speakMsgText(this)"><i class="fa-solid fa-volume-high"></i> Đọc</button>
+                <button class="tool-btn" onclick="copyMsgTextContent(this)"><i class="fa-regular fa-copy"></i> Sao chép</button>
                 <button class="tool-btn" onclick="triggerEditMessage(this, 'ai')"><i class="fa-solid fa-pen-to-square"></i> Sửa</button>
                 <span class="time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
             `;

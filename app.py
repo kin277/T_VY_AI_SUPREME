@@ -1,8 +1,8 @@
 #====================================================================
-# T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (BẢN HOÀN CHỈNH - FULL MULTIMODAL & AUTO CODE ENGINE)
+# T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (BẢN HOÀN CHỈNH - FULL MULTIMODAL, AUTO CODE & DYNAMIC AI IMAGE ENGINE)
 #====================================================================
 # Bản quyền: T.VỸ-VIP-FILE
-# Phiên bản: 12.6.0 (Vision, Multimodal, Auto Code Extension & Multilingual Adaptation)
+# Phiên bản: 12.8.0 (Vision, Multimodal, Auto Code Extension, Multilingual Adaptation & Dynamic AI Image Generator)
 #====================================================================
 
 import base64
@@ -151,6 +151,116 @@ SMART_CODE_SYSTEM_PROMPT = """
    - Khi nhận phản hồi từ người dùng chứa các từ khóa tiếp tục ("tiếp", "tiếp tục", "ok", "continue", "tiếp đi", "yes",...), bạn sẽ tự động sinh các file tiếp theo của dự án còn dở dang.
    - Tiếp tục lặp lại quy trình chia nhỏ 4-5 file kèm câu hỏi trên cho đến khi hoàn thành toàn bộ 100% dự án.
 """
+
+# ================================================================
+# DYNAMIC IMAGE GENERATOR ENGINE (POLLINATIONS AI ENGINE + DYNAMIC SIZE ANALYZER)
+# ================================================================
+
+def analyze_image_request(prompt):
+    """
+    Bộ Phân Tích Kích Thước Tự Động từ Ngữ Cảnh & Yêu Cầu Cụ Thể của Người Dùng
+    1. Nhận diện kích thước số (Ví dụ: 1920x1080, 720x1280)
+    2. Nhận diện tỷ lệ cụ thể (16:9, 9:16, 4:3, 3:4, 21:9, 1:1)
+    3. Phân tích ngữ cảnh thông minh:
+       - Landscape (1280x720): Phong cảnh, máy tính, desktop, banner, bìa Facebook, Youtube thumbnail...
+       - Portrait (720x1280): Hình nền điện thoại, ảnh chân dung, TikTok, Instagram Story, poster đứng...
+       - Square (1024x1024): Avatar, logo, icon, Instagram post...
+    """
+    p_lower = prompt.lower()
+    width, height = None, None
+
+    # 1. Nhận diện thông số kích thước số cụ thể (1920x1080, 720x1280,...)
+    dim_match = re.search(r'(\d{3,4})\s*x\s*(\d{3,4})', p_lower)
+    if dim_match:
+        width = int(dim_match.group(1))
+        height = int(dim_match.group(2))
+    else:
+        # 2. Nhận diện tỷ lệ khung hình cụ thể
+        if "16:9" in p_lower:
+            width, height = 1280, 720
+        elif "9:16" in p_lower:
+            width, height = 720, 1280
+        elif "4:3" in p_lower:
+            width, height = 1024, 768
+        elif "3:4" in p_lower:
+            width, height = 768, 1024
+        elif "21:9" in p_lower or "ultrawide" in p_lower:
+            width, height = 1344, 576
+        elif "1:1" in p_lower:
+            width, height = 1024, 1024
+
+        # 3. Phân tích ngữ cảnh thông minh (Nếu không ghi thông số / tỷ lệ)
+        if not width or not height:
+            # Dạng Ảnh Dọc (Portrait - 720x1280)
+            if any(k in p_lower for k in [
+                "dọc", "điện thoại", "phone", "mobile", "story", "tiktok", "reels", 
+                "chân dung", "portrait", "poster đứng", "thiệp đứng", "toàn thân", "full body", "ảnh thẻ"
+            ]):
+                width, height = 720, 1280
+
+            # Dạng Ảnh Ngang (Landscape - 1280x720)
+            elif any(k in p_lower for k in [
+                "ngang", "máy tính", "desktop", "laptop", "pc", "wallpaper", "phong cảnh", 
+                "landscape", "banner", "cover", "bìa", "thumbnail", "youtube", "cinematic", "toàn cảnh"
+            ]):
+                width, height = 1280, 720
+
+            # Dạng Ảnh Vuông (Square - 1024x1024)
+            elif any(k in p_lower for k in [
+                "logo", "avatar", "ảnh đại diện", "icon", "instagram", "vuông", "square", "symbol", "badge"
+            ]):
+                width, height = 1024, 1024
+
+            # Mặc định chuẩn
+            else:
+                width, height = 1024, 1024
+
+    # Làm sạch Prompt, loại bỏ các từ khóa điều khiển và tỷ lệ/kích thước
+    clean_prompt = re.sub(
+        r'^(tạo ảnh|vẽ ảnh|vẽ hình|vẽ bức tranh|vẽ|generate image|draw image|create image|thiết kế ảnh)\s*',
+        '', prompt, flags=re.IGNORECASE
+    ).strip()
+    clean_prompt = re.sub(r'\b(16:9|9:16|4:3|3:4|1:1|21:9)\b', '', clean_prompt, flags=re.IGNORECASE).strip()
+    clean_prompt = re.sub(r'\b\d{3,4}\s*x\s*\d{3,4}\b', '', clean_prompt, flags=re.IGNORECASE).strip()
+
+    if not clean_prompt:
+        clean_prompt = prompt
+
+    return clean_prompt, width, height
+
+
+def generate_ai_image_url(prompt, width=None, height=None):
+    """Tự động suy nghĩ, phân tích ngữ cảnh và sinh URL tạo ảnh chất lượng cao"""
+    try:
+        clean_prompt, inferred_w, inferred_h = analyze_image_request(prompt)
+        
+        # Ưu tiên kích thước truyền trực tiếp, nếu không có sẽ lấy kích thước tự động phân tích
+        final_w = width if width is not None else inferred_w
+        final_h = height if height is not None else inferred_h
+
+        seed = random.randint(100000, 9999999)
+        encoded_prompt = requests.utils.quote(clean_prompt)
+        image_url = f"https://pollinations.ai/p/{encoded_prompt}?width={final_w}&height={final_h}&seed={seed}&nologo=true"
+        
+        return image_url, clean_prompt, final_w, final_h
+    except Exception as e:
+        logger.error(f"❌ Lỗi sinh URL Tạo ảnh: {e}")
+        return None, prompt, 1024, 1024
+
+
+def is_image_generation_request(message):
+    """Kiểm tra xem câu hỏi người dùng có phải là yêu cầu tạo/vẽ ảnh hay không"""
+    msg_lower = message.lower().strip()
+    keywords = [
+        "tạo ảnh", "vẽ ảnh", "vẽ hình", "vẽ bức tranh", "thiết kế ảnh",
+        "generate image", "draw image", "create image", "make an image",
+        "tạo hình ảnh", "vẽ giúp", "phác họa ảnh"
+    ]
+    
+    if any(msg_lower.startswith(prefix) for prefix in ["vẽ ", "tạo ảnh ", "draw ", "generate image "]):
+        return True
+        
+    return any(kw in msg_lower for kw in keywords)
 
 # ================================================================
 # MUSIC GENERATOR ENGINE
@@ -491,7 +601,7 @@ def github_callback_route():
     return "❌ Lỗi hệ thống", 400
 
 # ================================================================
-# CHAT ROUTES (TÍCH HỢP SỬA TIN NHẮN, TỰ CẮT BỚT BÊN DƯỚI & ABORT)
+# CHAT & IMAGE GENERATION ROUTES
 # ================================================================
 
 @app.route('/chat', methods=['POST'])
@@ -541,13 +651,63 @@ def chat():
         # ⚡ CƠ CHẾ SỬA TIN NHẮN & CẮT BỎ CÁC TIN NHẮN BÊN DƯỚI ⚡
         if edit_index is not None and isinstance(edit_index, int) and edit_index >= 0:
             if edit_index < len(messages):
-                # Giữ lại các tin nhắn đứng TRƯỚC vị trí sửa, xóa toàn bộ từ edit_index trở về sau
                 messages = messages[:edit_index]
 
         user_content = message
         if image_url and f"![ảnh]({image_url})" not in user_content:
             user_content = f"![Hình ảnh đính kèm]({image_url})\n\n{message}"
 
+        # 🎨 1. BỘ LỌC TỰ ĐỘNG TẠO ẢNH AI VỚI KÍCH THƯỚC DỘNG
+        if is_image_generation_request(message):
+            gen_image_url, clean_prompt, img_w, img_h = generate_ai_image_url(message)
+            
+            # AI thông báo rõ kích thước tối ưu đã chọn cho người dùng
+            ai_response = (
+                f"🎨 **T.VỸ-AI đã phân tích ngữ cảnh và tạo ảnh thành công:**\n"
+                f"* **Nội dung:** \"{clean_prompt}\"\n"
+                f"* **Kích thước tối ưu:** `{img_w} x {img_h} px`\n\n"
+                f"![{clean_prompt}]({gen_image_url})\n\n"
+                f"🔗 [Mở ảnh chất lượng gốc]({gen_image_url})"
+            )
+
+            messages.append({
+                "role": "user",
+                "content": user_content,
+                "image_url": image_url,
+                "time": datetime.datetime.now().isoformat()
+            })
+
+            messages.append({
+                "role": "ai",
+                "content": ai_response,
+                "image_generated": gen_image_url,
+                "width": img_w,
+                "height": img_h,
+                "time": datetime.datetime.now().isoformat()
+            })
+
+            if user_id != 'guest_user':
+                save_conversation(user_id, conv_id, name, messages, level)
+                convs = get_conversations_by_user(user_id)
+                convs_list = [dict(c) for c in convs]
+            else:
+                convs_list = []
+
+            return jsonify({
+                "success": True,
+                "type": "image",
+                "message": ai_response,
+                "response": ai_response,
+                "image_url": gen_image_url,
+                "width": img_w,
+                "height": img_h,
+                "conversation_id": conv_id,
+                "conversations": convs_list,
+                "messages": messages,
+                "level": level
+            })
+
+        # 2. XỬ LÝ CHAT VĂN BẢN / LẬP TRÌNH THÔNG THƯỜNG
         is_continuation = bool(re.search(r'^\s*(tiếp|tiếp tục|ok|continue|tiếp đi|yes)\b', message.lower()))
         
         enhanced_query = message
@@ -558,19 +718,16 @@ def chat():
                 f"Nếu vẫn chưa xong hết toàn bộ dự án, ở cuối tin nhắn BẮT BUỘC lặp lại đúng câu hỏi tiếp tục theo ngôn ngữ đang sử dụng."
             )
 
-        # 1. TÍCH HỢP SYSTEM PROMPT VÀ LỊCH SỬ CHAT VÀO CONTEXT
         context_parts = [SMART_CODE_SYSTEM_PROMPT]
         for msg in messages:
             role = "Người dùng" if msg.get("role") == "user" else "AI"
             context_parts.append(f"{role}: {msg.get('content', '')}")
         context_str = "\n".join(context_parts)
 
-        # 2. LẤY THỜI GIAN THỰC TẾ VÀ GHẾP VÀO SYSTEM CONTENT
         now = datetime.datetime.now()
         current_time_info = f"Hôm nay là ngày {now.strftime('%d/%m/%Y')}, giờ hiện tại là {now.strftime('%H:%M')}."
         system_content = f"{current_time_info}\n\n{context_str}"
 
-        # Thêm câu hỏi mới (đã sửa hoặc mới hoàn toàn)
         messages.append({
             "role": "user",
             "content": user_content,
@@ -578,7 +735,7 @@ def chat():
             "time": datetime.datetime.now().isoformat()
         })
 
-        # 🚀 3. GỌI OPENROUTER API
+        # 🚀 GỌI OPENROUTER API
         api_key = os.environ.get('OPENROUTER_API_KEY') or os.environ.get('GEMINI_API_KEY')
         ai_response = ""
 
@@ -651,7 +808,37 @@ def chat():
         logger.error(f"❌ Lỗi xử lý Chat (500): {traceback.format_exc()}")
         return jsonify({"success": False, "error": f"Lỗi nội bộ máy chủ khi xử lý câu hỏi: {str(e)}"}), 500
 
-# API RIÊNG BIỆT DÀNH CHO VIỆC SỬA TIN NHẮN & LỰA CHỌN CẮT TIN NHẮN BÊN DƯỚI
+# ================================================================
+# API TẠO ẢNH CHUYÊN BIỆT (DYNAMIC STANDALONE IMAGE API)
+# ================================================================
+
+@app.route('/api/generate_image', methods=['POST'])
+@app.route('/generate_image', methods=['POST'])
+def generate_image_api():
+    try:
+        data = request.get_json(silent=True) or {}
+        prompt = (data.get('prompt') or data.get('message') or '').strip()
+        req_w = data.get('width')
+        req_h = data.get('height')
+
+        if not prompt:
+            return jsonify({"success": False, "error": "Mô tả bức ảnh không được để trống"}), 400
+
+        image_url, clean_prompt, width, height = generate_ai_image_url(prompt, width=req_w, height=req_h)
+
+        return jsonify({
+            "success": True,
+            "prompt": clean_prompt,
+            "image_url": image_url,
+            "width": width,
+            "height": height,
+            "message": f"🎨 **Hình ảnh ({width}x{height}px) được tạo:**\n![{clean_prompt}]({image_url})"
+        })
+    except Exception as e:
+        logger.error(f"Lỗi API Tạo ảnh: {e}")
+        return jsonify({"success": False, "error": f"Lỗi tạo ảnh: {str(e)}"}), 500
+
+# API RIÊNG BIỆT DÀNH CHO VIỆC SỬA TIN NHẮN
 @app.route('/api/conversation/message/edit', methods=['POST'])
 def edit_message_api():
     try:
@@ -659,13 +846,10 @@ def edit_message_api():
         conv_id = data.get('conversation_id')
         msg_index = data.get('message_index')
         new_text = data.get('new_text', '').strip()
-        level = data.get('level', 'pro')
-        user_id = session.get('user_id') or 'guest_user'
-
+        
         if not conv_id or msg_index is None or not new_text:
             return jsonify({"error": "Thiếu tham số conversation_id, message_index hoặc new_text"}), 400
 
-        # Gọi lại route /api/chat với tham số edit_index
         return chat()
     except Exception as e:
         logger.error(f"Lỗi API Edit Message: {e}")
@@ -1096,11 +1280,11 @@ if __name__ == '__main__':
 
     print("""
 ╔═══════════════════════════════════════════════════════════════════════╗
-║  T.VỸ-AI-SUPREME v12.6.0 (SMART CODE & MULTILINGUAL AUTO ENGINE)       ║
+║  T.VỸ-AI-SUPREME v12.8.0 (DYNAMIC DUAL ENGINE & AI IMAGE GENERATOR)   ║
 ║  Bản quyền: T.VỸ-VIP-FILE                                             ║
+║  🎨 Tự động suy nghĩ và đề xuất kích thước ảnh phù hợp với ngữ cảnh    ║
 ║  🌐 Tự động phản hồi theo đúng ngôn ngữ người dùng gửi câu hỏi        ║
 ║  📦 Tự động phân chia dự án lớn thành 4-5 file/lượt & Vòng lặp Tiếp tục║
-║  ⏹️ Tích hợp AbortController Ngắt Mạng & Sửa Tin Nhắn Tự Cắt Dưới     ║
 ╚═══════════════════════════════════════════════════════════════════════╝
     """)
     socketio.run(app, debug=app.config['DEBUG'], host=host, port=port, allow_unsafe_werkzeug=True)
