@@ -1752,17 +1752,31 @@
 			}
 
 			/* 4. Tối ưu Claude Artifact Live Preview khi bật trên điện thoại */
-			/* Màn hình nhỏ sẽ hiển thị Preview đè Toàn Màn Hình thay vì chia đôi 50% */
+			/* 👁️ Khung Claude Artifact Live Preview (Mặc định sẽ ẨN) */
 			#artifactPreviewPane {
-				width: 100% !important;
-				height: 100dvh !important;
-				right: -100% !important; /* Slide tràn từ lề phải qua toàn màn hình */
+				position: fixed;
 				top: 0;
-				z-index: 999999;
+				right: -100%;
+				width: 100%;
+				height: 100dvh;
+				background: var(--color-bg-secondary, #ffffff);
+				border-left: 2px solid var(--color-border, #ccc);
+				box-shadow: -5px 0 20px rgba(0,0,0,0.2);
+				transition: all 0.3s ease-in-out;
+				z-index: 99999;
+				display: flex;
+				flex-direction: column;
+				
+				/* 📍 Bổ sung dòng này để giấu hoàn toàn khi chưa mở */
+				visibility: hidden;
+				pointer-events: none;
 			}
 
+			/* Chỉ hiển thị khi được Javascript kích hoạt (thêm class .active) */
 			#artifactPreviewPane.active {
 				right: 0 !important;
+				visibility: visible !important;
+				pointer-events: auto !important;
 			}
 
 			/* 5. Cho phép Thẻ Nguồn Perplexity vuốt ngang (Horizontal Scroll) mượt mà */
@@ -2326,17 +2340,6 @@
                 </div>
                 <button class="btn-auth-submit" onclick="registerLocal()">Đăng ký Tài khoản</button>
             </div>
-        </div>
-    </div>
-
-    <!-- Live Code Sandbox Modal -->
-    <div class="modal-overlay" id="sandboxModal">
-        <div class="modal-box" style="max-width: 800px; width: 90%; height: 80vh; display: flex; flex-direction: column;">
-            <div class="modal-header">
-                <h2>🚀 Live Code Sandbox</h2>
-                <button class="close-btn" onclick="closeModal('sandboxModal')">&times;</button>
-            </div>
-            <iframe id="sandboxFrame" style="flex: 1; width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #fff;"></iframe>
         </div>
     </div>
 
