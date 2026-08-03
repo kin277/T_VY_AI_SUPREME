@@ -23,6 +23,11 @@ from flask import (
     Flask, jsonify, render_template, request,
     send_from_directory, session
 )
+from config.settings import Config
+from backend.api.chat_routes import chat_bp
+from backend.services.voice_service import VoiceService
+from backend.modules.code_interpreter import CodeInterpreter
+from backend.middleware.rate_limiter import limit_rate
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from werkzeug.utils import secure_filename
@@ -79,6 +84,9 @@ app.secret_key = os.getenv("SECRET_KEY", "T_VY_VIP_FILE_2026_PRODUCTION_KEY")
 app.config['DEBUG'] = os.getenv("FLASK_DEBUG", "False").lower() in ["true", "1"]
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB
 app.config['JSON_AS_ASCII'] = False
+app.register_blueprint(chat_bp, url_prefix='/api')
+
+voice_service = VoiceService()
 
 CORS(app, supports_credentials=True)
 socketio = SocketIO(app, async_mode='threading', cors_allowed_origins="*")
@@ -1248,6 +1256,24 @@ def export_conversation(conv_id):
         'Content-Type': 'text/plain; charset=utf-8',
         'Content-Disposition': f'attachment; filename={safe_filename}'
     }
+    
+# API Giọng Nói TTS
+@app.route('/api/voice/tts', methods=['POST'])
+@limit_rate(max_requests=10, window_seconds=60)
+def handle_tts():
+    text = request.json.get('text', '')
+    audio_fp = voice_service.text_to_speech_bytes(text)
+    if audio_fp:
+        return send_file(audio_fp, mimetype="audio/mp3")
+    return jsonify({"error": "Không thể tạo giọng nói"}), 500
+
+# API Trình Thực Thi Code (Code Interpreter)
+@app.route('/api/code/run', methods=['POST'])
+@limit_rate(max_requests=5, window_seconds=60)
+def handle_run_code():
+    code = request.json.get('code', '')
+    result = CodeInterpreter.execute_python(code)
+    return jsonify(result)
 
 # ================================================================
 # SOCKET.IO & GLOBAL ERROR HANDLERS

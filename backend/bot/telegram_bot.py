@@ -1,50 +1,31 @@
-"""
-====================================================================
-TELEGRAM BOT - TỰ ĐỘNG TRẢ LỜI QUA TELEGRAM
-====================================================================
-Bản quyền: T.VỸ-VIP-FILE
-====================================================================
-"""
-
+# File: backend/bot/telegram_bot.py
 import os
 import requests
-from flask import request, jsonify
+from backend.core.ai_engine import AIEngine
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
+class TelegramAIBot:
+    def __init__(self, token: str = None):
+        self.token = token or os.getenv("TELEGRAM_BOT_TOKEN", "")
+        self.api_url = f"https://api.telegram.org/bot{self.token}"
+        self.ai_engine = AIEngine()
 
+    def send_message(self, chat_id: int, text: str):
+        """Gửi tin nhắn trả lời về Telegram"""
+        url = f"{self.api_url}/sendMessage"
+        payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+        try:
+            requests.post(url, json=payload, timeout=5)
+        except Exception as e:
+            print(f"Lỗi gửi tin nhắn Telegram: {e}")
 
-def send_telegram_message(chat_id, text):
-    if not TELEGRAM_BOT_TOKEN:
-        return {"error": "Thiếu TELEGRAM_BOT_TOKEN"}
+    def process_webhook_update(self, update_data: dict):
+        """Xử lý sự kiện khi có tin nhắn từ Telegram gửi đến"""
+        if "message" in update_data:
+            chat_id = update_data["message"]["chat"]["id"]
+            user_text = update_data["message"].get("text", "")
 
-    url = f"{TELEGRAM_API_URL}/sendMessage"
-    data = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
-
-    try:
-        response = requests.post(url, json=data)
-        return response.json()
-    except Exception as e:
-        return {"error": str(e)}
-
-
-def handle_telegram_webhook():
-    data = request.json
-    if not data:
-        return jsonify({"ok": False}), 400
-
-    message = data.get('message')
-    if not message:
-        return jsonify({"ok": True}), 200
-
-    chat_id = message.get('chat', {}).get('id')
-    text = message.get('text', '')
-
-    if chat_id and text:
-        from backend.core.ai_engine import AIEngine
-        ai = AIEngine(level="pro")
-        response = ai.process(text)
-        reply = response.get("message", "Xin lỗi, tôi chưa hiểu câu hỏi của bạn.")
-        send_telegram_message(chat_id, f"🤖 T.VỸ-AI:\n\n{reply}")
-
-    return jsonify({"ok": True}), 200
+            if user_text:
+                # Gọi AI Engine xử lý
+                response = self.ai_engine.process_ai_request(user_text)
+                ai_reply = response.get("message", "Xin lỗi, tôi không thể xử lý yêu cầu này.")
+                self.send_message(chat_id, ai_reply)

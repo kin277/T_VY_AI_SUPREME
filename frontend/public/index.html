@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>T.VỸ-AI-SUPREME v13.0 Ultra Pro Max</title>
+	<!-- 📱 KHOANH VÙNG: Thẻ Viewport tối ưu Responsive cho Mobile -->
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1707,6 +1709,76 @@
                 grid-template-columns: 1fr;
             }
         }
+		/* ================================================================
+		   KHOANH VÙNG CSS: RESPONSIVE UI DÀNH CHO ĐIỆN THOẠI (@media max-width: 768px)
+		   ================================================================ */
+		@media screen and (max-width: 768px) {
+
+			/* 1. Sửa lỗi chiều cao màn hình trên điện thoại (dvh chống che bởi thanh địa chỉ Safari/Chrome) */
+			html, body, .app-container {
+				height: 100dvh !important;
+				overflow: hidden;
+			}
+
+			/* 2. Tối ưu Khung Chat */
+			#chatContainer {
+				padding: 10px 12px;
+				font-size: 15px; /* Chữ vừa tầm mắt trên điện thoại */
+			}
+
+			/* 3. Thanh nhập liệu & Nút bấm (Touch Targets lớn hơn để dễ bấm ngón tay) */
+			.chat-input-wrapper {
+				padding: 8px 10px;
+				gap: 8px;
+				background: var(--color-bg, #ffffff);
+			}
+
+			.chat-input-wrapper input {
+				font-size: 16px !important; /* Mẹo: Đặt 16px để iOS Safari KHÔNG tự động zoom vào ô nhập */
+				padding: 12px;
+				border-radius: 20px;
+			}
+
+			/* Nút Gửi và Nút Micro đạt chuẩn kích thước ngón tay (tối thiểu 44x44px) */
+			.btn-voice, #sendBtn {
+				min-width: 44px;
+				height: 44px;
+				border-radius: 50%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				padding: 0;
+				font-size: 18px;
+			}
+
+			/* 4. Tối ưu Claude Artifact Live Preview khi bật trên điện thoại */
+			/* Màn hình nhỏ sẽ hiển thị Preview đè Toàn Màn Hình thay vì chia đôi 50% */
+			#artifactPreviewPane {
+				width: 100% !important;
+				height: 100dvh !important;
+				right: -100% !important; /* Slide tràn từ lề phải qua toàn màn hình */
+				top: 0;
+				z-index: 999999;
+			}
+
+			#artifactPreviewPane.active {
+				right: 0 !important;
+			}
+
+			/* 5. Cho phép Thẻ Nguồn Perplexity vuốt ngang (Horizontal Scroll) mượt mà */
+			.perplexity-sources-wrapper {
+				display: flex;
+				overflow-x: auto;
+				white-space: nowrap;
+				gap: 8px;
+				padding: 8px 0;
+				-webkit-overflow-scrolling: touch; /* Vuốt mượt trên iOS */
+			}
+
+			.perplexity-source-card {
+				flex-shrink: 0; /* Giữ nguyên kích thước thẻ khi cuộn ngang */
+			}
+		}
     </style>
 </head>
 <body>
