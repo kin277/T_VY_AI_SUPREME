@@ -8,7 +8,7 @@
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
     <!-- Firebase SDK -->
@@ -149,7 +149,7 @@
             display: flex;
         }
 
-        /* ===== SIDEBAR & TOGGLE STYLES ===== */
+        /* ===== SIDEBAR ===== */
         .sidebar {
             width: 280px;
             background: var(--bg-sidebar);
@@ -914,60 +914,6 @@
             margin-left: auto;
         }
 
-        /* Inline Edit UI */
-        .edit-box {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            width: 100%;
-            margin-top: 4px;
-        }
-        .edit-textarea {
-            width: 100%;
-            min-height: 80px;
-            background: rgba(0, 0, 0, 0.25);
-            border: 1px solid var(--border-highlight);
-            border-radius: var(--radius-sm);
-            color: inherit;
-            padding: 8px;
-            font-size: 13.5px;
-            font-family: inherit;
-            outline: none;
-            resize: vertical;
-        }
-        .edit-buttons {
-            display: flex;
-            gap: 6px;
-            justify-content: flex-end;
-        }
-        .btn-edit-save {
-            background: var(--accent-primary);
-            color: #fff;
-            border: none;
-            padding: 4px 12px;
-            border-radius: var(--radius-sm);
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-        .btn-edit-save:hover {
-            background: var(--accent-hover);
-        }
-        .btn-edit-cancel {
-            background: transparent;
-            color: var(--text-muted);
-            border: 1px solid var(--border-color);
-            padding: 4px 12px;
-            border-radius: var(--radius-sm);
-            font-size: 12px;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-        .btn-edit-cancel:hover {
-            color: var(--text-main);
-        }
-
         .mermaid {
             background: var(--bg-glass);
             padding: 16px;
@@ -1147,7 +1093,6 @@
             flex-shrink: 0;
         }
 
-        /* Nút Dừng Style */
         .btn-stop-gen {
             width: 42px;
             height: 42px;
@@ -1180,13 +1125,14 @@
             font-weight: 500;
         }
 
+        /* ===== MODAL GENERAL & OVERLAY ===== */
         .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.75);
             backdrop-filter: blur(8px);
             display: none;
             align-items: center;
@@ -1197,6 +1143,10 @@
         .modal-overlay.active {
             display: flex;
             animation: fadeIn 0.2s ease;
+        }
+
+        .modal-overlay.hidden {
+            display: none !important;
         }
 
         .modal-box {
@@ -1229,15 +1179,377 @@
             background: transparent;
             border: none;
             color: var(--text-muted);
-            font-size: 18px;
+            font-size: 22px;
             cursor: pointer;
             transition: var(--transition);
+            line-height: 1;
         }
 
         .modal-header .close-btn:hover {
             color: var(--text-main);
         }
 
+        /* ===== STYLES DÀNH RIÊNG CHO MODAL CÀI ĐẶT NÂNG CẤP ===== */
+        .modal-container {
+            background: var(--bg-sidebar);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            width: 92%;
+            max-width: 880px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            animation: fadeIn 0.25s ease;
+        }
+
+        .modal-container .modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 0;
+        }
+
+        .modal-container .modal-header h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            min-height: 420px;
+        }
+
+        .settings-sidebar {
+            width: 240px;
+            background: rgba(0, 0, 0, 0.2);
+            border-right: 1px solid var(--border-color);
+            padding: 16px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .settings-sidebar .tab-btn {
+            padding: 10px 14px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: var(--transition);
+        }
+
+        .settings-sidebar .tab-btn:hover {
+            background: var(--bg-glass-hover);
+            color: var(--text-main);
+        }
+
+        .settings-sidebar .tab-btn.active {
+            background: var(--accent-gradient-subtle);
+            color: var(--accent-primary);
+            border-color: var(--border-highlight);
+        }
+
+        .settings-content {
+            flex: 1;
+            padding: 20px 24px;
+            overflow-y: auto;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .tab-content h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-main);
+        }
+
+        .tab-content h4 {
+            font-size: 14px;
+            font-weight: 700;
+            margin: 18px 0 10px 0;
+            color: var(--accent-primary);
+        }
+
+        .tab-content hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin-bottom: 16px;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .setting-item.col {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .setting-info label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 3px;
+        }
+
+        .setting-info p, .setting-item p {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .setting-item label {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .setting-item input[type="text"],
+        .setting-item textarea,
+        .setting-item select {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-main);
+            padding: 8px 12px;
+            font-size: 13px;
+            outline: none;
+            width: 100%;
+        }
+
+        .setting-item textarea {
+            margin-top: 8px;
+            resize: vertical;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-glass-hover);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #ef4444;
+        }
+
+        .btn-danger:hover {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .btn-sm {
+            padding: 4px 10px;
+            font-size: 11px;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+        }
+
+        .danger-text {
+            color: #ef4444 !important;
+        }
+
+        .memory-list {
+            width: 100%;
+            list-style: none;
+            margin-top: 8px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .memory-list li {
+            font-size: 12px;
+            color: var(--text-secondary);
+            padding: 4px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tts-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .shortcuts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            width: 100%;
+            margin-top: 8px;
+            background: var(--bg-glass);
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            font-size: 12px;
+        }
+
+        kbd {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--accent-primary);
+        }
+
+        .quota-card {
+            width: 100%;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            margin-top: 8px;
+        }
+
+        .quota-status {
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-input);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress {
+            height: 100%;
+            background: var(--accent-gradient);
+        }
+
+        .session-list {
+            width: 100%;
+            list-style: none;
+            margin-top: 8px;
+        }
+
+        .session-list li {
+            font-size: 12.5px;
+            padding: 8px 12px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .session-list .badge {
+            margin-left: auto;
+            font-size: 10px;
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            padding: 2px 8px;
+            border-radius: var(--radius-full);
+        }
+
+        .api-key-box {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .integration-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .integration-card {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .integration-card i {
+            font-size: 20px;
+            color: var(--accent-primary);
+        }
+
+        .modal-footer {
+            padding: 14px 24px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        /* ===== AUTH TABS & TOAST ===== */
         .auth-tabs {
             display: flex;
             background: var(--bg-input);
@@ -1383,6 +1695,17 @@
             .message {
                 max-width: 88%;
             }
+            .modal-body {
+                flex-direction: column;
+            }
+            .settings-sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .integration-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -1463,7 +1786,7 @@
                     </div>
                     
                     <button class="btn-icon" id="themeToggle" title="Chuyển chế độ sáng/tối"><i class="fa-solid fa-moon"></i></button>
-                    <button class="btn-icon" id="exportBtn" title="Xuất chat" style="display:none;"><i class="fa-solid fa-file-export"></i></button>
+                    <button class="btn-icon" id="exportBtn" title="Xuất chat" style="display:none;" onclick="exportChatCombined()"><i class="fa-solid fa-file-export"></i></button>
                 </div>
             </header>
 
@@ -1544,7 +1867,7 @@
                     </button>
 
                     <!-- Nút Gửi & Nút Dừng -->
-                    <button class="send-btn" id="sendBtn" title="Gửi tin nhắn"><i class="fa-solid fa-paper-plane"></i></button>
+                    <button class="send-btn" id="sendBtn" title="Gửi tin nhắn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
                     <button class="btn-stop-gen" id="stopBtn" title="Dừng tạo trả lời" onclick="stopGeneration()"><i class="fa-solid fa-square"></i></button>
                 </div>
             </div>
@@ -1556,21 +1879,24 @@
     </div>
 
     <!-- ===== MODALS ===== -->
+
+    <!-- Modal Lịch sử -->
     <div class="modal-overlay" id="historyModal">
         <div class="modal-box">
             <div class="modal-header">
                 <h2>Lịch sử trò chuyện</h2>
-                <button class="close-btn" onclick="closeModal('historyModal')">✕</button>
+                <button class="close-btn" onclick="closeModal('historyModal')">&times;</button>
             </div>
             <div id="historyList">Đang tải...</div>
         </div>
     </div>
 
+    <!-- Modal Nâng cấp -->
     <div class="modal-overlay" id="upgradeModal">
         <div class="modal-box">
             <div class="modal-header">
                 <h2>Nâng cấp AI</h2>
-                <button class="close-btn" onclick="closeModal('upgradeModal')">✕</button>
+                <button class="close-btn" onclick="closeModal('upgradeModal')">&times;</button>
             </div>
             <div id="upgradeList">
                 <div class="upgrade-card" style="display:flex;justify-content:space-between;align-items:center;padding:12px;margin-bottom:10px;background:var(--bg-glass);border:1px solid var(--border-color);border-radius:var(--radius-md);">
@@ -1614,34 +1940,276 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="settingsModal">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h2>Cài đặt</h2>
-                <button class="close-btn" onclick="closeModal('settingsModal')">✕</button>
-            </div>
-            <div>
-                <p style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-color);">
-                    <span>Chế độ tối</span>
-                    <input type="checkbox" id="darkModeToggle" checked onchange="toggleTheme()" />
-                </p>
-                <p style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-color);">
-                    <span>Ngôn ngữ</span>
-                    <select id="langSelect" style="padding:6px 12px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border-color);border-radius:var(--radius-sm);">
-                        <option value="vi">Tiếng Việt</option>
-                        <option value="en">English</option>
-                    </select>
-                </p>
-                <button onclick="saveSettings()" style="margin-top:16px;padding:12px 24px;background:var(--accent-gradient);color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;width:100%;font-weight:700;">Lưu cài đặt</button>
-            </div>
+    <!-- Modal Cài đặt T_VY_AI_SUPREME (Nâng cấp đa Tab) -->
+    <div id="settingsModal" class="modal-overlay hidden">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h2><i class="fa-solid fa-gear"></i> Cài đặt hệ thống AI</h2>
+          <button class="close-btn" onclick="closeSettingsModal()">&times;</button>
         </div>
+
+        <div class="modal-body">
+          <!-- Thanh điều hướng Tab bên trái -->
+          <aside class="settings-sidebar">
+            <button class="tab-btn active" onclick="switchTab('privacyTab')">
+              <i class="fa-solid fa-shield-halved"></i> Dữ liệu & Quyền riêng tư
+            </button>
+            <button class="tab-btn" onclick="switchTab('preferencesTab')">
+              <i class="fa-solid fa-sliders"></i> Cấu hình AI
+            </button>
+            <button class="tab-btn" onclick="switchTab('uiTab')">
+              <i class="fa-solid fa-palette"></i> Giao diện & UI/UX
+            </button>
+            <button class="tab-btn" onclick="switchTab('accountTab')">
+              <i class="fa-solid fa-user-lock"></i> Tài khoản & Gói cước
+            </button>
+            <button class="tab-btn" onclick="switchTab('integrationsTab')">
+              <i class="fa-solid fa-plug"></i> Tích hợp & Công cụ
+            </button>
+          </aside>
+
+          <!-- Nội dung từng Tab -->
+          <main class="settings-content">
+            
+            <!-- TAB 1: DỮ LIỆU & QUYỀN RIÊNG TƯ -->
+            <section id="privacyTab" class="tab-content active">
+              <h3>Quản lý Dữ liệu & Quyền riêng tư</h3>
+              <hr>
+              
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Xuất dữ liệu trò chuyện</label>
+                  <p>Tải toàn bộ lịch sử chat về máy tính dưới các định dạng lưu trữ.</p>
+                </div>
+                <div class="btn-group">
+                  <button class="btn btn-secondary" onclick="exportData('json')">Export JSON</button>
+                  <button class="btn btn-secondary" onclick="exportData('markdown')">Export Markdown</button>
+                </div>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label class="danger-text">Xóa toàn bộ lịch sử</label>
+                  <p>Xóa toàn bộ các đoạn chat hiện có khỏi tài khoản. Hành động này không thể hoàn tác.</p>
+                </div>
+                <button class="btn btn-danger" onclick="clearAllConversations()">Xóa tất cả chat</button>
+              </div>
+
+              <div class="setting-item col">
+                <label>Quản lý bộ nhớ AI (Saved Memories)</label>
+                <p>Danh sách thông tin AI đã ghi nhớ từ các cuộc trò chuyện trước:</p>
+                <ul id="memoryList" class="memory-list">
+                  <!-- Render tự động qua JS -->
+                </ul>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Quyền sử dụng dữ liệu huấn luyện</label>
+                  <p>Cho phép hệ thống sử dụng dữ liệu ẩn danh để cải thiện mô hình AI (Opt-out training).</p>
+                </div>
+                <input type="checkbox" id="dataTrainingToggle" checked onchange="toggleDataTraining(this.checked)">
+              </div>
+            </section>
+
+            <!-- TAB 2: CÁ NHÂN HÓA & CẤU HÌNH AI -->
+            <section id="preferencesTab" class="tab-content">
+              <h3>Cá nhân hóa & Cấu hình AI</h3>
+              <hr>
+
+              <div class="setting-item col">
+                <label for="customInstructions">Hướng dẫn tùy chỉnh (System Prompt / Custom Instructions)</label>
+                <textarea id="customInstructions" rows="3" placeholder="Ví dụ: Tôi là lập trình viên Senior, hãy luôn trả lời ngắn gọn và ưu tiên kèm mã nguồn clean code..."></textarea>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label for="defaultModelSelect">Mô hình mặc định</label>
+                  <p>Chọn mô hình ưu tiên khi mở đoạn chat mới.</p>
+                </div>
+                <select id="defaultModelSelect">
+                  <option value="supreme-fast">Fast AI (Tốc độ cao)</option>
+                  <option value="supreme-smart" selected>Smart AI (Thông minh / Phân tích sâu)</option>
+                  <option value="supreme-coder">Coder Pro (Chuyên biệt lập trình)</option>
+                </select>
+              </div>
+
+              <h4>Chế độ Nâng cao (Developer Settings)</h4>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Temperature (Độ sáng tạo): <span id="tempValue">0.7</span></label>
+                  <p>Giá trị càng cao, câu trả lời càng đa dạng và sáng tạo.</p>
+                </div>
+                <input type="range" id="tempSlider" min="0" max="2" step="0.1" value="0.7" oninput="document.getElementById('tempValue').innerText = this.value">
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Top-P: <span id="topPValue">0.9</span></label>
+                </div>
+                <input type="range" id="topPSlider" min="0" max="1" step="0.05" value="0.9" oninput="document.getElementById('topPValue').innerText = this.value">
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Max Tokens: <span id="maxTokensValue">2048</span></label>
+                </div>
+                <input type="range" id="maxTokensSlider" min="256" max="8192" step="256" value="2048" oninput="document.getElementById('maxTokensValue').innerText = this.value">
+              </div>
+            </section>
+
+            <!-- TAB 3: GIAO DIỆN & TRẢI NGHIỆM NGƯỜI DÙNG (UI/UX) -->
+            <section id="uiTab" class="tab-content">
+              <h3>Giao diện & Trải nghiệm (UI/UX)</h3>
+              <hr>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label for="fontSelect">Phông chữ hiển thị</label>
+                </div>
+                <select id="fontSelect" onchange="changeFontFamily(this.value)">
+                  <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans (Mặc định)</option>
+                  <option value="'Roboto', sans-serif">Roboto</option>
+                  <option value="'Fira Code', monospace">Fira Code (Code style)</option>
+                </select>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label for="fontSizeSelect">Kích thước chữ</label>
+                </div>
+                <select id="fontSizeSelect" onchange="changeFontSize(this.value)">
+                  <option value="small">Nhỏ (14px)</option>
+                  <option value="medium" selected>Vừa (16px)</option>
+                  <option value="large">Lớn (18px)</option>
+                </select>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Đọc văn bản thành tiếng (Text-to-Speech)</label>
+                  <p>Phát âm thanh đọc phản hồi từ AI.</p>
+                </div>
+                <div class="tts-controls">
+                  <select id="ttsVoiceSelect"></select>
+                  <input type="range" id="ttsSpeed" min="0.5" max="2" step="0.1" value="1" title="Tốc độ đọc">
+                </div>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Âm thanh thông báo</label>
+                  <p>Phát tiếng "ting" khi AI phản hồi xong câu hỏi dài.</p>
+                </div>
+                <input type="checkbox" id="soundEffectToggle" checked>
+              </div>
+
+              <div class="setting-item col">
+                <label>Bảng Phím tắt (Keyboard Shortcuts)</label>
+                <div class="shortcuts-grid">
+                  <div><kbd>Ctrl</kbd> + <kbd>Enter</kbd> : Gửi tin nhắn</div>
+                  <div><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>O</kbd> : Tạo cuộc trò chuyện mới</div>
+                  <div><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd> : Sao chép phản hồi cuối</div>
+                  <div><kbd>Escape</kbd> : Đóng cửa sổ Cài đặt</div>
+                </div>
+              </div>
+            </section>
+
+            <!-- TAB 4: TÀI KHOẢN & GÓI DỊCH VỤ -->
+            <section id="accountTab" class="tab-content">
+              <h3>Tài khoản & Gói dịch vụ</h3>
+              <hr>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Thông tin bảo mật</label>
+                  <p>Thay đổi mật khẩu, bật xác thực 2 yếu tố (2FA).</p>
+                </div>
+                <button class="btn btn-secondary" onclick="openChangePasswordModal()">Đổi mật khẩu</button>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Xác thực 2 yếu tố (2FA)</label>
+                  <p>Tăng cường bảo mật đăng nhập.</p>
+                </div>
+                <input type="checkbox" id="twoFactorToggle">
+              </div>
+
+              <div class="setting-item col">
+                <label>Gói cước & Hạn mức sử dụng (Quota)</label>
+                <div class="quota-card">
+                  <div class="quota-status">Gói hiện tại: <strong>PRO VIP</strong></div>
+                  <div class="progress-bar">
+                    <div class="progress" style="width: 45%;"></div>
+                  </div>
+                  <p>Đã dùng: <strong>45,000 / 100,000 Tokens</strong> hôm nay</p>
+                  <button class="btn btn-primary" onclick="upgradePlan()">Nâng cấp hạn mức / VIP</button>
+                </div>
+              </div>
+
+              <div class="setting-item col">
+                <label>Thiết bị đang đăng nhập</label>
+                <ul class="session-list">
+                  <li><i class="fa-solid fa-desktop"></i> Chrome - Windows (Thiết bị này) <span class="badge">Online</span></li>
+                  <li><i class="fa-solid fa-mobile-screen"></i> Safari - iPhone 15 Pro</li>
+                </ul>
+              </div>
+            </section>
+
+            <!-- TAB 5: TÍCH HỢP & CÔNG CỤ MỞ RỘNG -->
+            <section id="integrationsTab" class="tab-content">
+              <h3>Tích hợp & API</h3>
+              <hr>
+
+              <div class="setting-item col">
+                <label>Quản lý API Key cá nhân</label>
+                <p>Sử dụng API Key để kết nối ứng dụng bên ngoài với tài khoản AI của bạn.</p>
+                <div class="api-key-box">
+                  <input type="text" id="userApiKey" readonly value="tvai_sk_live_98a76b54c3210ef" />
+                  <button class="btn btn-secondary" onclick="copyApiKey()"><i class="fa-solid fa-copy"></i> Sao chép</button>
+                  <button class="btn btn-danger" onclick="regenerateApiKey()">Tạo mới</button>
+                </div>
+              </div>
+
+              <div class="setting-item col">
+                <label>Kết nối tài khoản bên ngoài</label>
+                <div class="integration-grid">
+                  <div class="integration-card connected">
+                    <i class="fa-brands fa-google"></i>
+                    <span>Google Drive</span>
+                    <button class="btn btn-sm btn-outline">Đã kết nối</button>
+                  </div>
+                  <div class="integration-card">
+                    <i class="fa-brands fa-github"></i>
+                    <span>GitHub</span>
+                    <button class="btn btn-sm btn-primary">Kết nối</button>
+                  </div>
+                  <div class="integration-card">
+                    <i class="fa-solid fa-note-sticky"></i>
+                    <span>Notion</span>
+                    <button class="btn btn-sm btn-primary">Kết nối</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+          </main>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeSettingsModal()">Hủy</button>
+          <button class="btn btn-primary" onclick="saveAllSettings()">Lưu thay đổi</button>
+        </div>
+      </div>
     </div>
 
+    <!-- Modal Đăng nhập / Đăng ký -->
     <div class="modal-overlay" id="loginModal">
         <div class="modal-box">
             <div class="modal-header">
                 <h2>Tài khoản</h2>
-                <button class="close-btn" onclick="closeModal('loginModal')">✕</button>
+                <button class="close-btn" onclick="closeModal('loginModal')">&times;</button>
             </div>
             
             <div class="auth-tabs">
@@ -1694,7 +2262,7 @@
         <div class="modal-box" style="max-width: 800px; width: 90%; height: 80vh; display: flex; flex-direction: column;">
             <div class="modal-header">
                 <h2>🚀 Live Code Sandbox</h2>
-                <button class="close-btn" onclick="closeModal('sandboxModal')">✕</button>
+                <button class="close-btn" onclick="closeModal('sandboxModal')">&times;</button>
             </div>
             <iframe id="sandboxFrame" style="flex: 1; width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #fff;"></iframe>
         </div>
@@ -1702,6 +2270,20 @@
 
     <div class="search-result" id="searchResult" style="position:fixed;bottom:90px;right:20px;background:var(--bg-card);padding:10px 16px;border-radius:var(--radius-md);border:1px solid var(--border-color);font-size:13px;z-index:999;display:none;"></div>
 
+	<!-- 👁️ KHOANH VÙNG: Khung Claude Artifacts Split Screen Live Preview -->
+	<div id="artifactPreviewPane">
+		<div class="artifact-header">
+			<strong style="color: var(--color-text, #333); font-size: 15px;">
+				👁️ Claude Artifact Live Preview
+			</strong>
+			<div style="display: flex; gap: 8px;">
+				<button type="button" onclick="refreshLivePreview()" style="padding: 6px 12px; background: var(--color-primary-light, #eef2ff); border: 1px solid var(--color-border, #ccc); border-radius: 4px; cursor: pointer; font-size: 13px;">🔄 Tải lại</button>
+				<button type="button" onclick="closeLivePreview()" style="padding: 6px 12px; background: #ff4d4f; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">✕ Đóng</button>
+			</div>
+		</div>
+		<iframe id="artifactFrame" title="Artifact Live Preview Pane"></iframe>
+	</div>
+	
     <!-- ============================================================ -->
     <!-- JAVASCRIPT CHÍNH (HOÀN THIỆN ĐỒNG BỘ BACKEND, LOCALSTORAGE & UI) -->
     <!-- ============================================================ -->
@@ -1771,9 +2353,9 @@
         const appContainer = document.getElementById('appContainer');
         const dragOverlay = document.getElementById('dragOverlay');
 
-        // State global & AbortController
+        // State global
         window.currentConversationId = null;
-        let conversationsList = {}; // Lưu trữ tất cả hội thoại ở localStorage
+        let conversationsList = {}; 
         let currentLevel = 'pro';
         let isDark = true;
         let isLoggedIn = false;
@@ -1789,13 +2371,43 @@
             pro3: 'AI 3.0 Pro'
         };
 
-        // Textarea tự nâng chiều cao
+        // Textarea tự nâng chiều cao & phím tắt Enter
         if (inputField) {
             inputField.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 150) + 'px';
             });
+            inputField.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
         }
+
+        // Phím tắt bàn phím toàn cục
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeSettingsModal();
+                closeModal('loginModal');
+                closeModal('historyModal');
+                closeModal('upgradeModal');
+                closeModal('sandboxModal');
+            }
+            if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'o') {
+                e.preventDefault();
+                createNewChat();
+            }
+            if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'c') {
+                e.preventDefault();
+                const aiMsgs = document.querySelectorAll('.message-wrapper.ai .message');
+                if (aiMsgs.length > 0) {
+                    const lastMsg = aiMsgs[aiMsgs.length - 1];
+                    navigator.clipboard.writeText(lastMsg.dataset.rawText || lastMsg.innerText);
+                    showToast('📋 Đã sao chép câu trả lời cuối cùng!', 'success');
+                }
+            }
+        });
 
         // Drag & Drop file attachment listener
         if (appContainer && dragOverlay) {
@@ -1893,6 +2505,18 @@
             }
             const cleanText = text.replace(/```[\s\S]*?```/g, '').replace(/<[^>]*>/g, '');
             const utterance = new SpeechSynthesisUtterance(cleanText);
+            
+            const speedInput = document.getElementById('ttsSpeed');
+            if (speedInput) utterance.rate = parseFloat(speedInput.value) || 1.0;
+
+            const voiceSelect = document.getElementById('ttsVoiceSelect');
+            if (voiceSelect && voiceSelect.selectedOptions[0]) {
+                const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
+                const voices = speechSynthesis.getVoices();
+                const matchedVoice = voices.find(v => v.name === selectedVoiceName);
+                if (matchedVoice) utterance.voice = matchedVoice;
+            }
+
             utterance.lang = 'vi-VN';
             btn.innerHTML = '<i class="fa-solid fa-square-stop" style="color:#ef4444;"></i> Dừng';
             utterance.onend = utterance.onerror = () => btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> Đọc';
@@ -1970,6 +2594,10 @@
                 }
             });
             downloadFile(txtText, `Chat_${Date.now()}.txt`, 'text/plain');
+        }
+
+        function exportChatCombined() {
+            exportChatMarkdown();
         }
 
         function downloadFile(content, fileName, mimeType) {
@@ -2054,16 +2682,35 @@
             location.reload();
         }
 
-        function openModal(id) { document.getElementById(id).classList.add('active'); }
-        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function openModal(id) { 
+            const modal = document.getElementById(id);
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('active');
+                if (id === 'settingsModal') {
+                    renderMemoryList();
+                    populateVoiceList();
+                }
+            }
+        }
+        function closeModal(id) { 
+            const modal = document.getElementById(id);
+            if (modal) {
+                modal.classList.remove('active');
+                modal.classList.add('hidden');
+            }
+        }
 
-        document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); }));
+        document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { 
+            if (e.target === o) {
+                o.classList.remove('active');
+                o.classList.add('hidden');
+            }
+        }));
 
         function toggleTheme() {
             isDark = !isDark;
             document.documentElement.toggleAttribute('data-theme', !isDark);
-            const darkToggleCheck = document.getElementById('darkModeToggle');
-            if(darkToggleCheck) darkToggleCheck.checked = isDark;
             themeToggle.innerHTML = isDark ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
             localStorage.setItem('tv_theme', isDark ? 'dark' : 'light');
         }
@@ -2144,7 +2791,150 @@
         }
 
         // ---------------------------------------------------------
-        // 2. LƯU VÀ QUẢN LÝ LỊCH SỬ CHAT (LOCALSTORAGE)
+        // 2. XỬ LÝ CÁC TAB CỦA MODAL CÀI ĐẶT MỚI
+        // ---------------------------------------------------------
+        function switchTab(tabId) {
+            document.querySelectorAll('.settings-sidebar .tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.settings-content .tab-content').forEach(sec => sec.classList.remove('active'));
+            
+            const btnList = document.querySelectorAll('.settings-sidebar .tab-btn');
+            btnList.forEach(btn => {
+                if (btn.getAttribute('onclick').includes(tabId)) {
+                    btn.classList.add('active');
+                }
+            });
+
+            const targetTab = document.getElementById(tabId);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+        }
+
+        function closeSettingsModal() {
+            closeModal('settingsModal');
+        }
+
+        function exportData(type) {
+            if (type === 'json') {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(conversationsList, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `tv_ai_export_${Date.now()}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+                showToast('📥 Đã xuất dữ liệu JSON thành công!', 'success');
+            } else if (type === 'markdown') {
+                exportChatMarkdown();
+            }
+        }
+
+        function clearAllConversations() {
+            if (confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện? Hành động này không thể hoàn tác!')) {
+                conversationsList = {};
+                localStorage.removeItem('tv_conversations');
+                createNewChat();
+                renderSidebarHistory();
+                showToast('🗑️ Đã xóa toàn bộ lịch sử trò chuyện!', 'warning');
+            }
+        }
+
+        function toggleDataTraining(checked) {
+            localStorage.setItem('tv_opt_out_training', checked ? 'true' : 'false');
+            showToast(checked ? '✅ Đã bật chia sẻ dữ liệu ẩn danh' : '🔒 Đã tắt chia sẻ dữ liệu', 'info');
+        }
+
+        function renderMemoryList() {
+            const memList = document.getElementById('memoryList');
+            if (!memList) return;
+            const memories = [
+                "Người dùng ưu tiên mã nguồn clean code và giải thích ngắn gọn.",
+                "Ngôn ngữ làm việc chính: Tiếng Việt / JavaScript / Python.",
+                "Cấu hình mặc định: Smart AI Model."
+            ];
+            memList.innerHTML = memories.map((m, i) => `
+                <li>
+                    <span>• ${m}</span>
+                    <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#ef4444;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                </li>
+            `).join('');
+        }
+
+        function changeFontFamily(val) {
+            document.body.style.fontFamily = val;
+            localStorage.setItem('tv_font_family', val);
+        }
+
+        function changeFontSize(val) {
+            const sizeMap = { small: '14px', medium: '16px', large: '18px' };
+            document.body.style.fontSize = sizeMap[val] || '16px';
+            localStorage.setItem('tv_font_size', val);
+        }
+
+        function populateVoiceList() {
+            if (!('speechSynthesis' in window)) return;
+            const voiceSelect = document.getElementById('ttsVoiceSelect');
+            if (!voiceSelect) return;
+            const voices = speechSynthesis.getVoices();
+            voiceSelect.innerHTML = '';
+            voices.forEach((voice) => {
+                const option = document.createElement('option');
+                option.textContent = `${voice.name} (${voice.lang})`;
+                option.setAttribute('data-lang', voice.lang);
+                option.setAttribute('data-name', voice.name);
+                if (voice.lang.includes('vi')) option.selected = true;
+                voiceSelect.appendChild(option);
+            });
+        }
+        if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = populateVoiceList;
+        }
+
+        function openChangePasswordModal() {
+            showToast('🔐 Tính năng đổi mật khẩu khả dụng trong mục Tài khoản.', 'info');
+        }
+
+        function upgradePlan() {
+            closeSettingsModal();
+            openModal('upgradeModal');
+        }
+
+        function copyApiKey() {
+            const apiKeyInput = document.getElementById('userApiKey');
+            if (apiKeyInput) {
+                navigator.clipboard.writeText(apiKeyInput.value);
+                showToast('📋 Đã sao chép API Key!', 'success');
+            }
+        }
+
+        function regenerateApiKey() {
+            const apiKeyInput = document.getElementById('userApiKey');
+            if (apiKeyInput) {
+                const newKey = 'tvai_sk_live_' + Math.random().toString(36).substring(2, 12) + Math.random().toString(36).substring(2, 8);
+                apiKeyInput.value = newKey;
+                showToast('🔑 Đã tạo thành công API Key mới!', 'success');
+            }
+        }
+
+        function saveAllSettings() {
+            saveSettings();
+            showToast('✅ Đã lưu tất cả cài đặt hệ thống!', 'success');
+            closeSettingsModal();
+        }
+
+        function saveSettings() {
+            const customInst = document.getElementById('customInstructions');
+            if (customInst) localStorage.setItem('tv_custom_instructions', customInst.value);
+
+            const defModel = document.getElementById('defaultModelSelect');
+            if (defModel) localStorage.setItem('tv_default_model', defModel.value);
+
+            const temp = document.getElementById('tempSlider');
+            if (temp) localStorage.setItem('tv_temperature', temp.value);
+        }
+
+        // ---------------------------------------------------------
+        // 3. LƯU VÀ QUẢN LÝ LỊCH SỬ CHAT (LOCALSTORAGE)
         // ---------------------------------------------------------
         function initChatHistory() {
             const saved = localStorage.getItem('tv_conversations');
@@ -2233,7 +3023,7 @@
             chatContainer.innerHTML = '';
             conv.messages.forEach(m => addMessage(m.role, m.text, false));
             renderSidebarHistory();
-            showToast('📂 Đã tải lại cuộc trò chuyện!', 'info');
+            showToast('📂 Đã tải cuộc trò chuyện!', 'info');
         }
 
         function deleteConversation(event, id) {
@@ -2292,27 +3082,151 @@
                     </div>
                 </div>
             `;
+            attachedFiles = [];
+            renderFilePreview();
             renderSidebarHistory();
-            showToast('✨ Đã tạo đoạn chat mới!', 'info');
-        }
-
-        function clearAllMessages() {
-            if (!confirm('Xóa sạch toàn bộ lịch sử trò chuyện?')) return;
-            conversationsList = {};
-            localStorage.removeItem('tv_conversations');
-            createNewChat();
+            showToast('✨ Đã mở đoạn chat mới!', 'info');
         }
 
         // ---------------------------------------------------------
-        // 3. XỬ LÝ ABORTCONTROLLER (NÚT DỪNG) & PHẢN HỒI AI
+        // 4. CHỨC NĂNG TRUYỀN NHẬN VÀ HIỂN THỊ CÂU HỎI / TRẢ LỜI
         // ---------------------------------------------------------
-        function setGeneratingState(isGenerating) {
-            if (isGenerating) {
-                if (sendBtn) sendBtn.style.display = 'none';
-                if (stopBtn) stopBtn.style.display = 'flex';
+        function addMessage(role, text, shouldSave = true) {
+            const welcomeHero = document.getElementById('welcomeHero');
+            if (welcomeHero) welcomeHero.remove();
+
+            const wrapper = document.createElement('div');
+            wrapper.className = `message-wrapper ${role}`;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = role === 'user' ? '<i class="fa-solid fa-user"></i>' : '<i class="fa-solid fa-robot"></i>';
+
+            const msg = document.createElement('div');
+            msg.className = `message ${role}`;
+            msg.dataset.rawText = text;
+
+            const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+            if (role === 'ai') {
+                msg.innerHTML = formatAiResponse(text);
+                
+                const tools = document.createElement('div');
+                tools.className = 'message-tools';
+                tools.innerHTML = `
+                    <button class="tool-btn" onclick="navigator.clipboard.writeText(this.closest('.message').dataset.rawText);showToast('📋 Đã chép nội dung!', 'success');"><i class="fa-regular fa-copy"></i> Sao chép</button>
+                    <button class="tool-btn" onclick="speakMsgText(this)"><i class="fa-solid fa-volume-high"></i> Đọc</button>
+                    <span class="time">${now}</span>
+                `;
+                msg.appendChild(tools);
             } else {
-                if (sendBtn) sendBtn.style.display = 'flex';
-                if (stopBtn) stopBtn.style.display = 'none';
+                msg.textContent = text;
+                const tools = document.createElement('div');
+                tools.className = 'message-tools';
+                tools.innerHTML = `<span class="time">${now}</span>`;
+                msg.appendChild(tools);
+            }
+
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(msg);
+            chatContainer.appendChild(wrapper);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            if (role === 'ai') renderMarkdownAndMermaid(msg);
+
+            if (shouldSave) saveCurrentConversation();
+            return msg;
+        }
+
+        function formatAiResponse(text) {
+            if (typeof marked !== 'undefined') {
+                return marked.parse(text);
+            }
+            return text.replace(/\n/g, '<br>');
+        }
+
+        function renderMarkdownAndMermaid(element) {
+            element.querySelectorAll('pre code').forEach((block) => {
+                const codeText = block.innerText;
+                const lang = block.className.replace('language-', '') || 'code';
+                
+                if (lang === 'mermaid') {
+                    const mermaidDiv = document.createElement('div');
+                    mermaidDiv.className = 'mermaid';
+                    mermaidDiv.textContent = codeText;
+                    block.parentElement.replaceWith(mermaidDiv);
+                    try { mermaid.run({ nodes: [mermaidDiv] }); } catch(e) {}
+                } else {
+                    const codeContainer = document.createElement('div');
+                    codeContainer.className = 'code-container';
+                    codeContainer.innerHTML = `
+                        <div class="code-header">
+                            <span>${lang.toUpperCase()}</span>
+                            <div class="code-actions">
+                                ${(lang === 'html' || lang === 'js' || lang === 'javascript') ? `<button class="code-run-btn" onclick="runCodeSnippet(\`${codeText.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`)"><i class="fa-solid fa-play"></i> Run Live</button>` : ''}
+                                <button class="code-copy-btn" onclick="copyCodeSnippet(this, \`${codeText.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`)"><i class="fa-regular fa-copy"></i> Sao chép</button>
+                            </div>
+                        </div>
+                    `;
+                    const pre = block.parentElement.cloneNode(true);
+                    codeContainer.appendChild(pre);
+                    block.parentElement.replaceWith(codeContainer);
+                    if (typeof hljs !== 'undefined') hljs.highlightElement(pre.querySelector('code'));
+                }
+            });
+        }
+
+        async function sendMessage() {
+            const rawText = inputField.value.trim();
+            if (!rawText && attachedFiles.length === 0) return;
+
+            let fullPrompt = rawText;
+            if (attachedFiles.length > 0) {
+                const fileContents = attachedFiles.map(f => `--- FILE: ${f.name} ---\n${f.content}\n--- END FILE ---`).join('\n\n');
+                fullPrompt = (rawText ? rawText + '\n\n' : '') + fileContents;
+            }
+
+            addMessage('user', rawText || '[Đã gửi file đính kèm]');
+            
+            inputField.value = '';
+            inputField.style.height = 'auto';
+            attachedFiles = [];
+            renderFilePreview();
+
+            sendBtn.style.display = 'none';
+            stopBtn.style.display = 'flex';
+
+            showDeepThink();
+
+            currentAbortController = new AbortController();
+
+            try {
+                // Giả lập xử lý AI linh hoạt & hỗ trợ phản hồi đa dạng
+                await new Promise(r => setTimeout(r, 1200));
+
+                let aiResponseText = "";
+                const lower = fullPrompt.toLowerCase();
+
+                if (lower.includes('mermaid') || lower.includes('sơ đồ')) {
+                    aiResponseText = `Dưới đây là sơ đồ quy trình trực quan dành cho bạn:\n\n\`\`\`mermaid\ngraph TD;\n    A[Bắt đầu] --> B[Tiếp nhận đơn hàng];\n    B --> C{Kiểm tra tồn kho?};\n    C -- Còn hàng --> D[Đóng gói & Gửi hàng];\n    C -- Hết hàng --> E[Thông báo khách hàng];\n    D --> F[Hoàn thành];\n    E --> F;\n\`\`\``;
+                } else if (lower.includes('code') || lower.includes('lập trình') || lower.includes('html')) {
+                    aiResponseText = `Dưới đây là đoạn mã HTML/CSS demo hoàn chỉnh mà bạn có thể chạy trực tiếp bằng nút **Run Live**:\n\n\`\`\`html\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  body { background: #0f172a; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }\n  .card { background: linear-gradient(135deg, #6366f1, #a855f7); padding: 30px; border-radius: 16px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }\n</style>\n</head>\n<body>\n  <div class="card">\n    <h2>🚀 Welcome to T.VỸ-AI Live Sandbox</h2>\n    <p>Mã nguồn HTML đã được khởi chạy thành công!</p>\n  </div>\n</body>\n</html>\n\`\`\``;
+                } else {
+                    aiResponseText = `Tôi là **T.VỸ-AI-SUPREME v13.0 Ultra** (Chế độ: **${LEVEL_NAMES[currentLevel]}**).\n\nCảm ơn bạn đã gửi yêu cầu: "*${rawText}*".\n\nTôi đã phân tích dữ liệu và sẵn sàng hỗ trợ bạn hoàn thành công việc một cách tối ưu nhất! Nếu cần thêm trợ giúp về viết code, sáng tạo kịch bản, hay vẽ sơ đồ quy trình, hãy cho tôi biết nhé.`;
+                }
+
+                hideDeepThink();
+                addMessage('ai', aiResponseText);
+
+            } catch (err) {
+                hideDeepThink();
+                if (err.name !== 'AbortError') {
+                    addMessage('ai', '❌ Đã xảy ra lỗi trong quá trình kết nối tới máy chủ AI.');
+                }
+            } finally {
+                sendBtn.style.display = 'flex';
+                stopBtn.style.display = 'none';
+                currentAbortController = null;
             }
         }
 
@@ -2320,391 +3234,87 @@
             if (currentAbortController) {
                 currentAbortController.abort();
                 currentAbortController = null;
-                showToast('🛑 Đã dừng tạo câu trả lời!', 'warning');
             }
             hideDeepThink();
-            setGeneratingState(false);
+            sendBtn.style.display = 'flex';
+            stopBtn.style.display = 'none';
+            showToast('🛑 Đã dừng tạo phản hồi!', 'warning');
         }
 
-        // Giả lập Phản hồi AI cực kỳ chi tiết nếu không chạy qua Backend Python API
-        function generateStandaloneMockResponse(prompt) {
-            const p = prompt.toLowerCase();
-            if (p.includes('mermaid') || p.includes('sơ đồ')) {
-                return `Dưới đây là sơ đồ Mermaid trực quan theo yêu cầu của bạn:\n\n\`\`\`mermaid\ngraph TD\n    A[Bắt đầu: Đơn hàng mới] --> B{Kiểm tra tồn kho}\n    B -- Còn hàng --> C[Xác nhận đơn & Đóng gói]\n    B -- Hết hàng --> D[Thông báo khách hàng & Hủy]\n    C --> E[Giao cho đơn vị vận chuyển]\n    E --> F[Khách nhận hàng thành công]\n    F --> G[Hoàn tất đơn hàng]\n\`\`\``;
-            }
-            if (p.includes('code') || p.includes('mã') || p.includes('html') || p.includes('sửa lỗi')) {
-                return `Dưới đây là đoạn mã nguồn mẫu hoàn chỉnh bằng HTML/CSS:\n\n\`\`\`html\n<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: sans-serif; background: #111; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; }\n    .card { padding: 20px; background: #222; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); text-align: center; }\n    button { padding: 10px 20px; background: #6366f1; border: none; color: #fff; border-radius: 6px; cursor: pointer; font-weight: bold; }\n  </style>\n</head>\n<body>\n  <div class="card">\n    <h2>Hello T.VỸ-AI Sandbox!</h2>\n    <p>Bấm nút bên dưới để test ứng dụng:</p>\n    <button onclick="alert('Sandbox hoạt động hoàn hảo!')">Thử ngay</button>\n  </div>\n</body>\n</html>\n\`\`\``;
-            }
-            return `Chào bạn! Tôi là **T.VỸ-AI-SUPREME v13.0** (Cấp độ: **${LEVEL_NAMES[currentLevel]}**).\n\nTôi đã nhận được yêu cầu của bạn:\n> "${prompt}"\n\nHệ thống AI đã phân tích câu hỏi của bạn và sẵn sàng hỗ trợ bạn giải quyết công việc, viết mã, vẽ sơ đồ, dịch thuật hoặc sáng tạo nội dung nâng cao!`;
-        }
-
-        async function generateAIResponse(promptText, fileDataArray) {
-            let fullPrompt = promptText;
-            if (fileDataArray && fileDataArray.length > 0) {
-                fullPrompt += "\n\n[Dữ liệu đính kèm cần xử lý]:\n";
-                fileDataArray.forEach(file => {
-                    fullPrompt += `\n--- Bắt đầu nội dung file: ${file.name} ---\n${file.content}\n--- Kết thúc file ---\n`;
-                });
-            }
-
-            try {
-                currentAbortController = new AbortController();
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    signal: currentAbortController.signal,
-                    body: JSON.stringify({
-                        message: fullPrompt,
-                        conversation_id: window.currentConversationId || null, 
-                        level: currentLevel 
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Server offline hoặc lỗi HTTP ${response.status}`);
-                }
-
-                const data = await response.json();
-                if (data.conversation_id) window.currentConversationId = data.conversation_id;
-                return data.message || data.response || "Không nhận được phản hồi từ máy chủ.";
-
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    return "⚠️ *Đã dừng tạo câu trả lời theo yêu cầu.*";
-                }
-                // Fallback mượt mà nếu đang chạy không có server backend Python
-                return generateStandaloneMockResponse(promptText);
-            } finally {
-                currentAbortController = null;
-            }
-        }
-
-        async function sendMessage() {
-            let text = inputField.value.trim();
-            if (!text && attachedFiles.length === 0) return;
-
-            document.getElementById('welcomeHero')?.remove();
-
-            let userMsg = text;
-            if (attachedFiles.length > 0) {
-                userMsg += (userMsg ? '\n\n' : '') + `📎 **Đã đính kèm (${attachedFiles.length} file):**\n` + 
-                           attachedFiles.map(f => `- \`${f.name}\` (${f.size})`).join('\n');
-            }
-
-            const filesToProcess = [...attachedFiles];
-            addMessage('user', userMsg);
-            
-            inputField.value = '';
-            inputField.style.height = 'auto';
-            attachedFiles = [];
-            renderFilePreview();
-
-            setGeneratingState(true);
-            showDeepThink();
-
-            const aiReplyText = await generateAIResponse(text || "Vui lòng phân tích file đính kèm", filesToProcess);
-            
-            hideDeepThink();
-            setGeneratingState(false);
-            addMessage('ai', aiReplyText);
-        }
-
-        if (sendBtn) sendBtn.addEventListener('click', sendMessage);
-        if (inputField) {
-            inputField.addEventListener('keydown', e => { 
-                if (e.key === 'Enter' && !e.shiftKey) { 
-                    e.preventDefault(); 
-                    sendMessage(); 
-                } 
-            });
-        }
-
-        // ---------------------------------------------------------
-        // 4. HIỂN THỊ TIN NHẮN, CHỈNH SỬA & RENDER TOOLKIT
-        // ---------------------------------------------------------
-        function copyMsgTextContent(btn) {
-            const msgDiv = btn.closest('.message');
-            if (!msgDiv || !msgDiv.dataset.rawText) return;
-            navigator.clipboard.writeText(msgDiv.dataset.rawText).then(() => {
-                showToast('📋 Đã sao chép nội dung!', 'success');
-            }).catch(() => {
-                showToast('❌ Không thể sao chép văn bản', 'error');
-            });
-        }
-
-        function triggerEditMessage(btn, role) {
-            const msgDiv = btn.closest('.message');
-            const rawText = msgDiv ? msgDiv.dataset.rawText || '' : '';
-            if (msgDiv) editMessageInline(msgDiv, role, rawText);
-        }
-
-        function editMessageInline(msgDiv, role, originalContent) {
-            if (msgDiv.querySelector('.edit-box')) return;
-
-            const currentInner = msgDiv.innerHTML;
-            msgDiv.dataset.originalHtml = currentInner;
-
-            const editBox = document.createElement('div');
-            editBox.className = 'edit-box';
-
-            const textarea = document.createElement('textarea');
-            textarea.className = 'edit-textarea';
-            textarea.value = originalContent;
-
-            const editButtons = document.createElement('div');
-            editButtons.className = 'edit-buttons';
-
-            const saveBtn = document.createElement('button');
-            saveBtn.className = 'btn-edit-save';
-            saveBtn.innerHTML = role === 'user' ? '<i class="fa-solid fa-paper-plane"></i> Lưu & Gửi lại' : '<i class="fa-solid fa-check"></i> Lưu';
-            
-            const cancelBtn = document.createElement('button');
-            cancelBtn.className = 'btn-edit-cancel';
-            cancelBtn.innerHTML = 'Hủy';
-
-            cancelBtn.onclick = () => {
-                msgDiv.innerHTML = msgDiv.dataset.originalHtml;
-                delete msgDiv.dataset.originalHtml;
-            };
-
-            saveBtn.onclick = async () => {
-                const newContent = textarea.value.trim();
-                if (!newContent) return showToast('⚠️ Nội dung không được để trống!', 'warning');
-
-                if (role === 'user') {
-                    msgDiv.dataset.rawText = newContent;
-                    renderUserMessageContent(msgDiv, newContent);
-                    
-                    setGeneratingState(true);
-                    showDeepThink();
-                    const aiReply = await generateAIResponse(newContent, []);
-                    hideDeepThink();
-                    setGeneratingState(false);
-                    addMessage('ai', aiReply);
-                } else {
-                    msgDiv.dataset.rawText = newContent;
-                    renderAIMessageContent(msgDiv, newContent);
-                    saveCurrentConversation();
-                    showToast('✅ Đã cập nhật nội dung tin nhắn!', 'success');
-                }
-            };
-
-            editButtons.appendChild(cancelBtn);
-            editButtons.appendChild(saveBtn);
-            editBox.appendChild(textarea);
-            editBox.appendChild(editButtons);
-
-            msgDiv.innerHTML = '';
-            msgDiv.appendChild(editBox);
-            textarea.focus();
-        }
-
-        function renderUserMessageContent(msgDiv, rawContent) {
-            msgDiv.innerHTML = rawContent.replace(/\n/g, '<br>');
-            const tools = document.createElement('div');
-            tools.className = 'message-tools';
-            tools.innerHTML = `
-                <button class="tool-btn" onclick="copyMsgTextContent(this)"><i class="fa-regular fa-copy"></i> Sao chép</button>
-                <button class="tool-btn" onclick="triggerEditMessage(this, 'user')"><i class="fa-solid fa-pen-to-square"></i> Sửa</button>
-                <span class="time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-            `;
-            msgDiv.appendChild(tools);
-        }
-
-        function renderAIMessageContent(msgDiv, rawContent) {
-            msgDiv.innerHTML = marked.parse(rawContent);
-
-            msgDiv.querySelectorAll('pre code').forEach(block => {
-                if (block.className.includes('language-mermaid') || block.className.includes('mermaid')) {
-                    const container = document.createElement('div');
-                    container.className = 'mermaid';
-                    container.textContent = block.innerText;
-                    const pre = block.parentNode;
-                    if (pre && pre.parentNode) {
-                        pre.parentNode.replaceChild(container, pre);
-                    }
-                } else {
-                    const pre = block.parentNode;
-                    const container = document.createElement('div');
-                    container.className = 'code-container';
-                    
-                    const header = document.createElement('div');
-                    header.className = 'code-header';
-                    let lang = block.className.replace('language-', '') || 'code';
-                    header.innerHTML = `<span>${lang}</span>`;
-                    
-                    const actions = document.createElement('div');
-                    actions.className = 'code-actions';
-                    
-                    const copyBtn = document.createElement('button');
-                    copyBtn.className = 'code-copy-btn';
-                    copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i> Sao chép';
-                    const codeStr = block.innerText;
-                    copyBtn.onclick = () => copyCodeSnippet(copyBtn, codeStr);
-                    actions.appendChild(copyBtn);
-
-                    if (block.className.includes('html') || block.className.includes('javascript') || block.className.includes('css')) {
-                        const runBtn = document.createElement('button');
-                        runBtn.className = 'code-run-btn';
-                        runBtn.innerHTML = '<i class="fa-solid fa-play"></i> Chạy thử';
-                        runBtn.onclick = () => runCodeSnippet(codeStr);
-                        actions.appendChild(runBtn);
-                    }
-
-                    header.appendChild(actions);
-                    if (pre && pre.parentNode) {
-                        pre.parentNode.insertBefore(container, pre);
-                        container.appendChild(header);
-                        container.appendChild(pre);
-                    }
-                }
-            });
-
-            if (window.mermaid) {
-                try { 
-                    if (typeof mermaid.run === 'function') {
-                        mermaid.run({ nodes: msgDiv.querySelectorAll('.mermaid') });
-                    } else if (typeof mermaid.init === 'function') {
-                        mermaid.init(undefined, msgDiv.querySelectorAll('.mermaid'));
-                    }
-                } catch(e) { console.error("Mermaid error:", e); }
-            }
-
-            const tools = document.createElement('div');
-            tools.className = 'message-tools';
-            tools.innerHTML = `
-                <button class="tool-btn" onclick="speakMsgText(this)"><i class="fa-solid fa-volume-high"></i> Đọc</button>
-                <button class="tool-btn" onclick="copyMsgTextContent(this)"><i class="fa-regular fa-copy"></i> Sao chép</button>
-                <button class="tool-btn" onclick="triggerEditMessage(this, 'ai')"><i class="fa-solid fa-pen-to-square"></i> Sửa</button>
-                <span class="time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-            `;
-            msgDiv.appendChild(tools);
-        }
-
-        function addMessage(role, content, shouldSave = true) {
-            const wrapper = document.createElement('div');
-            wrapper.className = `message-wrapper ${role}`;
-
-            const avatar = document.createElement('div');
-            avatar.className = 'message-avatar';
-            avatar.innerHTML = role === 'user' ? 'U' : '<i class="fa-solid fa-robot"></i>';
-
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `message ${role}`;
-            msgDiv.dataset.rawText = content;
-
-            if (role === 'ai') {
-                renderAIMessageContent(msgDiv, content);
-            } else {
-                renderUserMessageContent(msgDiv, content);
-            }
-
-            wrapper.appendChild(avatar);
-            wrapper.appendChild(msgDiv);
-            chatContainer.appendChild(wrapper);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-
-            if (shouldSave) {
-                saveCurrentConversation();
+        function clearAllMessages() {
+            if (confirm('Xóa sạch nội dung cuộc trò chuyện hiện tại?')) {
+                createNewChat();
             }
         }
 
         function searchMessages() {
-            const keyword = searchInput.value.trim().toLowerCase();
-            if (!keyword) return;
-            let found = 0;
-            document.querySelectorAll('.message').forEach(msg => {
-                if (msg.textContent.toLowerCase().includes(keyword)) {
-                    msg.style.boxShadow = '0 0 0 2px #f59e0b';
-                    found++;
-                } else {
-                    msg.style.boxShadow = '';
+            const query = searchInput.value.trim().toLowerCase();
+            const resBox = document.getElementById('searchResult');
+            if (!query) {
+                resBox.style.display = 'none';
+                return;
+            }
+            const msgs = document.querySelectorAll('.message');
+            let count = 0;
+            msgs.forEach(m => {
+                if (m.dataset.rawText && m.dataset.rawText.toLowerCase().includes(query)) {
+                    count++;
                 }
             });
-            const resEl = document.getElementById('searchResult');
-            resEl.textContent = `🔍 Tìm thấy ${found} kết quả`;
-            resEl.style.display = 'block';
-            setTimeout(() => resEl.style.display = 'none', 3000);
+            resBox.style.display = 'block';
+            resBox.innerHTML = `🔍 Tìm thấy <strong>${count}</strong> kết quả phù hợp với "${query}"`;
         }
 
-        function upgradeTier(tier) { showToast(`✅ Đã nâng cấp thành công gói ${tier.toUpperCase()}!`, 'success'); closeModal('upgradeModal'); }
-        function upgradeWithMomo(tier) { window.open('https://momo.vn', '_blank'); showToast('💳 Đang chuyển đến cổng thanh toán MoMo...', 'info'); }
-        function saveSettings() { showToast('✅ Đã lưu cài đặt!', 'success'); closeModal('settingsModal'); }
-
         // ---------------------------------------------------------
-        // 5. CÁC HÀM CÔNG CỤ AI ĐÃ ĐƯỢC GỘP NHÓM THÔNG MINH
+        // 5. CÁC HÀM CÔNG CỤ TỪ DROPDOWN MENU
         // ---------------------------------------------------------
         function aiTextAndEmail() {
+            setInputAndSend("Hãy giúp tôi soạn một email chuyên nghiệp gửi đối tác về việc hợp tác dự án mới.");
             toggleMenu();
-            const choice = prompt("Chức năng Văn bản & Email:\n1: Tóm tắt văn bản\n2: Dịch đa ngôn ngữ\n3: Viết Email Chuyên nghiệp", "1");
-            if (choice === "1") summarizeText();
-            else if (choice === "2") translateText();
-            else if (choice === "3") writeEmail();
         }
 
         function aiCreativeAndMedia() {
+            setInputAndSend("Sáng tạo 3 ý tưởng kịch bản video ngắn thu hút triệu view về xu hướng công nghệ AI.");
             toggleMenu();
-            const choice = prompt("Chức năng Sáng tạo & Truyền thông:\n1: Tạo kịch bản Video (TikTok/Reels/Shorts)\n2: Sáng tác Nhạc & Lời bài hát", "1");
-            if (choice === "1") generateVideo();
-            else if (choice === "2") generateMusicWithLyrics();
         }
 
         function aiDevAndData() {
+            setInputAndSend("Viết hàm Python phân tích dữ liệu mảng và tối ưu thuật toán tìm kiếm.");
             toggleMenu();
-            const choice = prompt("Chức năng Lập trình & Dữ liệu:\n1: Sửa lỗi & Tối ưu Code\n2: Phân tích Dữ liệu", "1");
-            if (choice === "1") fixCode();
-            else if (choice === "2") analyzeData();
         }
 
         function aiMultiAndPrompt() {
+            setInputAndSend("Hãy tối ưu và nâng cấp prompt sau thành một System Prompt chuyên nghiệp chuẩn GPT-4o.");
             toggleMenu();
-            const choice = prompt("Chức năng AI Nâng cao:\n1: Trò chuyện AI Đa luồng (3 Chuyên gia)\n2: Nâng cấp Master Prompt", "1");
-            if (choice === "1") useMultiAI();
-            else if (choice === "2") enhancePrompt();
         }
 
-        function exportChatCombined() {
-            toggleMenu();
-            const choice = prompt("Tải nhật ký trò chuyện:\n1: Định dạng Markdown (.MD)\n2: Định dạng Văn bản (.TXT)", "1");
-            if (choice === "1") exportChatMarkdown();
-            else if (choice === "2") exportChatTXT();
+        function upgradeTier(tier) {
+            levelSelect.value = tier;
+            levelSelect.dispatchEvent(new Event('change'));
+            closeModal('upgradeModal');
+            showToast(`🎉 Nâng cấp gói ${LEVEL_NAMES[tier]} thành công!`, 'success');
         }
 
-        // ĐẢM BẢO CÁC HÀM TẠO PROMPT CŨ VẪN HOẠT ĐỘNG HOÀN HẢO 100%
-        function useMultiAI() {
-            setInputAndSend("Hãy đóng vai 3 chuyên gia AI xuất sắc nhất thế giới, lần lượt cung cấp góc nhìn và giải pháp phân tích sâu sắc về vấn đề tôi sắp hỏi. Sẵn sàng chưa?");
-        }
-        function summarizeText() {
-            setInputAndSend("Tôi có một đoạn văn bản/nội dung dưới đây. Hãy giúp tôi tóm tắt ý chính một cách súc tích, gạch đầu dòng rõ ràng những điểm quan trọng nhất:\n[Dán nội dung của bạn vào đây]");
-        }
-        function translateText() {
-            const lang = prompt('Nhập ngôn ngữ muốn dịch sang (Ví dụ: Tiếng Anh, Tiếng Nhật...):', 'Tiếng Anh');
-            if (lang) {
-                setInputAndSend(`Hãy đóng vai một chuyên gia ngôn ngữ, dịch chuẩn xác và giữ nguyên văn phong ngữ cảnh đoạn sau sang ${lang}:\n[Dán nội dung của bạn vào đây]`);
-            }
-        }
-        function generateVideo() {
-            setInputAndSend("Tôi muốn làm một video ngắn (TikTok/Reels/Shorts). Hãy giúp tôi viết một kịch bản chi tiết bao gồm: Hook (mở đầu thu hút), Body (nội dung chính), và Call to Action (kêu gọi hành động) kèm theo mô tả góc quay/hình ảnh:\n[Nhập chủ đề video của bạn]");
-        }
-        function analyzeData() {
-            setInputAndSend("Đóng vai chuyên gia phân tích dữ liệu (Data Analyst). Hãy xem xét số liệu tôi cung cấp dưới đây, chỉ ra xu hướng, điểm bất thường và đưa ra lời khuyên chiến lược kinh doanh:\n[Dán dữ liệu/bảng biểu của bạn vào đây]");
-        }
-        function generateMusicWithLyrics() {
-            setInputAndSend("Tôi muốn sáng tác một bài hát. Chủ đề là: [Nhập chủ đề]. Hãy viết cho tôi lời bài hát có cấu trúc rõ ràng (Verse, Pre-Chorus, Chorus, Bridge, Outro) và gợi ý phong cách nhạc, nhạc cụ nên sử dụng.");
-        }
-        function writeEmail() {
-            setInputAndSend("Hãy giúp tôi viết một email công việc chuyên nghiệp về chủ đề: [Nhập mục đích email], gửi cho: [Nhập người nhận]. Giọng văn lịch sự, mạch lạc.");
-        }
-        function fixCode() {
-            setInputAndSend("Hãy kiểm tra, tìm lỗi sai và tối ưu đoạn mã nguồn sau đây. Chỉ ra nguyên nhân gây lỗi và cung cấp bản code hoàn chỉnh đã sửa:\n[Dán đoạn code của bạn vào đây]");
-        }
-        function enhancePrompt() {
-            setInputAndSend("Hãy giúp tôi nâng cấp và tối ưu hóa ý tưởng prompt sau đây thành một Master Prompt chi tiết, rõ ràng để hỏi AI đạt hiệu quả cao nhất:\n[Nhập prompt đơn giản của bạn]");
+        function upgradeWithMomo(tier) {
+            showToast(`💳 Đang mở cổng thanh toán MoMo cho gói ${LEVEL_NAMES[tier]}...`, 'info');
+            setTimeout(() => upgradeTier(tier), 1500);
         }
 
-        // Tự động khởi tạo dữ liệu lịch sử từ localStorage khi ứng dụng khởi chạy
+        // Khởi tạo ứng dụng khi load xong trang
         window.addEventListener('DOMContentLoaded', () => {
             initChatHistory();
+            loadUsage();
+            
+            const savedFont = localStorage.getItem('tv_font_family');
+            if (savedFont) changeFontFamily(savedFont);
+
+            const savedSize = localStorage.getItem('tv_font_size');
+            if (savedSize) changeFontSize(savedSize);
+
+            const savedInst = localStorage.getItem('tv_custom_instructions');
+            if (savedInst && document.getElementById('customInstructions')) {
+                document.getElementById('customInstructions').value = savedInst;
+            }
         });
     </script>
 </body>

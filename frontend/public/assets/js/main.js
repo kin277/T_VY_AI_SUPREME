@@ -1,7 +1,7 @@
 // ================================================================
-// T.VỸ-AI-SUPREME - MAIN JS (FULL INTEGRATED & UPGRADED INTELLIGENCE)
-// Dựa trên nền tảng gốc với hệ thống nhận dạng thông minh & tổng hợp web toàn diện cho mọi cấp độ AI
-// CẬP NHẬT: Thêm tính năng Chặn input khi chờ, Nút Dừng, Copy & Edit tin nhắn chuẩn xác.
+// T.VỸ-AI-SUPREME - MAIN JS (FULL INTEGRATED & UPGRADED INTELLIGENCE v16.0)
+// Dựa trên nền tảng gốc với hệ thống nhận dạng thông minh, tổng hợp web,
+// Claude Artifacts, Perplexity Source Cards & Voice Mode Tiếng Việt
 // ================================================================
 
 // ===== DOM ELEMENTS =====
@@ -38,6 +38,20 @@ if (sendBtn && !stopBtn) {
     sendBtn.parentNode.insertBefore(stopBtn, sendBtn); 
 }
 
+// ===== DOM BỔ SUNG CHO VOICE MODE (NÚT MICRO) =====
+let voiceBtn = document.getElementById('voiceBtn');
+if (sendBtn && !voiceBtn) {
+    voiceBtn = document.createElement('button');
+    voiceBtn.id = 'voiceBtn';
+    voiceBtn.type = 'button';
+    voiceBtn.innerHTML = '🎤';
+    voiceBtn.title = 'Bật/Tắt Nhận diện giọng nói Tiếng Việt';
+    voiceBtn.className = sendBtn.className;
+    voiceBtn.style.marginRight = '5px';
+    voiceBtn.onclick = toggleVoiceRecognition;
+    sendBtn.parentNode.insertBefore(voiceBtn, sendBtn);
+}
+
 // ===== STATE =====
 let currentConversationId = null;
 let currentLevel = 'pro';
@@ -51,6 +65,11 @@ const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 giờ
 // BIẾN QUẢN LÝ TRẠNG THÁI CHỜ & HỦY REQUEST
 let isGenerating = false;
 let currentAbortController = null;
+
+// BIẾN QUẢN LÝ VOICE MODE & SPEECH RECOGNITION
+let recognition = null;
+let isListening = false;
+let isVoiceTriggered = false;
 
 const LEVEL_NAMES = {
     basic: 'AI Thường',
@@ -82,6 +101,7 @@ function unlockUI() {
     if (sendBtn) sendBtn.style.display = 'inline-block';
     if (stopBtn) stopBtn.style.display = 'none';
     hideTyping();
+    hideDeepThink();
 }
 
 function stopGenerating() {
@@ -141,6 +161,241 @@ function renderMermaidInContainer(container) {
         }
     });
 }
+
+// ================================================================
+// TÍNH NĂNG 1: CLAUDE ARTIFACTS - SPLIT SCREEN LIVE PREVIEW
+// ================================================================
+function escapeHtml(text) {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function ensurePreviewPane() {
+    let pane = document.getElementById('artifactPreviewPane');
+    if (!pane) {
+        pane = document.createElement('div');
+        pane.id = 'artifactPreviewPane';
+        pane.style.cssText = `
+            position: fixed;
+            top: 0;
+            right: -50%;
+            width: 50%;
+            height: 100vh;
+            background: var(--color-bg-secondary, #ffffff);
+            border-left: 2px solid var(--color-border, #ccc);
+            box-shadow: -5px 0 20px rgba(0,0,0,0.2);
+            transition: right 0.3s ease-in-out;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+        `;
+        pane.innerHTML = `
+            <div style="padding: 12px 16px; background: var(--color-bg, #f8f9fa); border-bottom: 1px solid var(--color-border, #ccc); display: flex; justify-content: space-between; align-items: center;">
+                <strong style="color: var(--color-text, #333); font-size: 15px; display: flex; align-items: center; gap: 8px;">
+                    👁️ Claude Artifact Live Preview
+                </strong>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="refreshLivePreview()" style="padding: 6px 12px; background: var(--color-primary-light, #eef2ff); border: 1px solid var(--color-border, #ccc); border-radius: 4px; cursor: pointer; font-size: 13px; color: var(--color-text, #333);">🔄 Tải lại</button>
+                    <button onclick="closeLivePreview()" style="padding: 6px 12px; background: #ff4d4f; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">✕ Đóng</button>
+                </div>
+            </div>
+            <iframe id="artifactFrame" style="width: 100%; height: calc(100% - 50px); border: none; background: #ffffff;"></iframe>
+        `;
+        document.body.appendChild(pane);
+    }
+    return pane;
+}
+
+function openLivePreview(code) {
+    ensurePreviewPane();
+    const pane = document.getElementById('artifactPreviewPane');
+    const frame = document.getElementById('artifactFrame');
+    window.currentArtifactCode = code;
+    pane.style.right = '0';
+
+    // Đưa mã nguồn vào iframe thời gian thực
+    frame.srcdoc = code;
+}
+
+function openLivePreviewById(artId) {
+    const rawCode = window['artifact_code_' + artId];
+    if (rawCode) {
+        openLivePreview(rawCode);
+    } else {
+        showToast('❌ Không tìm thấy mã nguồn xem trước!', 'error');
+    }
+}
+
+function refreshLivePreview() {
+    const frame = document.getElementById('artifactFrame');
+    if (frame && window.currentArtifactCode) {
+        frame.srcdoc = window.currentArtifactCode;
+        showToast('🔄 Đã làm mới giao diện Preview!', 'info');
+    }
+}
+
+function closeLivePreview() {
+    const pane = document.getElementById('artifactPreviewPane');
+    if (pane) {
+        pane.style.right = '-50%';
+    }
+}
+
+// ================================================================
+// TÍNH NĂNG 2: PERPLEXITY SOURCE CARDS (THẺ TRÍCH DẪN & FAVICON)
+// ================================================================
+function renderSourceCardsHtml(sources) {
+    if (!sources || !Array.isArray(sources) || sources.length === 0) return '';
+
+    let cardsHtml = `
+        <div class="perplexity-sources-wrapper" style="margin-bottom: 14px; padding: 10px; background: var(--color-primary-light, rgba(74,110,224,0.08)); border-radius: 10px; border: 1px solid var(--color-border, #e4e7ec);">
+            <div style="font-size: 0.82em; font-weight: 600; color: var(--color-text-secondary, #666); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                🌐 Nguồn thông tin tổng hợp (${sources.length}):
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+    `;
+
+    sources.forEach(source => {
+        let url = source.url || '#';
+        let title = source.title || source.name || 'Trang web';
+        let domain = source.domain;
+        if (!domain && url !== '#') {
+            try { domain = new URL(url).hostname; } catch(e) { domain = 'website'; }
+        }
+        let favicon = source.favicon || `https://www.google.com/s2/favicons?domain=${domain || 'google.com'}&sz=32`;
+
+        cardsHtml += `
+            <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; background: var(--color-bg-secondary, #ffffff); border: 1px solid var(--color-border, #d0d5dd); border-radius: 16px; font-size: 12px; color: var(--color-text, #101828); text-decoration: none; transition: all 0.2s;" onmouseover="this.style.borderColor='#4a6ee0';this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='var(--color-border)';this.style.transform='none'">
+                <img src="${favicon}" style="width: 14px; height: 14px; border-radius: 2px; object-fit: contain;" onerror="this.src='https://www.google.com/s2/favicons?domain=google.com'">
+                <span style="max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;">${escapeHtml(title)}</span>
+            </a>
+        `;
+    });
+
+    cardsHtml += `
+            </div>
+        </div>
+    `;
+    return cardsHtml;
+}
+
+// ================================================================
+// TÍNH NĂNG 3: VOICE MODE (NHẬN DẠNG & ĐỌC PHẢN HỒI TIẾNG VIỆT)
+// ================================================================
+function initVoiceMode() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        console.warn('Trình duyệt không hỗ trợ Web Speech API.');
+        return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.lang = 'vi-VN';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    recognition.onstart = function() {
+        isListening = true;
+        if (voiceBtn) {
+            voiceBtn.style.background = '#ff4d4f';
+            voiceBtn.style.color = '#ffffff';
+            voiceBtn.innerHTML = '🛑';
+        }
+        showToast('🎙️ Đang lắng nghe giọng nói Tiếng Việt...', 'info');
+    };
+
+    recognition.onresult = function(event) {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+        }
+        if (inputField) {
+            inputField.value = transcript;
+        }
+    };
+
+    recognition.onend = function() {
+        isListening = false;
+        if (voiceBtn) {
+            voiceBtn.style.background = '';
+            voiceBtn.style.color = '';
+            voiceBtn.innerHTML = '🎤';
+        }
+
+        // Tự động gửi tin nhắn sau khi nói xong
+        if (inputField && inputField.value.trim().length > 0) {
+            isVoiceTriggered = true;
+            sendMessage();
+        }
+    };
+
+    recognition.onerror = function(event) {
+        isListening = false;
+        if (voiceBtn) {
+            voiceBtn.style.background = '';
+            voiceBtn.style.color = '';
+            voiceBtn.innerHTML = '🎤';
+        }
+        showToast('❌ Lỗi nhận dạng giọng nói: ' + event.error, 'error');
+    };
+}
+
+function toggleVoiceRecognition() {
+    if (!recognition) {
+        initVoiceMode();
+    }
+    if (!recognition) {
+        showToast('❌ Trình duyệt của bạn không hỗ trợ Nhận dạng Giọng nói!', 'error');
+        return;
+    }
+
+    if (isListening) {
+        recognition.stop();
+    } else {
+        try {
+            recognition.start();
+        } catch(e) {
+            recognition.stop();
+        }
+    }
+}
+
+function speakVietnamese(text) {
+    if (!('speechSynthesis' in window)) return;
+    
+    // Hủy các giọng đọc đang phát dở
+    window.speechSynthesis.cancel();
+
+    // Lọc bỏ thẻ HTML và Markdown code trước khi đọc
+    let cleanText = text
+        .replace(/<[^>]*>/g, '')
+        .replace(/```[\s\S]*?```/g, 'Mã nguồn chi tiết đã được hiển thị trên màn hình.')
+        .replace(/[*#_`~]/g, '')
+        .trim();
+
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'vi-VN';
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    // Tìm giọng đọc tiếng Việt thích hợp nếu hệ thống hỗ trợ
+    const voices = window.speechSynthesis.getVoices();
+    const viVoice = voices.find(v => v.lang.includes('vi') || v.lang.includes('VI'));
+    if (viVoice) {
+        utterance.voice = viVoice;
+    }
+
+    window.speechSynthesis.speak(utterance);
+}
+
+// Khởi tạo Voice Mode ngay khi load script
+initVoiceMode();
 
 // ================================================================
 // AUTH FUNCTIONS
@@ -310,7 +565,7 @@ if (localStorage.getItem('tv_theme') === 'dark') {
 if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 
 // ================================================================
-// TOGGLE MENU & DÒNG SUY NGHĨ
+// TOGGLE MENU & DÒNG SUY NGHĨ (DEEP THINK)
 // ================================================================
 function toggleMenu() {
     const menu = document.getElementById('functionMenu');
@@ -327,8 +582,36 @@ document.addEventListener('click', function(event) {
     }
 });
 
-function showDeepThink(stage = 0) {}
-function hideDeepThink() {}
+function showDeepThink(stage = 0) {
+    if (!chatContainer) return;
+    let thinkEl = document.getElementById('deepThinkIndicator');
+    const stages = [
+        '🧠 Đang phân tích yêu cầu & ngữ cảnh...',
+        '🌐 Đang tổng hợp dữ liệu tìm kiếm web...',
+        '💡 Đang tối ưu hóa mã nguồn và câu trả lời...'
+    ];
+    
+    if (!thinkEl) {
+        thinkEl = document.createElement('div');
+        thinkEl.id = 'deepThinkIndicator';
+        thinkEl.className = 'deep-think-box';
+        thinkEl.style.padding = '10px 14px';
+        thinkEl.style.margin = '10px 0';
+        thinkEl.style.borderRadius = '8px';
+        thinkEl.style.background = 'var(--color-primary-light)';
+        thinkEl.style.color = 'var(--color-text)';
+        thinkEl.style.fontSize = '0.9em';
+        thinkEl.style.borderLeft = '4px solid #4a6ee0';
+        chatContainer.appendChild(thinkEl);
+    }
+    thinkEl.innerHTML = `⚙️ <i>${stages[stage % stages.length]}</i>`;
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function hideDeepThink() {
+    const el = document.getElementById('deepThinkIndicator');
+    if (el) el.remove();
+}
 
 // ================================================================
 // LOGIN / LOGOUT OAUTH
@@ -477,7 +760,7 @@ function initSocket() {
     });
     socket.on('new_message', (data) => {
         if (data.message && data.user_id !== userData?.id) {
-            addMessage('ai', data.message);
+            addMessage('ai', data.message, data.sources);
         }
     });
 }
@@ -534,9 +817,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 // ================================================================
-// ADD MESSAGE & EDIT/COPY CỦA NGƯỜI DÙNG & AI
+// ADD MESSAGE & EDIT/COPY CỦA NGƯỜI DÙNG & AI (NÂNG CẤP ARTIFACTS & SOURCES)
 // ================================================================
-function addMessage(role, content) {
+function addMessage(role, content, sources = null) {
     if (!chatContainer) return;
 
     const wrapper = document.createElement('div');
@@ -551,10 +834,39 @@ function addMessage(role, content) {
     msgDiv.dataset.rawText = content; // Lưu dữ liệu thô vào dataset
 
     let formattedContent = content;
+
+    // 1. CHUYỂN ĐỔI MERMAID DIAGRAM
     const mermaidRegex = /```mermaid\s*([\s\S]*?)\s*```/g;
     formattedContent = formattedContent.replace(mermaidRegex, (match, code) => {
         return `<pre class="mermaid-code">${code}</pre>`;
     });
+
+    // 2. CHUYỂN ĐỔI ARTIFACTS (HTML/UI/SVG) LÀM NÚT XEM TRƯỚC LIVE PREVIEW
+    if (role === 'ai') {
+        const artifactRegex = /```(html|svg|xml)\s*([\s\S]*?)\s*```/gi;
+        formattedContent = formattedContent.replace(artifactRegex, (match, lang, code) => {
+            const artId = Math.random().toString(36).substr(2, 9);
+            window['artifact_code_' + artId] = code;
+
+            return `
+                <div class="artifact-block" style="margin: 12px 0; border: 1px solid var(--color-border, #ccc); border-radius: 8px; overflow: hidden;">
+                    <div style="background: #2a2a3e; color: #ffffff; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85em;">
+                        <span>📄 Code Artifact (${lang.toUpperCase()})</span>
+                        <button type="button" onclick="openLivePreviewById('${artId}')" style="background: #4a6ee0; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85em;">
+                            👁️ Xem trước Live Preview
+                        </button>
+                    </div>
+                    <pre style="margin: 0; padding: 10px; background: var(--color-bg-secondary); overflow-x: auto;"><code>${escapeHtml(code)}</code></pre>
+                </div>
+            `;
+        });
+    }
+
+    // 3. XỬ LÝ PERPLEXITY SOURCE CARDS Ở ĐẦU TIN NHẮN AI
+    let sourcesHeader = '';
+    if (role === 'ai' && sources) {
+        sourcesHeader = renderSourceCardsHtml(sources);
+    }
 
     if (role === 'user') {
         msgDiv.innerHTML = `
@@ -570,9 +882,11 @@ function addMessage(role, content) {
     } else {
         // Role AI
         msgDiv.innerHTML = `
+            ${sourcesHeader}
             <div class="msg-content" id="content-${msgId}">${formattedContent}</div>
             <div class="msg-actions" style="margin-top: 8px; font-size: 0.85em; display: flex; gap: 15px; opacity: 0.85;">
                 <span style="cursor:pointer;" onclick="copyMessage('${msgId}')">📋 Copy</span>
+                <span style="cursor:pointer;" onclick="speakVietnamese(document.getElementById('content-${msgId}').innerText)">🔊 Đọc</span>
             </div>
             <span class="time">${new Date().toLocaleTimeString()}</span>
         `;
@@ -661,7 +975,7 @@ function saveEdit(msgId) {
 
     const actionsDiv = msgDiv.querySelector('.msg-actions');
     if (actionsDiv) actionsDiv.style.display = 'flex';
-    renderMermaidInContainer(msgDiv);
+    renderMermaidInContainer(contentDiv);
 
     // XÓA TẤT CẢ CÁC TIN NHẮN SAU TIN NHẮN ĐANG SỬA
     let wrapper = msgDiv.parentElement;
@@ -749,7 +1063,7 @@ if (fileInput) {
                 if (exportBtn) exportBtn.style.display = 'inline-block';
             }
 
-            addMessage('ai', `📑 **Kết quả phân tích tài liệu chuyên sâu (${file.name}):**\n\n${data.analysis || data.summary || data.message}`);
+            addMessage('ai', `📑 **Kết quả phân tích tài liệu chuyên sâu (${file.name}):**\n\n${data.analysis || data.summary || data.message}`, data.sources);
             loadUsage();
         })
         .catch(err => {
@@ -761,7 +1075,7 @@ if (fileInput) {
 }
 
 // ================================================================
-// SEND MESSAGE (NÂNG CẤP CHẶN, CANCEL & EDIT TRUYỀN LẠI)
+// SEND MESSAGE (TÍCH HỢP VOICE READ-BACK & PERPLEXITY SOURCES)
 // ================================================================
 function sendMessage() {
     if (!inputField || isGenerating) return; 
@@ -796,6 +1110,7 @@ function sendMessageInternal(text, isResend = false) {
     const requiresWebSynthesis = isCodeRequest || isComplexQuery;
 
     showTyping();
+    showDeepThink(0);
     lockUI(); // Khóa UI và hiện Nút Dừng
     
     currentAbortController = new AbortController(); // Khởi tạo Controller ngắt kết nối
@@ -835,7 +1150,18 @@ function sendMessageInternal(text, isResend = false) {
             currentConversationId = data.conversation_id;
             if (exportBtn) exportBtn.style.display = 'inline-block';
         }
-        addMessage('ai', data.message || 'Đã xử lý thành công.');
+        
+        const aiResponseText = data.message || 'Đã xử lý thành công.';
+        const sourcesList = data.sources || data.web_sources || null;
+
+        addMessage('ai', aiResponseText, sourcesList);
+
+        // NẾU GỬI BẰNG PHƯƠNG THỨC NÓI -> TỰ ĐỘNG ĐỌC LẠI BẰNG TIẾNG VIỆT
+        if (isVoiceTriggered) {
+            speakVietnamese(aiResponseText);
+            isVoiceTriggered = false; // Reset trạng thái
+        }
+
         loadUsage();
         if (data.conversation_id) {
             fetch('/conversations')
@@ -917,7 +1243,7 @@ function loadConversation(id) {
                 const c = data.conversation;
                 currentConversationId = c.id;
                 if (chatContainer) chatContainer.innerHTML = '';
-                c.messages.forEach(m => addMessage(m.role, m.content));
+                c.messages.forEach(m => addMessage(m.role, m.content, m.sources));
                 closeModal('historyModal');
                 if (exportBtn) exportBtn.style.display = 'inline-block';
                 if (c.level && levelSelect) {
@@ -1102,7 +1428,7 @@ function hideTyping() {
 }
 
 // ================================================================
-// TOOLBAR FUNCTIONS
+// TOOLBAR FUNCTIONS (5 CHỨC NĂNG MỞ RỘNG)
 // ================================================================
 function requireAuthAndExecute(callback) {
     if (!isLoggedIn) {
@@ -1117,6 +1443,7 @@ function requireAuthAndExecute(callback) {
     callback();
 }
 
+// CHỨC NĂNG 1: AI ĐA LUỒNG (MULTIPLE AI SYNTHESIS)
 function useMultiAI() {
     if (isGenerating) { showToast('⚠️ Đang chờ AI phản hồi...', 'warning'); return; }
     requireAuthAndExecute(() => {
@@ -1142,16 +1469,23 @@ function useMultiAI() {
                 return;
             }
             let html = '🧠 **Kết quả AI Đa luồng (Đã tổng hợp web & nhận dạng tối ưu):**\n\n';
-            data.results.forEach(r => {
-                html += `📌 **${r.model}** (Độ chính xác: ${r.accuracy}%):\n${r.response}\n\n`;
-            });
-            html += `🏆 **Kết quả tốt nhất:** ${data.best.model}`;
-            addMessage('ai', html);
+            if (data.results && Array.isArray(data.results)) {
+                data.results.forEach(r => {
+                    html += `📌 **${r.model}** (Độ chính xác: ${r.accuracy || 95}%):\n${r.response}\n\n`;
+                });
+            } else {
+                html += data.message || 'Đã phân tích xong câu hỏi qua hệ thống đa luồng.';
+            }
+            if (data.best) {
+                html += `🏆 **Kết quả tốt nhất:** ${data.best.model || data.best}`;
+            }
+            addMessage('ai', html, data.sources);
         })
-        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối'); });
+        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối AI Đa luồng'); });
     });
 }
 
+// CHỨC NĂNG 2: TÓM TẮT VĂN BẢN (TEXT SUMMARIZER)
 function summarizeText() {
     if (isGenerating) { showToast('⚠️ Đang chờ AI phản hồi...', 'warning'); return; }
     requireAuthAndExecute(() => {
@@ -1176,12 +1510,15 @@ function summarizeText() {
                 addMessage('ai', '❌ ' + data.error);
                 return;
             }
-            addMessage('ai', `📝 **Tóm tắt chuyên sâu:**\n\n${data.summary}\n\n📊 Độ dài gốc: ${data.original_length} ký tự → ${data.summarized_length} ký tự`);
+            const origLen = data.original_length || text.length;
+            const sumLen = data.summarized_length || (data.summary ? data.summary.length : 0);
+            addMessage('ai', `📝 **Tóm tắt chuyên sâu:**\n\n${data.summary}\n\n📊 Độ dài gốc: ${origLen} ký tự → ${sumLen} ký tự`, data.sources);
         })
-        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối'); });
+        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối dịch vụ tóm tắt'); });
     });
 }
 
+// CHỨC NĂNG 3: DỊCH THUẬT ĐA NGÔN NGỮ (MULTILINGUAL TRANSLATION)
 function translateText() {
     if (isGenerating) { showToast('⚠️ Đang chờ AI phản hồi...', 'warning'); return; }
     requireAuthAndExecute(() => {
@@ -1192,7 +1529,7 @@ function translateText() {
         }
         const lang = prompt('Nhập mã ngôn ngữ đích:\nvi (Tiếng Việt)\nen (English)\nko (한국어)\nja (日本語)\nzh (中文)\nfr (Français)\nde (Deutsch)\nes (Español)\nru (Русский)\nar (العربية)', 'en');
         if (!lang) return;
-        addMessage('user', `🌐 Yêu cầu dịch sang ${lang}: ${text}`);
+        addMessage('user', `🌐 Yêu cầu dịch sang [${lang}]: ${text}`);
         inputField.value = '';
         showTyping();
         lockUI();
@@ -1208,21 +1545,22 @@ function translateText() {
                 addMessage('ai', '❌ ' + data.error);
                 return;
             }
-            addMessage('ai', `🌐 **Dịch chuẩn xác sang ${lang}:**\n\n${data.translated}`);
+            addMessage('ai', `🌐 **Dịch chuẩn xác sang [${lang}]:**\n\n${data.translated}`);
         })
-        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối'); });
+        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối dịch thuật'); });
     });
 }
 
+// CHỨC NĂNG 4: TẠO VIDEO AI (AI VIDEO GENERATOR)
 function generateVideo() {
     if (isGenerating) { showToast('⚠️ Đang chờ AI phản hồi...', 'warning'); return; }
     requireAuthAndExecute(() => {
         const text = inputField ? inputField.value.trim() : '';
         if (!text) {
-            showToast('Vui lòng nhập mô tả video!', 'error');
+            showToast('Vui lòng nhập mô tả kịch bản video!', 'error');
             return;
         }
-        const template = prompt('Chọn loại video:\nshort (15s)\nmedium (30s)\nlong (60s)', 'short');
+        const template = prompt('Chọn thời lượng video:\nshort (15s)\nmedium (30s)\nlong (60s)', 'short');
         if (!template) return;
         addMessage('user', `🎬 Yêu cầu tạo video (${template}): ${text}`);
         inputField.value = '';
@@ -1240,25 +1578,26 @@ function generateVideo() {
                 addMessage('ai', '❌ ' + data.error);
                 return;
             }
-            addMessage('ai', `🎬 **Video đang được tạo:**\n\n📌 Tiêu đề: ${data.title}\n⏱️ Thời lượng: ${data.duration}s\n📐 Độ phân giải: ${data.resolution}\n🎨 Phong cách: ${data.style}\n🔗 Link: ${data.url}\n\n⏳ Trạng thái: ${data.status}`);
+            addMessage('ai', `🎬 **Video AI đang khởi tạo thành công:**\n\n📌 Tiêu đề: ${data.title || text}\n⏱️ Thời lượng: ${data.duration || 15}s\n📐 Độ phân giải: ${data.resolution || '1080p'}\n🎨 Phong cách: ${data.style || 'Chân thực'}\n🔗 Link xem: <a href="${data.url || '#'}" target="_blank">Tải / Xem Video</a>\n\n⏳ Trạng thái: ${data.status || 'Hoàn tất'}`, data.sources);
         })
-        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối'); });
+        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối tạo video'); });
     });
 }
 
+// CHỨC NĂNG 5: PHÂN TÍCH DỮ LIỆU SỐ & TẠO NHẠC SUNO AI (DATA ANALYSIS & SUNO MUSIC)
 function analyzeData() {
     if (isGenerating) { showToast('⚠️ Đang chờ AI phản hồi...', 'warning'); return; }
     requireAuthAndExecute(() => {
         const text = inputField ? inputField.value.trim() : '';
         if (!text) {
-            showToast('Vui lòng nhập văn bản hoặc số cần phân tích!', 'error');
+            showToast('Vui lòng nhập văn bản hoặc dải số cần phân tích!', 'error');
             return;
         }
         const numbers = text.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
         
         lockUI();
         if (numbers.length > 1) {
-            addMessage('user', '📊 Yêu cầu phân tích số: ' + text);
+            addMessage('user', '📊 Yêu cầu phân tích dải số: ' + text);
             inputField.value = '';
             showTyping();
             fetch('/api/analyze_numbers', {
@@ -1273,9 +1612,9 @@ function analyzeData() {
                     addMessage('ai', '❌ ' + data.error);
                     return;
                 }
-                addMessage('ai', `📊 **Phân tích dữ liệu số:**\n\n📌 Số lượng: ${data.count}\n📉 Nhỏ nhất: ${data.min}\n📈 Lớn nhất: ${data.max}\n📊 Trung bình: ${data.mean}\n📏 Trung vị: ${data.median}\n📐 Tổng: ${data.sum}`);
+                addMessage('ai', `📊 **Kết quả phân tích thống kê số liệu:**\n\n📌 Số lượng phần tử: ${data.count}\n📉 Giá trị nhỏ nhất (Min): ${data.min}\n📈 Giá trị lớn nhất (Max): ${data.max}\n📊 Giá trị trung bình (Mean): ${data.mean}\n📏 Trung vị (Median): ${data.median}\n📐 Tổng cộng (Sum): ${data.sum}`);
             })
-            .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối'); });
+            .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối phân tích dữ liệu số'); });
         } else {
             addMessage('user', '📊 Yêu cầu phân tích văn bản: ' + text);
             inputField.value = '';
@@ -1292,9 +1631,9 @@ function analyzeData() {
                     addMessage('ai', '❌ ' + data.error);
                     return;
                 }
-                addMessage('ai', `📊 **Phân tích văn bản:**\n\n📌 Số từ: ${data.word_count}\n📝 Số câu: ${data.sentence_count}\n📏 Độ dài trung bình từ: ${data.avg_word_length}\n🔤 Số từ độc nhất: ${data.unique_words}\n📖 Độ dễ đọc: ${data.readability}`);
+                addMessage('ai', `📊 **Chỉ số phân tích cấu trúc văn bản:**\n\n📌 Tổng số từ: ${data.word_count}\n📝 Tổng số câu: ${data.sentence_count}\n📏 Độ dài trung bình của từ: ${data.avg_word_length}\n🔤 Số từ độc nhất: ${data.unique_words}\n📖 Đánh giá độ dễ đọc: ${data.readability}`);
             })
-            .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối'); });
+            .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối phân tích văn bản'); });
         }
     });
 }
@@ -1304,15 +1643,15 @@ function generateMusicWithLyrics() {
     requireAuthAndExecute(() => {
         const text = inputField ? inputField.value.trim() : '';
         if (!text) {
-            showToast('Vui lòng nhập mô tả bài hát!', 'error');
+            showToast('Vui lòng nhập chủ đề bài hát!', 'error');
             return;
         }
-        const style = prompt('Chọn thể loại:\npop, rock, jazz, edm, classical, rap, ballad, v_pop, k_pop', 'pop');
+        const style = prompt('Chọn thể loại nhạc:\npop, rock, jazz, edm, classical, rap, ballad, v_pop, k_pop', 'v_pop');
         if (!style) return;
-        const mood = prompt('Chọn tâm trạng:\nhappy, sad, romantic, epic, neutral', 'happy');
+        const mood = prompt('Chọn tâm trạng:\nhappy, sad, romantic, epic, neutral', 'romantic');
         if (!mood) return;
-        const duration = parseInt(prompt('Chọn độ dài (giây, tối đa 420 - 7 phút):', '60')) || 60;
-        addMessage('user', `🎵 Yêu cầu tạo nhạc (${style}, ${mood}, ${duration}s): ${text}`);
+        const duration = parseInt(prompt('Chọn độ dài bài hát (giây, tối đa 420s - 7 phút):', '60')) || 60;
+        addMessage('user', `🎵 Yêu cầu tạo nhạc Suno AI (${style}, ${mood}, ${duration}s): ${text}`);
         inputField.value = '';
         showTyping();
         lockUI();
@@ -1334,16 +1673,19 @@ function generateMusicWithLyrics() {
                 addMessage('ai', '❌ ' + data.error);
                 return;
             }
-            let html = `🎵 **Bài hát đã được tạo!**\n\n`;
-            html += `📌 Thời lượng: ${data.duration} giây\n`;
-            html += `🎤 Thể loại: ${data.style}\n`;
-            html += `🎭 Tâm trạng: ${data.mood}\n`;
+            let html = `🎵 **Bài hát Suno AI đã được tạo thành công!**\n\n`;
+            html += `📌 Thời lượng: ${data.duration || duration} giây\n`;
+            html += `🎤 Thể loại: ${data.style || style}\n`;
+            html += `🎭 Tâm trạng: ${data.mood || mood}\n`;
             html += `📦 Số đoạn ghép: ${data.num_segments || 1}\n\n`;
-            html += `📝 Lời bài hát:\n${data.lyrics}\n\n`;
-            html += `🔊 Tải nhạc: <a href="${data.download_url}" download style="color:var(--color-primary);text-decoration:underline;">${data.music_file}</a>`;
-            addMessage('ai', html);
+            html += `📝 **Lời bài hát:**\n${data.lyrics || 'Đã tạo xong giai điệu audio.'}\n\n`;
+            if (data.download_url || data.music_file) {
+                const link = data.download_url || `/static/audio/${data.music_file}`;
+                html += `🔊 **Tải bản thu âm hoàn chỉnh:** <a href="${link}" download style="color:var(--color-primary);text-decoration:underline;">Tải File Nhạc MP3</a>`;
+            }
+            addMessage('ai', html, data.sources);
         })
-        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối'); });
+        .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối máy chủ nhạc Suno AI'); });
     });
 }
 
@@ -1357,7 +1699,7 @@ function clearAllMessages() {
 }
 
 // ================================================================
-// INIT
+// INIT & KHỞI TẠO HỆ THỐNG
 // ================================================================
 checkLogin();
 if (inputField) inputField.focus();
@@ -1370,5 +1712,5 @@ if (typeof io !== 'undefined') {
     initSocket();
 }
 
-console.log('🚀 T.VỸ-AI-SUPREME v15.0: Nâng cấp luồng hội thoại & giao diện chống spam hoàn hảo!');
-console.log('📌 Bản quyền: T.VỸ-VIP-FILE');
+console.log('🚀 T.VỸ-AI-SUPREME v16.0: Đã tích hợp trọn vẹn Claude Artifacts Live Preview, Perplexity Source Cards & Voice Mode Tiếng Việt!');
+console.log('📌 Bản quyền tác giả: T.VỸ-VIP-FILE');
