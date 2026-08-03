@@ -19,6 +19,8 @@ import requests
 from io import BytesIO
 from pathlib import Path
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from flask import (
     Flask, jsonify, render_template, request,
     send_from_directory, session
