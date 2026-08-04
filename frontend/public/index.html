@@ -2,10 +2,8 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>T.VỸ-AI-SUPREME v13.0 Ultra Pro Max</title>
-	<!-- 📱 KHOANH VÙNG: Thẻ Viewport tối ưu Responsive cho Mobile -->
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1191,7 +1189,7 @@
             color: var(--text-main);
         }
 
-        /* ===== STYLES DÀNH RIÊNG CHO MODAL CÀI ĐẶT NÂNG CẤP ===== */
+        /* ===== STYLES MODAL CÀI ĐẶT NÂNG CẤP ===== */
         .modal-container {
             background: var(--bg-sidebar);
             border: 1px solid var(--border-color);
@@ -1551,6 +1549,175 @@
             background: rgba(0, 0, 0, 0.1);
         }
 
+        /* ===== STYLES DÀNH RIÊNG CHO MỤC PLUGIN STORE ===== */
+        .plugins-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            gap: 12px;
+        }
+
+        .plugins-search-input {
+            flex: 1;
+            padding: 8px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-full);
+            color: var(--text-main);
+            font-size: 13px;
+            outline: none;
+        }
+
+        .plugins-search-input:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .plugins-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 14px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .plugin-card {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 12px;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .plugin-card:hover {
+            border-color: var(--border-highlight);
+            background: var(--bg-glass-hover);
+            transform: translateY(-2px);
+        }
+
+        .plugin-top {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .plugin-icon-box {
+            width: 42px;
+            height: 42px;
+            border-radius: var(--radius-sm);
+            background: var(--accent-gradient-subtle);
+            border: 1px solid var(--border-highlight);
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .plugin-info {
+            flex: 1;
+        }
+
+        .plugin-info h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 2px;
+        }
+
+        .plugin-info span.author {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .plugin-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .plugin-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .plugin-badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: var(--radius-full);
+            font-weight: 700;
+        }
+
+        .plugin-badge.official {
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .plugin-badge.community {
+            background: rgba(236, 72, 153, 0.15);
+            color: #f472b6;
+            border: 1px solid rgba(236, 72, 153, 0.3);
+        }
+
+        /* TOGGLE SWITCH CỦA PLUGIN */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider-toggle {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .slider-toggle:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: var(--text-muted);
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider-toggle {
+            background: var(--accent-gradient);
+            border-color: transparent;
+        }
+
+        input:checked + .slider-toggle:before {
+            transform: translateX(21px);
+            background-color: #ffffff;
+        }
+
         /* ===== AUTH TABS & TOAST ===== */
         .auth-tabs {
             display: flex;
@@ -1709,90 +1876,95 @@
                 grid-template-columns: 1fr;
             }
         }
-		/* ================================================================
-		   KHOANH VÙNG CSS: RESPONSIVE UI DÀNH CHO ĐIỆN THOẠI (@media max-width: 768px)
-		   ================================================================ */
-		@media screen and (max-width: 768px) {
 
-			/* 1. Sửa lỗi chiều cao màn hình trên điện thoại (dvh chống che bởi thanh địa chỉ Safari/Chrome) */
-			html, body, .app-container {
-				height: 100dvh !important;
-				overflow: hidden;
-			}
+        /* KHOANH VÙNG CSS RESPONSIVE DÀNH CHO ĐIỆN THOẠI */
+        @media screen and (max-width: 768px) {
+            html, body, .app-container {
+                height: 100dvh !important;
+                overflow: hidden;
+            }
 
-			/* 2. Tối ưu Khung Chat */
-			#chatContainer {
-				padding: 10px 12px;
-				font-size: 15px; /* Chữ vừa tầm mắt trên điện thoại */
-			}
+            #chatContainer {
+                padding: 10px 12px;
+                font-size: 15px;
+            }
 
-			/* 3. Thanh nhập liệu & Nút bấm (Touch Targets lớn hơn để dễ bấm ngón tay) */
-			.chat-input-wrapper {
-				padding: 8px 10px;
-				gap: 8px;
-				background: var(--color-bg, #ffffff);
-			}
+            .chat-input-wrapper {
+                padding: 8px 10px;
+                gap: 8px;
+                background: var(--color-bg, #ffffff);
+            }
 
-			.chat-input-wrapper input {
-				font-size: 16px !important; /* Mẹo: Đặt 16px để iOS Safari KHÔNG tự động zoom vào ô nhập */
-				padding: 12px;
-				border-radius: 20px;
-			}
+            .chat-input-wrapper input {
+                font-size: 16px !important;
+                padding: 12px;
+                border-radius: 20px;
+            }
 
-			/* Nút Gửi và Nút Micro đạt chuẩn kích thước ngón tay (tối thiểu 44x44px) */
-			.btn-voice, #sendBtn {
-				min-width: 44px;
-				height: 44px;
-				border-radius: 50%;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				padding: 0;
-				font-size: 18px;
-			}
+            .btn-voice, #sendBtn {
+                min-width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+                font-size: 18px;
+            }
 
-			/* 4. Tối ưu Claude Artifact Live Preview khi bật trên điện thoại */
-			/* 👁️ Khung Claude Artifact Live Preview (Mặc định sẽ ẨN) */
-			#artifactPreviewPane {
-				position: fixed;
-				top: 0;
-				right: -100%;
-				width: 100%;
-				height: 100dvh;
-				background: var(--color-bg-secondary, #ffffff);
-				border-left: 2px solid var(--color-border, #ccc);
-				box-shadow: -5px 0 20px rgba(0,0,0,0.2);
-				transition: all 0.3s ease-in-out;
-				z-index: 99999;
-				display: flex;
-				flex-direction: column;
-				
-				/* 📍 Bổ sung dòng này để giấu hoàn toàn khi chưa mở */
-				visibility: hidden;
-				pointer-events: none;
-			}
+            /* Khung Claude Artifact Live Preview khi bật trên điện thoại */
+            #artifactPreviewPane {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 100%;
+                height: 100dvh;
+                background: var(--bg-sidebar);
+                border-left: 2px solid var(--border-color);
+                box-shadow: -5px 0 20px rgba(0,0,0,0.5);
+                transition: all 0.3s ease-in-out;
+                z-index: 99999;
+                display: flex;
+                flex-direction: column;
+                visibility: hidden;
+                pointer-events: none;
+            }
 
-			/* Chỉ hiển thị khi được Javascript kích hoạt (thêm class .active) */
-			#artifactPreviewPane.active {
-				right: 0 !important;
-				visibility: visible !important;
-				pointer-events: auto !important;
-			}
+            #artifactPreviewPane.active {
+                right: 0 !important;
+                visibility: visible !important;
+                pointer-events: auto !important;
+            }
 
-			/* 5. Cho phép Thẻ Nguồn Perplexity vuốt ngang (Horizontal Scroll) mượt mà */
-			.perplexity-sources-wrapper {
-				display: flex;
-				overflow-x: auto;
-				white-space: nowrap;
-				gap: 8px;
-				padding: 8px 0;
-				-webkit-overflow-scrolling: touch; /* Vuốt mượt trên iOS */
-			}
+            .artifact-header {
+                padding: 12px 16px;
+                background: var(--bg-card);
+                border-bottom: 1px solid var(--border-color);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
 
-			.perplexity-source-card {
-				flex-shrink: 0; /* Giữ nguyên kích thước thẻ khi cuộn ngang */
-			}
-		}
+            #artifactFrame {
+                width: 100%;
+                height: 100%;
+                border: none;
+                background: #ffffff;
+            }
+
+            .perplexity-sources-wrapper {
+                display: flex;
+                overflow-x: auto;
+                white-space: nowrap;
+                gap: 8px;
+                padding: 8px 0;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .perplexity-source-card {
+                flex-shrink: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1824,9 +1996,10 @@
                 <div id="usageInfo"><i class="fa-solid fa-bolt"></i> Lượt còn lại: ♾️ Không giới hạn Ultra</div>
             </div>
 
-            <!-- ===== NAVIGATION (ĐÃ XÓA MỤC TRÒ CHUYỆN) ===== -->
+            <!-- NAVIGATION (ĐÃ BỔ SUNG MỤC PLUGIN) -->
             <nav>
                 <button class="nav-item" data-tab="history"><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử</button>
+                <button class="nav-item" data-tab="plugins"><i class="fa-solid fa-plug-circle-plus"></i> Kho Plugin</button>
                 <button class="nav-item" data-tab="upgrade"><i class="fa-solid fa-crown"></i> Nâng cấp</button>
                 <button class="nav-item" data-tab="settings"><i class="fa-solid fa-gear"></i> Cài đặt</button>
             </nav>
@@ -1931,6 +2104,8 @@
                         <button onclick="aiDevAndData()"><i class="fa-solid fa-code-compare"></i> Lập trình & Phân tích Dữ liệu</button>
                         <button onclick="aiMultiAndPrompt()"><i class="fa-solid fa-network-wired"></i> AI Đa luồng & Nâng cấp Prompt</button>
                         <hr>
+                        <button onclick="openModal('pluginsModal')"><i class="fa-solid fa-plug-circle-plus" style="color:var(--accent-primary);"></i> Bật / Tắt Plugin AI</button>
+                        <hr>
                         <button onclick="exportChatCombined()"><i class="fa-solid fa-file-export"></i> Tải về nhật ký Chat (.MD / .TXT)</button>
                         <hr>
                         <button class="danger" onclick="clearAllMessages()"><i class="fa-solid fa-trash"></i> Xóa toàn bộ chat</button>
@@ -1974,6 +2149,26 @@
                 <button class="close-btn" onclick="closeModal('historyModal')">&times;</button>
             </div>
             <div id="historyList">Đang tải...</div>
+        </div>
+    </div>
+
+    <!-- Modal Kho Plugin & Tiện ích Mở rộng -->
+    <div class="modal-overlay" id="pluginsModal">
+        <div class="modal-box" style="max-width: 780px; width: 92%;">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-plug-circle-plus" style="color:var(--accent-primary);"></i> Kho Plugin & Tiện ích Mở rộng AI</h2>
+                <button class="close-btn" onclick="closeModal('pluginsModal')">&times;</button>
+            </div>
+            
+            <div class="plugins-header-bar">
+                <input type="text" id="pluginSearchInput" class="plugins-search-input" placeholder="🔍 Tìm kiếm plugin (Web Search, Code Runner, DALL-E, PDF...)..." oninput="filterPlugins()" />
+                <button class="btn btn-secondary btn-sm" onclick="enableAllPlugins(true)">Bật tất cả</button>
+                <button class="btn btn-outline btn-sm" onclick="enableAllPlugins(false)">Tắt tất cả</button>
+            </div>
+
+            <div class="plugins-grid" id="pluginsGrid">
+                <!-- Render động các plugin bằng Javascript -->
+            </div>
         </div>
     </div>
 
@@ -2193,7 +2388,7 @@
               <div class="setting-item col">
                 <label>Bảng Phím tắt (Keyboard Shortcuts)</label>
                 <div class="shortcuts-grid">
-                  <div><kbd>Ctrl</kbd> + <kbd>Enter</kbd> : Gửi tin nhắn</div>
+                  <div><kbd>Enter</kbd> : Gửi tin nhắn</div>
                   <div><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>O</kbd> : Tạo cuộc trò chuyện mới</div>
                   <div><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd> : Sao chép phản hồi cuối</div>
                   <div><kbd>Escape</kbd> : Đóng cửa sổ Cài đặt</div>
@@ -2345,22 +2540,22 @@
 
     <div class="search-result" id="searchResult" style="position:fixed;bottom:90px;right:20px;background:var(--bg-card);padding:10px 16px;border-radius:var(--radius-md);border:1px solid var(--border-color);font-size:13px;z-index:999;display:none;"></div>
 
-	<!-- 👁️ KHOANH VÙNG: Khung Claude Artifacts Split Screen Live Preview -->
-	<div id="artifactPreviewPane">
-		<div class="artifact-header">
-			<strong style="color: var(--color-text, #333); font-size: 15px;">
-				👁️ Claude Artifact Live Preview
-			</strong>
-			<div style="display: flex; gap: 8px;">
-				<button type="button" onclick="refreshLivePreview()" style="padding: 6px 12px; background: var(--color-primary-light, #eef2ff); border: 1px solid var(--color-border, #ccc); border-radius: 4px; cursor: pointer; font-size: 13px;">🔄 Tải lại</button>
-				<button type="button" onclick="closeLivePreview()" style="padding: 6px 12px; background: #ff4d4f; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">✕ Đóng</button>
-			</div>
-		</div>
-		<iframe id="artifactFrame" title="Artifact Live Preview Pane"></iframe>
-	</div>
-	
+    <!-- Khung Claude Artifacts Split Screen Live Preview -->
+    <div id="artifactPreviewPane">
+        <div class="artifact-header">
+            <strong style="color: var(--text-main); font-size: 15px; display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-eye" style="color:var(--accent-primary);"></i> Claude Artifact Live Preview
+            </strong>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" onclick="refreshLivePreview()" style="padding: 6px 12px; background: var(--bg-glass); border: 1px solid var(--border-color); color:var(--text-main); border-radius: 4px; cursor: pointer; font-size: 13px;">🔄 Tải lại</button>
+                <button type="button" onclick="closeLivePreview()" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">✕ Đóng</button>
+            </div>
+        </div>
+        <iframe id="artifactFrame" title="Artifact Live Preview Pane"></iframe>
+    </div>
+
     <!-- ============================================================ -->
-    <!-- JAVASCRIPT CHÍNH (HOÀN THIỆN ĐỒNG BỘ BACKEND, LOCALSTORAGE & UI) -->
+    <!-- JAVASCRIPT CHÍNH (HOÀN THIỆN TOÀN BỘ LOGIC HỆ THỐNG & PLUGIN) -->
     <!-- ============================================================ -->
     <script>
         // ---------------------------------------------------------
@@ -2467,6 +2662,8 @@
                 closeModal('loginModal');
                 closeModal('historyModal');
                 closeModal('upgradeModal');
+                closeModal('pluginsModal');
+                closeLivePreview();
             }
             if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'o') {
                 e.preventDefault();
@@ -2750,6 +2947,8 @@
                 if (id === 'settingsModal') {
                     renderMemoryList();
                     populateVoiceList();
+                } else if (id === 'pluginsModal') {
+                    renderPluginsGrid();
                 }
             }
         }
@@ -2797,10 +2996,10 @@
             const ind = document.getElementById('deepThinkIndicator');
             const status = document.getElementById('thinkStatus');
             const stages = [
-                "🔍 Đang phân tích câu hỏi...",
+                "🔍 Đang phân tích câu hỏi & kích hoạt Plugin...",
                 "📚 Tìm kiếm & Tổng hợp kiến thức...",
-                "🧠 Xây dựng lập luận chi tiết...",
-                "✍️ Đang viết code và hoàn thiện..."
+                "🧠 Xây dựng lập luận suy luận sâu...",
+                "✍️ Đang hoàn thiện câu trả lời..."
             ];
             let stageIndex = 0;
             if (ind) {
@@ -2840,6 +3039,7 @@
                 this.classList.add('active');
                 const tab = this.dataset.tab;
                 if (tab === 'history') { openModal('historyModal'); renderHistoryModal(); }
+                else if (tab === 'plugins') { openModal('pluginsModal'); }
                 else if (tab === 'settings') { openModal('settingsModal'); }
                 else if (tab === 'upgrade') { openModal('upgradeModal'); }
             });
@@ -2851,7 +3051,99 @@
         }
 
         // ---------------------------------------------------------
-        // 2. XỬ LÝ CÁC TAB CỦA MODAL CÀI ĐẶT MỚI
+        // 2. HỆ THỐNG PLUGIN (PLUGIN STORE ENGINE)
+        // ---------------------------------------------------------
+        const DEFAULT_PLUGINS = [
+            { id: 'web_search', name: 'Web Search & Crawl', icon: 'fa-globe', author: 'Official', desc: 'Truy cập dữ liệu trực tuyến theo thời gian thực để tìm kiếm thông tin mới nhất.', enabled: true, category: 'official' },
+            { id: 'code_interpreter', name: 'Code Interpreter & Sandbox', icon: 'fa-terminal', author: 'Official', desc: 'Thực thi JavaScript / Python trực tiếp và tạo bản xem trước Live Preview HTML/CSS.', enabled: true, category: 'official' },
+            { id: 'image_gen', name: 'DALL-E 3 Image Generator', icon: 'fa-image', author: 'Official', desc: 'Sáng tạo hình ảnh nghệ thuật HD từ mô tả văn bản tiếng Việt.', enabled: false, category: 'official' },
+            { id: 'pdf_reader', name: 'PDF & Doc Analyzer', icon: 'fa-file-pdf', author: 'Official', desc: 'Trích xuất, đọc hiểu tài liệu PDF, DOCX, TXT kích thước lớn.', enabled: true, category: 'official' },
+            { id: 'wolfram_math', name: 'Math & Wolfram Engine', icon: 'fa-calculator', author: 'Community', desc: 'Giải phương trình, tính toán ma trận và tích phân phức tạp chính xác $100\%$.', enabled: false, category: 'community' },
+            { id: 'webhook_connector', name: 'Custom Webhook API', icon: 'fa-network-wired', author: 'Community', desc: 'Gửi dữ liệu đến Server riêng của bạn thông qua RESTful API Webhook.', enabled: false, category: 'community' }
+        ];
+
+        let pluginsList = [];
+
+        function initPlugins() {
+            const saved = localStorage.getItem('tv_plugins');
+            if (saved) {
+                try { pluginsList = JSON.parse(saved); } catch(e) { pluginsList = DEFAULT_PLUGINS; }
+            } else {
+                pluginsList = DEFAULT_PLUGINS;
+            }
+        }
+
+        function savePlugins() {
+            localStorage.setItem('tv_plugins', JSON.stringify(pluginsList));
+        }
+
+        function renderPluginsGrid(filterText = '') {
+            const grid = document.getElementById('pluginsGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const filtered = pluginsList.filter(p => p.name.toLowerCase().includes(filterText.toLowerCase()) || p.desc.toLowerCase().includes(filterText.toLowerCase()));
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 30px;">Không tìm thấy plugin phù hợp!</div>`;
+                return;
+            }
+
+            filtered.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'plugin-card';
+                card.innerHTML = `
+                    <div class="plugin-top">
+                        <div class="plugin-icon-box">
+                            <i class="fa-solid ${p.icon}"></i>
+                        </div>
+                        <div class="plugin-info">
+                            <h4>${p.name}</h4>
+                            <span class="author">Bởi ${p.author}</span>
+                        </div>
+                    </div>
+                    <div class="plugin-desc">${p.desc}</div>
+                    <div class="plugin-bottom">
+                        <span class="plugin-badge ${p.category}">${p.category === 'official' ? 'Chính thức' : 'Cộng đồng'}</span>
+                        <label class="switch">
+                            <input type="checkbox" ${p.enabled ? 'checked' : ''} onchange="togglePlugin('${p.id}', this.checked)">
+                            <span class="slider-toggle"></span>
+                        </label>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterPlugins() {
+            const val = document.getElementById('pluginSearchInput').value;
+            renderPluginsGrid(val);
+        }
+
+        function togglePlugin(pluginId, isChecked) {
+            const p = pluginsList.find(x => x.id === pluginId);
+            if (p) {
+                p.enabled = isChecked;
+                savePlugins();
+                showToast(`${isChecked ? '🔌 Bật' : '🚫 Tắt'} plugin: ${p.name}`, isChecked ? 'success' : 'warning');
+            }
+        }
+
+        function enableAllPlugins(enable) {
+            pluginsList.forEach(p => p.enabled = enable);
+            savePlugins();
+            renderPluginsGrid();
+            showToast(enable ? '🔌 Đã bật tất cả Plugin' : '🚫 Đã tắt tất cả Plugin', 'info');
+        }
+
+        function getActivePluginsPrompt() {
+            const active = pluginsList.filter(p => p.enabled).map(p => p.name);
+            if (active.length === 0) return '';
+            return `\n\n[Active Plugins: ${active.join(', ')}]`;
+        }
+
+        // ---------------------------------------------------------
+        // 3. XỬ LÝ CÁC TAB CỦA MODAL CÀI ĐẶT
         // ---------------------------------------------------------
         function switchTab(tabId) {
             document.querySelectorAll('.settings-sidebar .tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -2994,7 +3286,7 @@
         }
 
         // ---------------------------------------------------------
-        // 3. LƯU VÀ QUẢN LÝ LỊCH SỬ CHAT (LOCALSTORAGE)
+        // 4. LƯU VÀ QUẢN LÝ LỊCH SỬ CHAT (LOCALSTORAGE)
         // ---------------------------------------------------------
         function initChatHistory() {
             const saved = localStorage.getItem('tv_conversations');
@@ -3021,10 +3313,9 @@
             if (msgs.length > 0) {
                 const title = msgs[0].text.substring(0, 30) + (msgs[0].text.length > 30 ? '...' : '');
                 conversationsList[window.currentConversationId] = {
-                    id: window.currentConversationId,
                     title: title,
-                    time: new Date().toLocaleDateString('vi-VN'),
-                    messages: msgs
+                    messages: msgs,
+                    updatedAt: Date.now()
                 };
                 localStorage.setItem('tv_conversations', JSON.stringify(conversationsList));
                 renderSidebarHistory();
@@ -3032,23 +3323,26 @@
         }
 
         function renderSidebarHistory() {
-            const list = document.getElementById('sidebarHistoryList');
-            if (!list) return;
-            list.innerHTML = '';
-            const keys = Object.keys(conversationsList).reverse();
+            const container = document.getElementById('sidebarHistoryList');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const keys = Object.keys(conversationsList).sort((a, b) => conversationsList[b].updatedAt - conversationsList[a].updatedAt);
             if (keys.length === 0) {
-                list.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px;">Chưa có lịch sử</div>';
+                container.innerHTML = `<div style="font-size:12px;color:var(--text-muted);padding:8px;">Chưa có lịch sử</div>`;
                 return;
             }
+
             keys.forEach(key => {
                 const item = conversationsList[key];
                 const div = document.createElement('div');
                 div.className = `history-item ${key === window.currentConversationId ? 'active' : ''}`;
+                div.onclick = () => loadConversation(key);
                 div.innerHTML = `
-                    <span onclick="loadConversation('${key}')" style="flex:1;overflow:hidden;text-overflow:ellipsis;">${item.title}</span>
-                    <button class="del-btn" onclick="event.stopPropagation(); deleteConversation('${key}')"><i class="fa-solid fa-trash"></i></button>
+                    <span style="overflow:hidden;text-overflow:ellipsis;"><i class="fa-regular fa-message" style="margin-right:6px;"></i> ${item.title}</span>
+                    <button class="del-btn" onclick="deleteConversation('${key}', event)"><i class="fa-solid fa-trash"></i></button>
                 `;
-                list.appendChild(div);
+                container.appendChild(div);
             });
         }
 
@@ -3056,9 +3350,9 @@
             const list = document.getElementById('historyList');
             if (!list) return;
             list.innerHTML = '';
-            const keys = Object.keys(conversationsList).reverse();
+            const keys = Object.keys(conversationsList).sort((a, b) => conversationsList[b].updatedAt - conversationsList[a].updatedAt);
             if (keys.length === 0) {
-                list.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">Chưa có lịch sử trò chuyện nào.</p>';
+                list.innerHTML = `<p style="font-size:13px;color:var(--text-muted);">Trống</p>`;
                 return;
             }
             keys.forEach(key => {
@@ -3066,20 +3360,41 @@
                 const div = document.createElement('div');
                 div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px;margin-bottom:8px;background:var(--bg-glass);border:1px solid var(--border-color);border-radius:var(--radius-sm);cursor:pointer;';
                 div.innerHTML = `
-                    <div>
-                        <div style="font-weight:600;font-size:13px;color:var(--text-main);">${item.title}</div>
-                        <div style="font-size:11px;color:var(--text-muted);">${item.time}</div>
+                    <div onclick="loadConversation('${key}'); closeModal('historyModal');">
+                        <div style="font-weight:700;font-size:13px;">${item.title}</div>
+                        <div style="font-size:11px;color:var(--text-muted);">${new Date(item.updatedAt).toLocaleString('vi-VN')}</div>
                     </div>
-                    <button class="btn btn-danger btn-sm" onclick="deleteConversation('${key}'); renderHistoryModal();">Xóa</button>
+                    <button onclick="deleteConversation('${key}', event)" style="background:none;border:none;color:#ef4444;cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
                 `;
-                div.onclick = (e) => {
-                    if (e.target.tagName !== 'BUTTON') {
-                        loadConversation(key);
-                        closeModal('historyModal');
-                    }
-                };
                 list.appendChild(div);
             });
+        }
+
+        function loadConversation(id) {
+            const conv = conversationsList[id];
+            if (!conv) return;
+            window.currentConversationId = id;
+            
+            const welcome = document.getElementById('welcomeHero');
+            if (welcome) welcome.style.display = 'none';
+
+            chatContainer.innerHTML = '';
+            conv.messages.forEach(m => appendMessage(m.role, m.text, false));
+            renderSidebarHistory();
+            showToast('📖 Đã tải đoạn chat!', 'info');
+        }
+
+        function deleteConversation(id, e) {
+            if (e) e.stopPropagation();
+            if (!confirm('Xóa đoạn chat này?')) return;
+            delete conversationsList[id];
+            localStorage.setItem('tv_conversations', JSON.stringify(conversationsList));
+            if (window.currentConversationId === id) {
+                createNewChat();
+            } else {
+                renderSidebarHistory();
+            }
+            showToast('🗑️ Đã xóa đoạn chat', 'info');
         }
 
         function createNewChat() {
@@ -3089,6 +3404,7 @@
                     <div class="hero-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
                     <h1>T.VỸ-AI-SUPREME v13.0 Ultra</h1>
                     <p>Hệ thống AI thế hệ mới nâng cao năng suất, sáng tạo nội dung, lập trình và hỗ trợ công việc đa nhiệm vượt trội.</p>
+                    
                     <div class="suggestion-cards">
                         <div class="suggestion-card" onclick="setInputAndSend('Vẽ sơ đồ quy trình xử lý đơn hàng bằng Mermaid JS')">
                             <div class="title"><i class="fa-solid fa-diagram-project" style="color:#6366f1;"></i> Vẽ sơ đồ Mermaid</div>
@@ -3102,111 +3418,59 @@
                 </div>
             `;
             renderSidebarHistory();
-            showToast('✨ Đã tạo đoạn chat mới!', 'info');
+            showToast('✨ Đã tạo đoạn chat mới!', 'success');
         }
 
-        function loadConversation(id) {
-            const item = conversationsList[id];
-            if (!item) return;
-            window.currentConversationId = id;
-            chatContainer.innerHTML = '';
-            item.messages.forEach(m => {
-                appendMessage(m.role, m.text);
-            });
-            renderSidebarHistory();
-        }
-
-        function deleteConversation(id) {
-            delete conversationsList[id];
-            localStorage.setItem('tv_conversations', JSON.stringify(conversationsList));
-            if (window.currentConversationId === id) {
+        function clearAllMessages() {
+            if (confirm('Xóa sạch tin nhắn trong màn hình hiện tại?')) {
                 createNewChat();
-            } else {
-                renderSidebarHistory();
-            }
-            showToast('🗑️ Đã xóa cuộc trò chuyện', 'info');
-        }
-
-        function appendMessage(role, text) {
-            const hero = document.getElementById('welcomeHero');
-            if (hero) hero.remove();
-
-            const wrapper = document.createElement('div');
-            wrapper.className = `message-wrapper ${role}`;
-
-            const avatar = document.createElement('div');
-            avatar.className = 'message-avatar';
-            avatar.innerHTML = role === 'user' ? '👤' : '<i class="fa-solid fa-robot"></i>';
-
-            const msg = document.createElement('div');
-            msg.className = `message ${role}`;
-            msg.dataset.rawText = text;
-
-            if (role === 'ai') {
-                if (typeof marked !== 'undefined') {
-                    msg.innerHTML = marked.parse(text);
-                } else {
-                    msg.textContent = text;
-                }
-            } else {
-                msg.textContent = text;
-            }
-
-            const tools = document.createElement('div');
-            tools.className = 'message-tools';
-            tools.innerHTML = `
-                <button class="tool-btn" onclick="navigator.clipboard.writeText(this.closest('.message').dataset.rawText); showToast('📋 Đã sao chép!', 'success');">
-                    <i class="fa-regular fa-copy"></i> Sao chép
-                </button>
-                ${role === 'ai' ? '<button class="tool-btn" onclick="speakMsgText(this)"><i class="fa-solid fa-volume-high"></i> Đọc</button>' : ''}
-                <span class="time">${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
-            `;
-            msg.appendChild(tools);
-
-            wrapper.appendChild(avatar);
-            wrapper.appendChild(msg);
-            chatContainer.appendChild(wrapper);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-
-            if (role === 'ai' && typeof hljs !== 'undefined') {
-                msg.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
             }
         }
 
-        function sendMessage() {
+        // ---------------------------------------------------------
+        // 5. ENGINE GỬI & NHẬN PHẢN HỒI AI
+        // ---------------------------------------------------------
+        async function sendMessage() {
             const text = inputField.value.trim();
             if (!text && attachedFiles.length === 0) return;
 
-            let fullText = text;
+            let fullPrompt = text;
             if (attachedFiles.length > 0) {
-                fullText += '\n\n[Tài liệu đính kèm:\n' + attachedFiles.map(f => `--- ${f.name} ---\n${f.content}`).join('\n') + ']';
+                fullPrompt += '\n\n[Tệp đính kèm]:\n' + attachedFiles.map(f => `--- ${f.name} ---\n${f.content}`).join('\n');
                 attachedFiles = [];
                 renderFilePreview();
             }
 
-            appendMessage('user', text || '[File đính kèm]');
+            // Gắn ngữ cảnh Plugin đang bật
+            fullPrompt += getActivePluginsPrompt();
+
+            const welcome = document.getElementById('welcomeHero');
+            if (welcome) welcome.style.display = 'none';
+
+            appendMessage('user', text || '[Đã gửi tệp đính kèm]');
             inputField.value = '';
             inputField.style.height = 'auto';
 
             sendBtn.style.display = 'none';
             stopBtn.style.display = 'flex';
+
             showDeepThink();
 
-            currentAbortController = new AbortController();
-
-            // Phản hồi mô phỏng AI
-            setTimeout(() => {
+            try {
+                // Giả lập câu trả lời thông minh dựa trên prompt & plugin
+                const responseText = await simulateAIResponse(text, fullPrompt);
                 hideDeepThink();
+                appendMessage('ai', responseText);
+                saveCurrentConversation();
+            } catch (err) {
+                hideDeepThink();
+                if (err.name !== 'AbortError') {
+                    appendMessage('ai', '⚠️ Da xảy ra lỗi kết nối với máy chủ AI. Vui lòng thử lại!');
+                }
+            } finally {
                 sendBtn.style.display = 'flex';
                 stopBtn.style.display = 'none';
-
-                let reply = `Cảm ơn bạn đã hỏi! Dưới đây là phản hồi chi tiết từ **${LEVEL_NAMES[currentLevel]}**:\n\n`;
-                reply += `> Bạn đã nhập: "${text}"\n\n`;
-                reply += `### Phân tích & Giải quyết:\n1. **Yêu cầu**: Hệ thống đã ghi nhận và xử lý yêu cầu của bạn.\n2. **Chi tiết**: Để tối ưu hiệu suất, mô hình AI đang ở phiên bản Ultra 13.0 Pro Max.\n\n\`\`\`javascript\n// Mã xử lý tự động\nfunction processRequest(input) {\n    return "Xử lý thành công: " + input;\n}\n\`\`\``;
-
-                appendMessage('ai', reply);
-                saveCurrentConversation();
-            }, 1200);
+            }
         }
 
         function stopGeneration() {
@@ -3216,57 +3480,227 @@
             hideDeepThink();
             sendBtn.style.display = 'flex';
             stopBtn.style.display = 'none';
-            showToast('⏹️ Đã dừng tạo phản hồi', 'warning');
+            showToast('⏹️ Đã dừng tạo phản hồi!', 'warning');
         }
 
-        function clearAllMessages() {
-            if (confirm('Bạn có chắc chắn muốn xóa toàn bộ khung chat hiện tại?')) {
-                createNewChat();
+        function simulateAIResponse(query, fullPrompt) {
+            return new Promise((resolve) => {
+                const delay = Math.floor(Math.random() * 1000) + 1500;
+                setTimeout(() => {
+                    const qLower = query.toLowerCase();
+
+                    if (qLower.includes('mermaid') || qLower.includes('sơ đồ')) {
+                        resolve(`Dưới đây là sơ đồ quy trình được vẽ bằng **Mermaid JS** theo yêu cầu của bạn:\n\n\`\`\`mermaid\ngraph TD\n    A[🚀 Nhận đơn hàng] --> B{Kiểm tra tồn kho}\n    B -- Còn hàng --> C[📦 Đóng gói sản phẩm]\n    B -- Hết hàng --> D[📞 Thông báo khách hàng]\n    C --> E[🚚 Giao cho đơn vị vận chuyển]\n    E --> F[🎉 Giao hàng thành công]\n\`\`\`\n\nBạn có thể chỉnh sửa các bước trên nếu muốn tùy biến quy trình!`);
+                        return;
+                    }
+
+                    if (qLower.includes('code') || qLower.includes('lập trình') || qLower.includes('html') || qLower.includes('javascript')) {
+                        resolve(`Dưới đây là mã nguồn HTML/JS mẫu có tích hợp tính năng Claude Artifact Live Preview:\n\n\`\`\`html\n<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: sans-serif; text-align: center; padding: 40px; background: #0f172a; color: white; }\n    button { padding: 12px 24px; background: #6366f1; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }\n  </style>\n</head>\n<body>\n  <h1>⚡ TV-AI Interactive Artifact</h1>\n  <button onclick="alert('Hello from TV-AI Supreme!')">Bấm vào đây</button>\n</body>\n</html>\n\`\`\`\n\n*Bấm nút **Live Preview** ở góc trên khung code để xem giao diện chạy trực tiếp!*`);
+                        return;
+                    }
+
+                    resolve(`Chào bạn! Tôi là **T.VỸ-AI-SUPREME v13.0 Ultra Pro Max**.\n\nTôi đã nhận được yêu cầu: "${query}".\n\nHệ thống AI của tôi đang hoạt động ở cấp độ **${LEVEL_NAMES[currentLevel]}** với các Plugin mở rộng sẵn sàng hỗ trợ bạn hoàn thành công việc một cách nhanh chóng và tối ưu nhất!`);
+                }, delay);
+            });
+        }
+
+        // ---------------------------------------------------------
+        // 6. RENDER TIN NHẮN & CÁC CÔNG CỤ TRONG TIN NHẮN
+        // ---------------------------------------------------------
+        function appendMessage(role, text, shouldScroll = true) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `message-wrapper ${role}`;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = role === 'user' ? '👤' : '<i class="fa-solid fa-brain"></i>';
+
+            const msg = document.createElement('div');
+            msg.className = `message ${role}`;
+            msg.dataset.rawText = text;
+
+            if (role === 'ai') {
+                if (typeof marked !== 'undefined') {
+                    msg.innerHTML = marked.parse(text);
+                } else {
+                    msg.innerText = text;
+                }
+                
+                // Xử lý khối Code & Nút Live Preview / Copy
+                msg.querySelectorAll('pre code').forEach((codeBlock) => {
+                    const container = document.createElement('div');
+                    container.className = 'code-container';
+
+                    const header = document.createElement('div');
+                    header.className = 'code-header';
+                    const lang = codeBlock.className.replace('language-', '') || 'code';
+                    header.innerHTML = `<span>${lang.toUpperCase()}</span>`;
+
+                    const actions = document.createElement('div');
+                    actions.className = 'code-actions';
+
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'code-copy-btn';
+                    copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
+                    copyBtn.onclick = () => {
+                        navigator.clipboard.writeText(codeBlock.innerText);
+                        showToast('📋 Đã sao chép mã nguồn!', 'success');
+                    };
+                    actions.appendChild(copyBtn);
+
+                    if (lang.toLowerCase() === 'html' || lang.toLowerCase() === 'javascript') {
+                        const runBtn = document.createElement('button');
+                        runBtn.className = 'code-run-btn';
+                        runBtn.innerHTML = '<i class="fa-solid fa-play"></i> Live Preview';
+                        runBtn.onclick = () => openLivePreview(codeBlock.innerText);
+                        actions.appendChild(runBtn);
+                    }
+
+                    header.appendChild(actions);
+
+                    const pre = codeBlock.parentNode;
+                    pre.parentNode.insertBefore(container, pre);
+                    container.appendChild(header);
+                    container.appendChild(pre);
+                });
+
+                // Render Mermaid Diagrams nếu có
+                msg.querySelectorAll('code.language-mermaid').forEach((mBlock) => {
+                    const mContent = mBlock.innerText;
+                    const mDiv = document.createElement('div');
+                    mDiv.className = 'mermaid';
+                    mDiv.textContent = mContent;
+                    mBlock.parentNode.parentNode.replaceChild(mDiv, mBlock.parentNode);
+                });
+
+                setTimeout(() => {
+                    if (typeof mermaid !== 'undefined') {
+                        try { mermaid.contentLoaded(); } catch(e) {}
+                    }
+                }, 100);
+
+            } else {
+                msg.innerText = text;
+            }
+
+            // Thanh công cụ bên dưới tin nhắn
+            const tools = document.createElement('div');
+            tools.className = 'message-tools';
+            tools.innerHTML = `
+                <button class="tool-btn" onclick="navigator.clipboard.writeText(this.closest('.message').dataset.rawText); showToast('📋 Đã sao chép!', 'success');"><i class="fa-regular fa-copy"></i> Sao chép</button>
+                ${role === 'ai' ? '<button class="tool-btn" onclick="speakMsgText(this)"><i class="fa-solid fa-volume-high"></i> Đọc</button>' : ''}
+                <span class="time">${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+            `;
+            msg.appendChild(tools);
+
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(msg);
+
+            chatContainer.appendChild(wrapper);
+
+            if (shouldScroll) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
             }
         }
 
-        function searchMessages() {
-            const q = searchInput.value.trim().toLowerCase();
-            if (!q) return;
-            const msgs = document.querySelectorAll('.message');
-            let found = 0;
-            msgs.forEach(m => {
-                if (m.innerText.toLowerCase().includes(q)) {
-                    m.style.border = '2px solid var(--accent-primary)';
-                    found++;
-                } else {
-                    m.style.border = '1px solid var(--border-color)';
-                }
-            });
-            showToast(`🔎 Tìm thấy ${found} kết quả trùng khớp`, 'info');
+        // ---------------------------------------------------------
+        // 7. CLAUDE ARTIFACT LIVE PREVIEW PANE
+        // ---------------------------------------------------------
+        let currentArtifactCode = '';
+
+        function openLivePreview(code) {
+            currentArtifactCode = code;
+            const pane = document.getElementById('artifactPreviewPane');
+            const frame = document.getElementById('artifactFrame');
+            if (pane && frame) {
+                pane.classList.add('active');
+                frame.srcdoc = code;
+                showToast('👁️ Đã mở Claude Artifact Live Preview!', 'info');
+            }
         }
 
+        function refreshLivePreview() {
+            const frame = document.getElementById('artifactFrame');
+            if (frame && currentArtifactCode) {
+                frame.srcdoc = currentArtifactCode;
+                showToast('🔄 Đã tải lại Live Preview!', 'info');
+            }
+        }
+
+        function closeLivePreview() {
+            const pane = document.getElementById('artifactPreviewPane');
+            if (pane) {
+                pane.classList.remove('active');
+            }
+        }
+
+        // ---------------------------------------------------------
+        // 8. MENU CÔNG CỤ AI VÀ MẤY TÍNH NĂNG MỞ RỘNG
+        // ---------------------------------------------------------
         function aiTextAndEmail() {
-            setInputAndSend("Hãy viết cho tôi một mẫu Email công việc chuyên nghiệp về việc xin gia hạn thời gian hoàn thành dự án.");
+            setInputAndSend('Hãy viết một email công việc chuyên nghiệp và lịch sự gửi đối tác về việc hợp tác dự án mới.');
         }
+
         function aiCreativeAndMedia() {
-            setInputAndSend("Sáng tạo cho tôi 3 ý tưởng kịch bản video ngắn thu hút về xu hướng AI năm 2026.");
+            setInputAndSend('Sáng tạo kịch bản video TikTok 60 giây thu hút về chủ đề Trí tuệ nhân tạo thay đổi tương lai.');
         }
+
         function aiDevAndData() {
-            setInputAndSend("Viết một script Python để tự động phân tích dữ liệu từ file CSV và vẽ biểu đồ.");
+            setInputAndSend('Viết một hàm JavaScript tối ưu để lọc và sắp xếp danh sách mảng đối tượng dữ liệu JSON.');
         }
+
         function aiMultiAndPrompt() {
-            setInputAndSend("Hãy giúp tôi tối ưu hóa câu Prompt sau đây để AI tạo ra kết quả tốt nhất: ");
+            setInputAndSend('Nâng cấp và mở rộng câu lệnh (Prompt Optimizer) sau đây trở nên chi tiết và chuyên nghiệp hơn: ');
+        }
+
+        function searchMessages() {
+            const query = searchInput.value.trim().toLowerCase();
+            if (!query) return;
+            const matches = document.querySelectorAll('.message');
+            let found = 0;
+            matches.forEach(m => {
+                if (m.innerText.toLowerCase().includes(query)) {
+                    m.style.outline = '2px solid #6366f1';
+                    found++;
+                } else {
+                    m.style.outline = 'none';
+                }
+            });
+            const res = document.getElementById('searchResult');
+            if (res) {
+                res.style.display = 'block';
+                res.textContent = `🔍 Tìm thấy ${found} kết quả cho "${query}"`;
+                setTimeout(() => res.style.display = 'none', 3000);
+            }
         }
 
         function upgradeTier(tier) {
-            showToast(`🎉 Cảm ơn bạn! Đã ghi nhận yêu cầu nâng cấp gói ${LEVEL_NAMES[tier] || tier}`, 'success');
+            showToast(`🎉 Đã đăng ký gói ${LEVEL_NAMES[tier]}!`, 'success');
             closeModal('upgradeModal');
         }
 
         function upgradeWithMomo(tier) {
-            showToast(`💳 Đang chuyển hướng đến cổng thanh toán MoMo cho gói ${tier}...`, 'info');
+            showToast(`💳 Đang chuyển hướng đến cổng thanh toán MoMo cho gói ${LEVEL_NAMES[tier]}...`, 'info');
         }
 
-        // Khởi tạo ứng dụng
-        document.addEventListener('DOMContentLoaded', () => {
+        // ---------------------------------------------------------
+        // 9. KHỞI TẠO HỆ THỐNG TRÊN TRÌNH DUYỆT
+        // ---------------------------------------------------------
+        window.addEventListener('load', function() {
             initChatHistory();
+            initPlugins();
             loadUsage();
+
+            const savedFont = localStorage.getItem('tv_font_family');
+            if (savedFont) changeFontFamily(savedFont);
+
+            const savedSize = localStorage.getItem('tv_font_size');
+            if (savedSize) changeFontSize(savedSize);
+
+            const customInst = localStorage.getItem('tv_custom_instructions');
+            if (customInst && document.getElementById('customInstructions')) {
+                document.getElementById('customInstructions').value = customInst;
+            }
         });
     </script>
 </body>
