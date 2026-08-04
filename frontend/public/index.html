@@ -1824,8 +1824,8 @@
                 <div id="usageInfo"><i class="fa-solid fa-bolt"></i> Lượt còn lại: ♾️ Không giới hạn Ultra</div>
             </div>
 
+            <!-- ===== NAVIGATION (ĐÃ XÓA MỤC TRÒ CHUYỆN) ===== -->
             <nav>
-                <button class="nav-item active" data-tab="chat"><i class="fa-solid fa-comments"></i> Trò chuyện</button>
                 <button class="nav-item" data-tab="history"><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử</button>
                 <button class="nav-item" data-tab="upgrade"><i class="fa-solid fa-crown"></i> Nâng cấp</button>
                 <button class="nav-item" data-tab="settings"><i class="fa-solid fa-gear"></i> Cài đặt</button>
@@ -2467,7 +2467,6 @@
                 closeModal('loginModal');
                 closeModal('historyModal');
                 closeModal('upgradeModal');
-                closeModal('sandboxModal');
             }
             if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'o') {
                 e.preventDefault();
@@ -2629,20 +2628,6 @@
                     <span class="remove-file" onclick="removeAttachedFile(${i})">✕</span>
                 </div>
             `).join('');
-        }
-
-        function copyCodeSnippet(btn, codeText) {
-            navigator.clipboard.writeText(codeText).then(() => {
-                btn.innerHTML = '<i class="fa-solid fa-check" style="color:#22c55e;"></i> Đã chép';
-                setTimeout(() => btn.innerHTML = '<i class="fa-regular fa-copy"></i> Sao chép', 2000);
-            });
-        }
-
-        function runCodeSnippet(codeText) {
-            const iframe = document.getElementById('sandboxFrame');
-            iframe.srcdoc = codeText;
-            openModal('sandboxModal');
-            showToast('🚀 Đang chạy mã nguồn trong Sandbox...', 'success');
         }
 
         function exportChatMarkdown() {
@@ -3047,104 +3032,63 @@
         }
 
         function renderSidebarHistory() {
-            const listEl = document.getElementById('sidebarHistoryList');
-            if (!listEl) return;
-
+            const list = document.getElementById('sidebarHistoryList');
+            if (!list) return;
+            list.innerHTML = '';
             const keys = Object.keys(conversationsList).reverse();
             if (keys.length === 0) {
-                listEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:4px 8px;">Chưa có dữ liệu</div>';
+                list.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px;">Chưa có lịch sử</div>';
                 return;
             }
-
-            listEl.innerHTML = keys.map(id => {
-                const item = conversationsList[id];
-                const activeClass = id === window.currentConversationId ? 'active' : '';
-                return `
-                    <div class="history-item ${activeClass}" onclick="loadConversationId('${id}')">
-                        <span style="overflow:hidden;text-overflow:ellipsis;"><i class="fa-regular fa-message" style="margin-right:6px;"></i>${item.title}</span>
-                        <button class="del-btn" onclick="deleteConversation(event, '${id}')" title="Xóa"><i class="fa-solid fa-trash"></i></button>
-                    </div>
+            keys.forEach(key => {
+                const item = conversationsList[key];
+                const div = document.createElement('div');
+                div.className = `history-item ${key === window.currentConversationId ? 'active' : ''}`;
+                div.innerHTML = `
+                    <span onclick="loadConversation('${key}')" style="flex:1;overflow:hidden;text-overflow:ellipsis;">${item.title}</span>
+                    <button class="del-btn" onclick="event.stopPropagation(); deleteConversation('${key}')"><i class="fa-solid fa-trash"></i></button>
                 `;
-            }).join('');
+                list.appendChild(div);
+            });
         }
 
         function renderHistoryModal() {
-            const modalList = document.getElementById('historyList');
+            const list = document.getElementById('historyList');
+            if (!list) return;
+            list.innerHTML = '';
             const keys = Object.keys(conversationsList).reverse();
             if (keys.length === 0) {
-                modalList.innerHTML = '<p style="color:var(--text-muted);">Chưa có lịch sử trò chuyện.</p>';
+                list.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">Chưa có lịch sử trò chuyện nào.</p>';
                 return;
             }
-
-            modalList.innerHTML = keys.map(id => {
-                const item = conversationsList[id];
-                return `
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:8px;background:var(--bg-glass);border:1px solid var(--border-color);border-radius:var(--radius-md);cursor:pointer;" onclick="loadConversationId('${id}');closeModal('historyModal');">
-                        <div>
-                            <div style="font-weight:700;font-size:13px;color:var(--text-main);">${item.title}</div>
-                            <div style="font-size:11px;color:var(--text-muted);">${item.time} - ${item.messages.length} tin nhắn</div>
-                        </div>
-                        <button class="del-btn" onclick="deleteConversation(event, '${id}')" style="color:#ef4444;background:none;border:none;cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+            keys.forEach(key => {
+                const item = conversationsList[key];
+                const div = document.createElement('div');
+                div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px;margin-bottom:8px;background:var(--bg-glass);border:1px solid var(--border-color);border-radius:var(--radius-sm);cursor:pointer;';
+                div.innerHTML = `
+                    <div>
+                        <div style="font-weight:600;font-size:13px;color:var(--text-main);">${item.title}</div>
+                        <div style="font-size:11px;color:var(--text-muted);">${item.time}</div>
                     </div>
+                    <button class="btn btn-danger btn-sm" onclick="deleteConversation('${key}'); renderHistoryModal();">Xóa</button>
                 `;
-            }).join('');
-        }
-
-        function loadConversationId(id) {
-            if (!conversationsList[id]) return;
-            window.currentConversationId = id;
-            const conv = conversationsList[id];
-            
-            chatContainer.innerHTML = '';
-            conv.messages.forEach(m => addMessage(m.role, m.text, false));
-            renderSidebarHistory();
-            showToast('📂 Đã tải cuộc trò chuyện!', 'info');
-        }
-
-        function deleteConversation(event, id) {
-            event.stopPropagation();
-            if (!confirm('Xóa đoạn chat này?')) return;
-            delete conversationsList[id];
-            localStorage.setItem('tv_conversations', JSON.stringify(conversationsList));
-            if (window.currentConversationId === id) {
-                createNewChat();
-            } else {
-                renderSidebarHistory();
-                renderHistoryModal();
-            }
-            showToast('🗑️ Đã xóa đoạn chat!', 'info');
+                div.onclick = (e) => {
+                    if (e.target.tagName !== 'BUTTON') {
+                        loadConversation(key);
+                        closeModal('historyModal');
+                    }
+                };
+                list.appendChild(div);
+            });
         }
 
         function createNewChat() {
             window.currentConversationId = null;
             chatContainer.innerHTML = `
-                <div class="upgrade-required" id="upgradeRequired" style="display:${isLoggedIn ? 'none' : 'none'};">
-                    <strong>🔒 Chức năng này yêu cầu đăng nhập!</strong>
-                    <p style="margin:4px 0;font-size:13px;">Vui lòng đăng nhập hoặc đăng ký tài khoản để sử dụng.</p>
-                    <button class="btn-upgrade" onclick="openLoginModal()">Đăng nhập</button>
-                    <button class="btn-upgrade" onclick="openRegisterModal()" style="background:#4f6ef7;margin-left:8px;">Đăng ký</button>
-                </div>
-
-                <div id="deepThinkIndicator">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <span style="font-size:20px;">🧠</span>
-                        <div>
-                            <div style="font-weight:700;color:var(--text-main);">Đang suy nghĩ sâu...</div>
-                            <div style="font-size:12px;color:var(--text-muted);" id="thinkStatus">Phân tích vấn đề...</div>
-                        </div>
-                        <div style="margin-left:auto;display:flex;gap:4px;">
-                            <span class="think-dot"></span>
-                            <span class="think-dot"></span>
-                            <span class="think-dot"></span>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="welcome-hero" id="welcomeHero">
                     <div class="hero-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
                     <h1>T.VỸ-AI-SUPREME v13.0 Ultra</h1>
                     <p>Hệ thống AI thế hệ mới nâng cao năng suất, sáng tạo nội dung, lập trình và hỗ trợ công việc đa nhiệm vượt trội.</p>
-                    
                     <div class="suggestion-cards">
                         <div class="suggestion-card" onclick="setInputAndSend('Vẽ sơ đồ quy trình xử lý đơn hàng bằng Mermaid JS')">
                             <div class="title"><i class="fa-solid fa-diagram-project" style="color:#6366f1;"></i> Vẽ sơ đồ Mermaid</div>
@@ -3157,255 +3101,172 @@
                     </div>
                 </div>
             `;
-            attachedFiles = [];
-            renderFilePreview();
             renderSidebarHistory();
-            showToast('✨ Đã mở đoạn chat mới!', 'info');
+            showToast('✨ Đã tạo đoạn chat mới!', 'info');
         }
 
-        // ---------------------------------------------------------
-        // 4. CHỨC NĂNG TRUYỀN NHẬN VÀ HIỂN THỊ CÂU HỎI / TRẢ LỜI
-        // ---------------------------------------------------------
-        function addMessage(role, text, shouldSave = true) {
-            const welcomeHero = document.getElementById('welcomeHero');
-            if (welcomeHero) welcomeHero.remove();
+        function loadConversation(id) {
+            const item = conversationsList[id];
+            if (!item) return;
+            window.currentConversationId = id;
+            chatContainer.innerHTML = '';
+            item.messages.forEach(m => {
+                appendMessage(m.role, m.text);
+            });
+            renderSidebarHistory();
+        }
+
+        function deleteConversation(id) {
+            delete conversationsList[id];
+            localStorage.setItem('tv_conversations', JSON.stringify(conversationsList));
+            if (window.currentConversationId === id) {
+                createNewChat();
+            } else {
+                renderSidebarHistory();
+            }
+            showToast('🗑️ Đã xóa cuộc trò chuyện', 'info');
+        }
+
+        function appendMessage(role, text) {
+            const hero = document.getElementById('welcomeHero');
+            if (hero) hero.remove();
 
             const wrapper = document.createElement('div');
             wrapper.className = `message-wrapper ${role}`;
 
             const avatar = document.createElement('div');
             avatar.className = 'message-avatar';
-            avatar.innerHTML = role === 'user' ? '<i class="fa-solid fa-user"></i>' : '<i class="fa-solid fa-robot"></i>';
+            avatar.innerHTML = role === 'user' ? '👤' : '<i class="fa-solid fa-robot"></i>';
 
             const msg = document.createElement('div');
             msg.className = `message ${role}`;
             msg.dataset.rawText = text;
 
-            const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-
             if (role === 'ai') {
-                msg.innerHTML = formatAiResponse(text);
-                
-                const tools = document.createElement('div');
-                tools.className = 'message-tools';
-                tools.innerHTML = `
-                    <button class="tool-btn" onclick="navigator.clipboard.writeText(this.closest('.message').dataset.rawText);showToast('📋 Đã chép nội dung!', 'success');"><i class="fa-regular fa-copy"></i> Sao chép</button>
-                    <button class="tool-btn" onclick="speakMsgText(this)"><i class="fa-solid fa-volume-high"></i> Đọc</button>
-                    <span class="time">${now}</span>
-                `;
-                msg.appendChild(tools);
+                if (typeof marked !== 'undefined') {
+                    msg.innerHTML = marked.parse(text);
+                } else {
+                    msg.textContent = text;
+                }
             } else {
                 msg.textContent = text;
-                const tools = document.createElement('div');
-                tools.className = 'message-tools';
-                tools.innerHTML = `<span class="time">${now}</span>`;
-                msg.appendChild(tools);
             }
+
+            const tools = document.createElement('div');
+            tools.className = 'message-tools';
+            tools.innerHTML = `
+                <button class="tool-btn" onclick="navigator.clipboard.writeText(this.closest('.message').dataset.rawText); showToast('📋 Đã sao chép!', 'success');">
+                    <i class="fa-regular fa-copy"></i> Sao chép
+                </button>
+                ${role === 'ai' ? '<button class="tool-btn" onclick="speakMsgText(this)"><i class="fa-solid fa-volume-high"></i> Đọc</button>' : ''}
+                <span class="time">${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+            `;
+            msg.appendChild(tools);
 
             wrapper.appendChild(avatar);
             wrapper.appendChild(msg);
             chatContainer.appendChild(wrapper);
             chatContainer.scrollTop = chatContainer.scrollHeight;
 
-            if (role === 'ai') renderMarkdownAndMermaid(msg);
-
-            if (shouldSave) saveCurrentConversation();
-            return msg;
-        }
-
-        function formatAiResponse(text) {
-            if (typeof marked !== 'undefined') {
-                return marked.parse(text);
+            if (role === 'ai' && typeof hljs !== 'undefined') {
+                msg.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
             }
-            return text.replace(/\n/g, '<br>');
         }
 
-        function renderMarkdownAndMermaid(element) {
-            element.querySelectorAll('pre code').forEach((block) => {
-                const codeText = block.innerText;
-                const lang = block.className.replace('language-', '') || 'code';
-                
-                if (lang === 'mermaid') {
-                    const mermaidDiv = document.createElement('div');
-                    mermaidDiv.className = 'mermaid';
-                    mermaidDiv.textContent = codeText;
-                    block.parentElement.replaceWith(mermaidDiv);
-                    try { mermaid.run({ nodes: [mermaidDiv] }); } catch(e) {}
-                } else {
-                    const codeContainer = document.createElement('div');
-                    codeContainer.className = 'code-container';
-                    codeContainer.innerHTML = `
-                        <div class="code-header">
-                            <span>${lang.toUpperCase()}</span>
-                            <div class="code-actions">
-                                ${(lang === 'html' || lang === 'js' || lang === 'javascript') ? `<button class="code-run-btn" onclick="runCodeSnippet(\`${codeText.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`)"><i class="fa-solid fa-play"></i> Run Live</button>` : ''}
-                                <button class="code-copy-btn" onclick="copyCodeSnippet(this, \`${codeText.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`)"><i class="fa-regular fa-copy"></i> Sao chép</button>
-                            </div>
-                        </div>
-                    `;
-                    const pre = block.parentElement.cloneNode(true);
-                    codeContainer.appendChild(pre);
-                    block.parentElement.replaceWith(codeContainer);
-                    if (typeof hljs !== 'undefined') hljs.highlightElement(pre.querySelector('code'));
-                }
-            });
+        function sendMessage() {
+            const text = inputField.value.trim();
+            if (!text && attachedFiles.length === 0) return;
+
+            let fullText = text;
+            if (attachedFiles.length > 0) {
+                fullText += '\n\n[Tài liệu đính kèm:\n' + attachedFiles.map(f => `--- ${f.name} ---\n${f.content}`).join('\n') + ']';
+                attachedFiles = [];
+                renderFilePreview();
+            }
+
+            appendMessage('user', text || '[File đính kèm]');
+            inputField.value = '';
+            inputField.style.height = 'auto';
+
+            sendBtn.style.display = 'none';
+            stopBtn.style.display = 'flex';
+            showDeepThink();
+
+            currentAbortController = new AbortController();
+
+            // Phản hồi mô phỏng AI
+            setTimeout(() => {
+                hideDeepThink();
+                sendBtn.style.display = 'flex';
+                stopBtn.style.display = 'none';
+
+                let reply = `Cảm ơn bạn đã hỏi! Dưới đây là phản hồi chi tiết từ **${LEVEL_NAMES[currentLevel]}**:\n\n`;
+                reply += `> Bạn đã nhập: "${text}"\n\n`;
+                reply += `### Phân tích & Giải quyết:\n1. **Yêu cầu**: Hệ thống đã ghi nhận và xử lý yêu cầu của bạn.\n2. **Chi tiết**: Để tối ưu hiệu suất, mô hình AI đang ở phiên bản Ultra 13.0 Pro Max.\n\n\`\`\`javascript\n// Mã xử lý tự động\nfunction processRequest(input) {\n    return "Xử lý thành công: " + input;\n}\n\`\`\``;
+
+                appendMessage('ai', reply);
+                saveCurrentConversation();
+            }, 1200);
         }
-
-        async function sendMessage() {
-			const rawText = inputField.value.trim();
-			if (!rawText && attachedFiles.length === 0) return;
-
-			let fullPrompt = rawText;
-			if (attachedFiles.length > 0) {
-				const fileContents = attachedFiles.map(f => `--- FILE: ${f.name} ---\n${f.content}\n--- END FILE ---`).join('\n\n');
-				fullPrompt = (rawText ? rawText + '\n\n' : '') + fileContents;
-			}
-
-			addMessage('user', rawText || '[Đã gửi file đính kèm]');
-			
-			inputField.value = '';
-			inputField.style.height = 'auto';
-			attachedFiles = [];
-			renderFilePreview();
-
-			sendBtn.style.display = 'none';
-			stopBtn.style.display = 'flex';
-
-			showDeepThink();
-
-			currentAbortController = new AbortController();
-
-			try {
-				// 🚀 BỎ CODE MẪU -> GỌI TRỰC TIẾP LÊN PYTHON BACKEND SERVER
-				const response = await fetch('/chat', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						message: fullPrompt,
-						level: typeof currentLevel !== 'undefined' ? currentLevel : 'pro',
-						web_synthesis: true
-					}),
-					signal: currentAbortController.signal
-				});
-
-				const data = await response.json();
-
-				hideDeepThink();
-
-				if (data.success && data.message) {
-					// Thêm câu trả lời THẬT do AI vừa suy nghĩ vào ô chat
-					addMessage('ai', data.message);
-
-					// Nếu AI tạo mã HTML/CSS/JS, tự động trích xuất và mở Sandbox Live Preview
-					if (data.has_artifact || data.message.includes('```html')) {
-						const codeMatch = data.message.match(/```html([\s\S]*?)```/i);
-						if (codeMatch && codeMatch[1] && typeof openSandboxWithCode === 'function') {
-							openSandboxWithCode(codeMatch[1].trim());
-						}
-					}
-				} else {
-					addMessage('ai', '❌ ' + (data.error || 'Máy chủ AI trả về phản hồi không hợp lệ.'));
-				}
-
-			} catch (err) {
-				hideDeepThink();
-				if (err.name !== 'AbortError') {
-					addMessage('ai', '❌ Không thể kết nối tới Server AI. Vui lòng kiểm tra lại Render Server.');
-				}
-			} finally {
-				sendBtn.style.display = 'flex';
-				stopBtn.style.display = 'none';
-				currentAbortController = null;
-			}
-		}
 
         function stopGeneration() {
             if (currentAbortController) {
                 currentAbortController.abort();
-                currentAbortController = null;
             }
             hideDeepThink();
             sendBtn.style.display = 'flex';
             stopBtn.style.display = 'none';
-            showToast('🛑 Đã dừng tạo phản hồi!', 'warning');
+            showToast('⏹️ Đã dừng tạo phản hồi', 'warning');
         }
 
         function clearAllMessages() {
-            if (confirm('Xóa sạch nội dung cuộc trò chuyện hiện tại?')) {
+            if (confirm('Bạn có chắc chắn muốn xóa toàn bộ khung chat hiện tại?')) {
                 createNewChat();
             }
         }
 
         function searchMessages() {
-            const query = searchInput.value.trim().toLowerCase();
-            const resBox = document.getElementById('searchResult');
-            if (!query) {
-                resBox.style.display = 'none';
-                return;
-            }
+            const q = searchInput.value.trim().toLowerCase();
+            if (!q) return;
             const msgs = document.querySelectorAll('.message');
-            let count = 0;
+            let found = 0;
             msgs.forEach(m => {
-                if (m.dataset.rawText && m.dataset.rawText.toLowerCase().includes(query)) {
-                    count++;
+                if (m.innerText.toLowerCase().includes(q)) {
+                    m.style.border = '2px solid var(--accent-primary)';
+                    found++;
+                } else {
+                    m.style.border = '1px solid var(--border-color)';
                 }
             });
-            resBox.style.display = 'block';
-            resBox.innerHTML = `🔍 Tìm thấy <strong>${count}</strong> kết quả phù hợp với "${query}"`;
+            showToast(`🔎 Tìm thấy ${found} kết quả trùng khớp`, 'info');
         }
 
-        // ---------------------------------------------------------
-        // 5. CÁC HÀM CÔNG CỤ TỪ DROPDOWN MENU
-        // ---------------------------------------------------------
         function aiTextAndEmail() {
-            setInputAndSend("Hãy giúp tôi soạn một email chuyên nghiệp gửi đối tác về việc hợp tác dự án mới.");
-            toggleMenu();
+            setInputAndSend("Hãy viết cho tôi một mẫu Email công việc chuyên nghiệp về việc xin gia hạn thời gian hoàn thành dự án.");
         }
-
         function aiCreativeAndMedia() {
-            setInputAndSend("Sáng tạo 3 ý tưởng kịch bản video ngắn thu hút triệu view về xu hướng công nghệ AI.");
-            toggleMenu();
+            setInputAndSend("Sáng tạo cho tôi 3 ý tưởng kịch bản video ngắn thu hút về xu hướng AI năm 2026.");
         }
-
         function aiDevAndData() {
-            setInputAndSend("Viết hàm Python phân tích dữ liệu mảng và tối ưu thuật toán tìm kiếm.");
-            toggleMenu();
+            setInputAndSend("Viết một script Python để tự động phân tích dữ liệu từ file CSV và vẽ biểu đồ.");
         }
-
         function aiMultiAndPrompt() {
-            setInputAndSend("Hãy tối ưu và nâng cấp prompt sau thành một System Prompt chuyên nghiệp chuẩn GPT-4o.");
-            toggleMenu();
+            setInputAndSend("Hãy giúp tôi tối ưu hóa câu Prompt sau đây để AI tạo ra kết quả tốt nhất: ");
         }
 
         function upgradeTier(tier) {
-            levelSelect.value = tier;
-            levelSelect.dispatchEvent(new Event('change'));
+            showToast(`🎉 Cảm ơn bạn! Đã ghi nhận yêu cầu nâng cấp gói ${LEVEL_NAMES[tier] || tier}`, 'success');
             closeModal('upgradeModal');
-            showToast(`🎉 Nâng cấp gói ${LEVEL_NAMES[tier]} thành công!`, 'success');
         }
 
         function upgradeWithMomo(tier) {
-            showToast(`💳 Đang mở cổng thanh toán MoMo cho gói ${LEVEL_NAMES[tier]}...`, 'info');
-            setTimeout(() => upgradeTier(tier), 1500);
+            showToast(`💳 Đang chuyển hướng đến cổng thanh toán MoMo cho gói ${tier}...`, 'info');
         }
 
-        // Khởi tạo ứng dụng khi load xong trang
-        window.addEventListener('DOMContentLoaded', () => {
+        // Khởi tạo ứng dụng
+        document.addEventListener('DOMContentLoaded', () => {
             initChatHistory();
             loadUsage();
-            
-            const savedFont = localStorage.getItem('tv_font_family');
-            if (savedFont) changeFontFamily(savedFont);
-
-            const savedSize = localStorage.getItem('tv_font_size');
-            if (savedSize) changeFontSize(savedSize);
-
-            const savedInst = localStorage.getItem('tv_custom_instructions');
-            if (savedInst && document.getElementById('customInstructions')) {
-                document.getElementById('customInstructions').value = savedInst;
-            }
         });
     </script>
 </body>
