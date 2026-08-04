@@ -18,6 +18,15 @@ import traceback
 import requests
 from io import BytesIO
 from pathlib import Path
+from tools import all_tools
+from dotenv import load_dotenv
+
+load_dotenv()
+
+groq_key = os.getenv("GROQ_API_KEY")
+tavily_key = os.getenv("TAVILY_API_KEY")
+wolfram_alpha_appid = os.getenv("WOLFRAM_ALPHA_APPID")
+github_token = os.getenv("GITHUB_TOKEN")
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
