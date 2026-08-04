@@ -3252,58 +3252,74 @@
         }
 
         async function sendMessage() {
-            const rawText = inputField.value.trim();
-            if (!rawText && attachedFiles.length === 0) return;
+			const rawText = inputField.value.trim();
+			if (!rawText && attachedFiles.length === 0) return;
 
-            let fullPrompt = rawText;
-            if (attachedFiles.length > 0) {
-                const fileContents = attachedFiles.map(f => `--- FILE: ${f.name} ---\n${f.content}\n--- END FILE ---`).join('\n\n');
-                fullPrompt = (rawText ? rawText + '\n\n' : '') + fileContents;
-            }
+			let fullPrompt = rawText;
+			if (attachedFiles.length > 0) {
+				const fileContents = attachedFiles.map(f => `--- FILE: ${f.name} ---\n${f.content}\n--- END FILE ---`).join('\n\n');
+				fullPrompt = (rawText ? rawText + '\n\n' : '') + fileContents;
+			}
 
-            addMessage('user', rawText || '[Đã gửi file đính kèm]');
-            
-            inputField.value = '';
-            inputField.style.height = 'auto';
-            attachedFiles = [];
-            renderFilePreview();
+			addMessage('user', rawText || '[Đã gửi file đính kèm]');
+			
+			inputField.value = '';
+			inputField.style.height = 'auto';
+			attachedFiles = [];
+			renderFilePreview();
 
-            sendBtn.style.display = 'none';
-            stopBtn.style.display = 'flex';
+			sendBtn.style.display = 'none';
+			stopBtn.style.display = 'flex';
 
-            showDeepThink();
+			showDeepThink();
 
-            currentAbortController = new AbortController();
+			currentAbortController = new AbortController();
 
-            try {
-                // Giả lập xử lý AI linh hoạt & hỗ trợ phản hồi đa dạng
-                await new Promise(r => setTimeout(r, 1200));
+			try {
+				// 🚀 BỎ CODE MẪU -> GỌI TRỰC TIẾP LÊN PYTHON BACKEND SERVER
+				const response = await fetch('/chat', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						message: fullPrompt,
+						level: typeof currentLevel !== 'undefined' ? currentLevel : 'pro',
+						web_synthesis: true
+					}),
+					signal: currentAbortController.signal
+				});
 
-                let aiResponseText = "";
-                const lower = fullPrompt.toLowerCase();
+				const data = await response.json();
 
-                if (lower.includes('mermaid') || lower.includes('sơ đồ')) {
-                    aiResponseText = `Dưới đây là sơ đồ quy trình trực quan dành cho bạn:\n\n\`\`\`mermaid\ngraph TD;\n    A[Bắt đầu] --> B[Tiếp nhận đơn hàng];\n    B --> C{Kiểm tra tồn kho?};\n    C -- Còn hàng --> D[Đóng gói & Gửi hàng];\n    C -- Hết hàng --> E[Thông báo khách hàng];\n    D --> F[Hoàn thành];\n    E --> F;\n\`\`\``;
-                } else if (lower.includes('code') || lower.includes('lập trình') || lower.includes('html')) {
-                    aiResponseText = `Dưới đây là đoạn mã HTML/CSS demo hoàn chỉnh mà bạn có thể chạy trực tiếp bằng nút **Run Live**:\n\n\`\`\`html\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  body { background: #0f172a; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }\n  .card { background: linear-gradient(135deg, #6366f1, #a855f7); padding: 30px; border-radius: 16px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }\n</style>\n</head>\n<body>\n  <div class="card">\n    <h2>🚀 Welcome to T.VỸ-AI Live Sandbox</h2>\n    <p>Mã nguồn HTML đã được khởi chạy thành công!</p>\n  </div>\n</body>\n</html>\n\`\`\``;
-                } else {
-                    aiResponseText = `Tôi là **T.VỸ-AI-SUPREME v13.0 Ultra** (Chế độ: **${LEVEL_NAMES[currentLevel]}**).\n\nCảm ơn bạn đã gửi yêu cầu: "*${rawText}*".\n\nTôi đã phân tích dữ liệu và sẵn sàng hỗ trợ bạn hoàn thành công việc một cách tối ưu nhất! Nếu cần thêm trợ giúp về viết code, sáng tạo kịch bản, hay vẽ sơ đồ quy trình, hãy cho tôi biết nhé.`;
-                }
+				hideDeepThink();
 
-                hideDeepThink();
-                addMessage('ai', aiResponseText);
+				if (data.success && data.message) {
+					// Thêm câu trả lời THẬT do AI vừa suy nghĩ vào ô chat
+					addMessage('ai', data.message);
 
-            } catch (err) {
-                hideDeepThink();
-                if (err.name !== 'AbortError') {
-                    addMessage('ai', '❌ Đã xảy ra lỗi trong quá trình kết nối tới máy chủ AI.');
-                }
-            } finally {
-                sendBtn.style.display = 'flex';
-                stopBtn.style.display = 'none';
-                currentAbortController = null;
-            }
-        }
+					// Nếu AI tạo mã HTML/CSS/JS, tự động trích xuất và mở Sandbox Live Preview
+					if (data.has_artifact || data.message.includes('```html')) {
+						const codeMatch = data.message.match(/```html([\s\S]*?)```/i);
+						if (codeMatch && codeMatch[1] && typeof openSandboxWithCode === 'function') {
+							openSandboxWithCode(codeMatch[1].trim());
+						}
+					}
+				} else {
+					addMessage('ai', '❌ ' + (data.error || 'Máy chủ AI trả về phản hồi không hợp lệ.'));
+				}
+
+			} catch (err) {
+				hideDeepThink();
+				if (err.name !== 'AbortError') {
+					addMessage('ai', '❌ Không thể kết nối tới Server AI. Vui lòng kiểm tra lại Render Server.');
+				}
+			} finally {
+				sendBtn.style.display = 'flex';
+				stopBtn.style.display = 'none';
+				currentAbortController = null;
+			}
+		}
 
         function stopGeneration() {
             if (currentAbortController) {
