@@ -1,4 +1,4 @@
-# Web framework & server
+# Web Framework & Server
 Flask==3.0.0
 Flask-Cors==4.0.0
 Flask-SocketIO==5.3.4
@@ -8,32 +8,30 @@ gevent-websocket==0.10.1
 python-dotenv==1.0.0
 requests>=2.32.5
 
-# Xử lý dữ liệu & Đồ họa
-pandas
-matplotlib
-openpyxl
-
-# GitHub & AI SDKs
-PyGithub
-anthropic==0.40.0
-google-generativeai
-
-# LangChain Framework & Tools
+# LangChain Framework & AI SDKs
 langchain
 langchain-core
 langchain-community
 langchain-experimental
 langchain-tavily
+anthropic==0.40.0
+google-generativeai
 
-# Thư viện phụ trợ cho các Tool
-wolframalpha
-arxiv
-wikipedia
-duckduckgo-search
+# Thư viện chạy ngầm cho từng Tool trong tools.py
+PyGithub            # Cho: from github import Github
+wolframalpha        # Cho: WolframAlphaAPIWrapper
+arxiv               # Cho: ArxivAPIWrapper
+wikipedia           # Cho: WikipediaAPIWrapper
+duckduckgo-search   # Cho: DuckDuckGoSearchRun
+ddgs                # Cho: DuckDuckGoSearchRun (bản cập nhật mới)
+tavily-python       # Cho: TavilySearchResults
 
-# Các thư viện xử lý file khác (từ file cũ của bạn)
+# Xử lý dữ liệu, Đồ họa & Tài liệu
+pandas
+matplotlib
+openpyxl            # Cho: pd.read_excel (.xlsx)
+xlrd                # Cho: pd.read_excel (.xls)
 Pillow>=10.2.0
 scipy>=1.11.0
 pypdf>=3.17.0
 python-docx>=1.1.0
-tavily-python
