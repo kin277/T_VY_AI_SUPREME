@@ -1,8 +1,8 @@
 #====================================================================
-# T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (BẢN HOÀN CHỈNH - FULL MULTIMODAL, AUTO CODE & DYNAMIC AI IMAGE ENGINE)
+# T.VỸ-AI-SUPREME - ỨNG DỤNG CHÍNH (BẢN HOÀN CHỈNH - FULL MULTIMODAL, AUTO CODE, DYNAMIC AI IMAGE ENGINE & LANGCHAIN AGENT INTEGRATION)
 #====================================================================
 # Bản quyền: T.VỸ-VIP-FILE
-# Phiên bản: 12.8.0 (Vision, Multimodal, Auto Code Extension, Multilingual Adaptation & Dynamic AI Image Generator)
+# Phiên bản: 12.9.0 (Vision, Multimodal, Auto Code Extension, Dynamic AI Image Generator & LangChain Agent Engine)
 #====================================================================
 
 import base64
@@ -23,7 +23,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from flask import (
     Flask, jsonify, render_template, request,
-    send_from_directory, session
+    send_from_directory, session, send_file
 )
 from config.settings import Config
 from backend.api.chat_routes import chat_bp
@@ -167,25 +167,14 @@ SMART_CODE_SYSTEM_PROMPT = """
 # ================================================================
 
 def analyze_image_request(prompt):
-    """
-    Bộ Phân Tích Kích Thước Tự Động từ Ngữ Cảnh & Yêu Cầu Cụ Thể của Người Dùng
-    1. Nhận diện kích thước số (Ví dụ: 1920x1080, 720x1280)
-    2. Nhận diện tỷ lệ cụ thể (16:9, 9:16, 4:3, 3:4, 21:9, 1:1)
-    3. Phân tích ngữ cảnh thông minh:
-       - Landscape (1280x720): Phong cảnh, máy tính, desktop, banner, bìa Facebook, Youtube thumbnail...
-       - Portrait (720x1280): Hình nền điện thoại, ảnh chân dung, TikTok, Instagram Story, poster đứng...
-       - Square (1024x1024): Avatar, logo, icon, Instagram post...
-    """
     p_lower = prompt.lower()
     width, height = None, None
 
-    # 1. Nhận diện thông số kích thước số cụ thể (1920x1080, 720x1280,...)
     dim_match = re.search(r'(\d{3,4})\s*x\s*(\d{3,4})', p_lower)
     if dim_match:
         width = int(dim_match.group(1))
         height = int(dim_match.group(2))
     else:
-        # 2. Nhận diện tỷ lệ khung hình cụ thể
         if "16:9" in p_lower:
             width, height = 1280, 720
         elif "9:16" in p_lower:
@@ -199,33 +188,24 @@ def analyze_image_request(prompt):
         elif "1:1" in p_lower:
             width, height = 1024, 1024
 
-        # 3. Phân tích ngữ cảnh thông minh (Nếu không ghi thông số / tỷ lệ)
         if not width or not height:
-            # Dạng Ảnh Dọc (Portrait - 720x1280)
             if any(k in p_lower for k in [
                 "dọc", "điện thoại", "phone", "mobile", "story", "tiktok", "reels", 
                 "chân dung", "portrait", "poster đứng", "thiệp đứng", "toàn thân", "full body", "ảnh thẻ"
             ]):
                 width, height = 720, 1280
-
-            # Dạng Ảnh Ngang (Landscape - 1280x720)
             elif any(k in p_lower for k in [
                 "ngang", "máy tính", "desktop", "laptop", "pc", "wallpaper", "phong cảnh", 
                 "landscape", "banner", "cover", "bìa", "thumbnail", "youtube", "cinematic", "toàn cảnh"
             ]):
                 width, height = 1280, 720
-
-            # Dạng Ảnh Vuông (Square - 1024x1024)
             elif any(k in p_lower for k in [
                 "logo", "avatar", "ảnh đại diện", "icon", "instagram", "vuông", "square", "symbol", "badge"
             ]):
                 width, height = 1024, 1024
-
-            # Mặc định chuẩn
             else:
                 width, height = 1024, 1024
 
-    # Làm sạch Prompt, loại bỏ các từ khóa điều khiển và tỷ lệ/kích thước
     clean_prompt = re.sub(
         r'^(tạo ảnh|vẽ ảnh|vẽ hình|vẽ bức tranh|vẽ|generate image|draw image|create image|thiết kế ảnh)\s*',
         '', prompt, flags=re.IGNORECASE
@@ -240,11 +220,8 @@ def analyze_image_request(prompt):
 
 
 def generate_ai_image_url(prompt, width=None, height=None):
-    """Tự động suy nghĩ, phân tích ngữ cảnh và sinh URL tạo ảnh chất lượng cao"""
     try:
         clean_prompt, inferred_w, inferred_h = analyze_image_request(prompt)
-        
-        # Ưu tiên kích thước truyền trực tiếp, nếu không có sẽ lấy kích thước tự động phân tích
         final_w = width if width is not None else inferred_w
         final_h = height if height is not None else inferred_h
 
@@ -259,17 +236,14 @@ def generate_ai_image_url(prompt, width=None, height=None):
 
 
 def is_image_generation_request(message):
-    """Kiểm tra xem câu hỏi người dùng có phải là yêu cầu tạo/vẽ ảnh hay không"""
     msg_lower = message.lower().strip()
     keywords = [
         "tạo ảnh", "vẽ ảnh", "vẽ hình", "vẽ bức tranh", "thiết kế ảnh",
         "generate image", "draw image", "create image", "make an image",
         "tạo hình ảnh", "vẽ giúp", "phác họa ảnh"
     ]
-    
     if any(msg_lower.startswith(prefix) for prefix in ["vẽ ", "tạo ảnh ", "draw ", "generate image "]):
         return True
-        
     return any(kw in msg_lower for kw in keywords)
 
 # ================================================================
@@ -521,6 +495,115 @@ except ImportError as e:
     MUSIC_AVAILABLE = False
 
 # ================================================================
+# LANGCHAIN AGENT ENGINE & TOOLS INTEGRATION (GEMINI / OPENAI)
+# ================================================================
+
+LANGCHAIN_AVAILABLE = False
+try:
+    from langchain_core.tools import tool
+    from langchain.agents import create_tool_calling_agent, AgentExecutor
+    from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+    from langchain_core.messages import HumanMessage, AIMessage
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_openai import ChatOpenAI
+    LANGCHAIN_AVAILABLE = True
+    logger.info("✅ Tích hợp LangChain Agent & Tools thành công!")
+except ImportError:
+    LANGCHAIN_AVAILABLE = False
+    logger.warning("⚠️ Chưa cài đặt đầy đủ langchain/langchain-google-genai/langchain-openai. Dùng REST API dự phòng.")
+
+# Định nghĩa các LangChain Tools tích hợp dịch vụ nội bộ
+if LANGCHAIN_AVAILABLE:
+    @tool
+    def ai_generate_image_tool(prompt: str) -> str:
+        """Tạo hình ảnh AI từ mô tả văn bản của người dùng. Dùng công cụ này khi người dùng muốn vẽ ảnh, thiết kế hình ảnh, phác họa hoặc tạo avatar, wallpaper."""
+        image_url, clean_prompt, w, h = generate_ai_image_url(prompt)
+        return (
+            f"🎨 **Tạo ảnh AI thành công:**\n"
+            f"* Nội dung: \"{clean_prompt}\"\n"
+            f"* Kích thước: `{w}x{h}px`\n\n"
+            f"![{clean_prompt}]({image_url})\n\n"
+            f"🔗 [Xem ảnh gốc]({image_url})"
+        )
+
+    @tool
+    def ai_generate_music_tool(prompt: str, duration: int = 15) -> str:
+        """Tạo bài hát và giai điệu âm nhạc AI từ chủ đề hoặc yêu cầu người dùng. Dùng công cụ này khi người dùng muốn làm nhạc, tạo bài hát, viết lời ca."""
+        res = music_gen.generate_with_lyrics(prompt, duration=duration)
+        if res.get("success"):
+            return (
+                f"🎵 **Đã tạo nhạc AI thành công!**\n\n"
+                f"**Lời bài hát ({res.get('style')}, {res.get('mood')}):**\n"
+                f"{res.get('lyrics')}\n\n"
+                f"🔗 [Nghe / Tải bài hát]({res.get('download_url')})"
+            )
+        return f"Lỗi tạo nhạc: {res.get('error', 'Không xác định')}"
+
+    @tool
+    def execute_python_code_tool(code: str) -> str:
+        """Thực thi mã nguồn Python an toàn trong Sandbox và trả về kết quả Output/Print hoặc Lỗi. Dùng công cụ này khi cần tính toán phức tạp, xử lý dữ liệu hoặc kiểm tra code Python."""
+        try:
+            res = CodeInterpreter.execute_python(code)
+            return f"```python\n{code}\n```\n**Kết quả thực thi:**\n```\n{json.dumps(res, ensure_ascii=False, indent=2)}\n```"
+        except Exception as err:
+            return f"❌ Lỗi thực thi Python: {str(err)}"
+
+
+def run_langchain_agent(user_query, conversation_history=None, provider="gemini"):
+    """
+    Hàm khởi tạo và chạy LangChain Agent tích hợp với Gemini hoặc OpenAI.
+    Trả về câu trả lời văn bản nếu thành công, hoặc None nếu thất bại để chuyển sang API fallback.
+    """
+    if not LANGCHAIN_AVAILABLE:
+        return None
+
+    try:
+        gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        openai_key = os.environ.get("OPENAI_API_KEY")
+
+        llm = None
+        if provider == "openai" and openai_key:
+            llm = ChatOpenAI(model="gpt-4o-mini", openai_api_key=openai_key, temperature=0.7)
+        elif provider == "gemini" and gemini_key:
+            llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=gemini_key, temperature=0.7)
+        elif gemini_key:
+            llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=gemini_key, temperature=0.7)
+        elif openai_key:
+            llm = ChatOpenAI(model="gpt-4o-mini", openai_api_key=openai_key, temperature=0.7)
+        else:
+            return None
+
+        tools = [ai_generate_image_tool, ai_generate_music_tool, execute_python_code_tool]
+
+        prompt_template = ChatPromptTemplate.from_messages([
+            ("system", SMART_CODE_SYSTEM_PROMPT),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "{input}"),
+            MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ])
+
+        agent = create_tool_calling_agent(llm, tools, prompt_template)
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
+
+        formatted_history = []
+        if conversation_history and isinstance(conversation_history, list):
+            for msg in conversation_history[-10:]:
+                if msg.get("role") == "user":
+                    formatted_history.append(HumanMessage(content=str(msg.get("content", ""))))
+                elif msg.get("role") == "ai":
+                    formatted_history.append(AIMessage(content=str(msg.get("content", ""))))
+
+        result = agent_executor.invoke({
+            "input": user_query,
+            "chat_history": formatted_history
+        })
+
+        return result.get("output")
+    except Exception as e:
+        logger.error(f"⚠️ Lỗi LangChain Agent Execution: {e}\n{traceback.format_exc()}")
+        return None
+
+# ================================================================
 # ROUTES (GIAO DIỆN & TÀI NGUYÊN TĨNH)
 # ================================================================
 
@@ -611,7 +694,7 @@ def github_callback_route():
     return "❌ Lỗi hệ thống", 400
 
 # ================================================================
-# CHAT & IMAGE GENERATION ROUTES
+# CHAT & IMAGE GENERATION ROUTES (GIAO TIẾP FRONTEND)
 # ================================================================
 
 @app.route('/chat', methods=['POST'])
@@ -622,6 +705,7 @@ def chat():
         message = (data.get('message') or data.get('prompt') or '').strip()
         conv_id = data.get('conversation_id', None)
         level = data.get('level', 'pro')
+        provider = data.get('provider', 'gemini')  # 'gemini' hoặc 'openai'
         image_url = data.get('image_url', None)
         image_base64 = data.get('image_base64', None)
         edit_index = data.get('edit_index', None)  # Chỉ số tin nhắn được sửa (nếu có)
@@ -667,11 +751,10 @@ def chat():
         if image_url and f"![ảnh]({image_url})" not in user_content:
             user_content = f"![Hình ảnh đính kèm]({image_url})\n\n{message}"
 
-        # 🎨 1. BỘ LỌC TỰ ĐỘNG TẠO ẢNH AI VỚI KÍCH THƯỚC DỘNG
+        # 🎨 1. BỘ LỌC TỰ ĐỘNG TẠO ẢNH AI TỐC ĐỘ CAO (FAST PATH)
         if is_image_generation_request(message):
             gen_image_url, clean_prompt, img_w, img_h = generate_ai_image_url(message)
             
-            # AI thông báo rõ kích thước tối ưu đã chọn cho người dùng
             ai_response = (
                 f"🎨 **T.VỸ-AI đã phân tích ngữ cảnh và tạo ảnh thành công:**\n"
                 f"* **Nội dung:** \"{clean_prompt}\"\n"
@@ -717,7 +800,7 @@ def chat():
                 "level": level
             })
 
-        # 2. XỬ LÝ CHAT VĂN BẢN / LẬP TRÌNH THÔNG THƯỜNG
+        # 2. XỬ LÝ CHAT CHUẨN ĐOÁN / LẬP TRÌNH & LANGCHAIN AGENT
         is_continuation = bool(re.search(r'^\s*(tiếp|tiếp tục|ok|continue|tiếp đi|yes)\b', message.lower()))
         
         enhanced_query = message
@@ -728,16 +811,6 @@ def chat():
                 f"Nếu vẫn chưa xong hết toàn bộ dự án, ở cuối tin nhắn BẮT BUỘC lặp lại đúng câu hỏi tiếp tục theo ngôn ngữ đang sử dụng."
             )
 
-        context_parts = [SMART_CODE_SYSTEM_PROMPT]
-        for msg in messages:
-            role = "Người dùng" if msg.get("role") == "user" else "AI"
-            context_parts.append(f"{role}: {msg.get('content', '')}")
-        context_str = "\n".join(context_parts)
-
-        now = datetime.datetime.now()
-        current_time_info = f"Hôm nay là ngày {now.strftime('%d/%m/%Y')}, giờ hiện tại là {now.strftime('%H:%M')}."
-        system_content = f"{current_time_info}\n\n{context_str}"
-
         messages.append({
             "role": "user",
             "content": user_content,
@@ -745,42 +818,62 @@ def chat():
             "time": datetime.datetime.now().isoformat()
         })
 
-        # 🚀 GỌI OPENROUTER API
-        api_key = os.environ.get('OPENROUTER_API_KEY') or os.environ.get('GEMINI_API_KEY')
-        ai_response = ""
+        ai_response = None
 
-        if api_key:
-            try:
-                url = "https://openrouter.ai/api/v1/chat/completions"
-                headers = {
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://tvy-ai-supreme.local",
-                    "X-Title": "TVY-AI SUPREME"
-                }
-                
-                payload = {
-                    "model": "openrouter/free", 
-                    "messages": [
-                        {"role": "system", "content": system_content},
-                        {"role": "user", "content": enhanced_query}
-                    ]
-                }
-                
-                resp = requests.post(url, json=payload, headers=headers, timeout=60)
-                
-                if resp.status_code == 200:
-                    res_data = resp.json()
-                    ai_response = res_data['choices'][0]['message']['content']
-                else:
-                    logger.error(f"Lỗi OpenRouter: {resp.text}")
-                    ai_response = f"⚠️ Lỗi từ OpenRouter API ({resp.status_code}): {resp.text}"
+        # 🚀 THỬ CHẠY HỆ THỐNG LANGCHAIN AGENT (TÍCH HỢP TOOLS GEMINI/OPENAI)
+        if LANGCHAIN_AVAILABLE:
+            ai_response = run_langchain_agent(
+                user_query=enhanced_query,
+                conversation_history=messages[:-1],
+                provider=provider
+            )
+
+        # 🚀 NẾU LANGCHAIN KHÔNG HOẠT ĐỘNG HOẶC CHƯA CÓ KEY -> DÙNG OPENROUTER / REST API FALLBACK
+        if not ai_response:
+            context_parts = [SMART_CODE_SYSTEM_PROMPT]
+            for msg in messages[:-1]:
+                role = "Người dùng" if msg.get("role") == "user" else "AI"
+                context_parts.append(f"{role}: {msg.get('content', '')}")
+            context_str = "\n".join(context_parts)
+
+            now = datetime.datetime.now()
+            current_time_info = f"Hôm nay là ngày {now.strftime('%d/%m/%Y')}, giờ hiện tại là {now.strftime('%H:%M')}."
+            system_content = f"{current_time_info}\n\n{context_str}"
+
+            api_key = os.environ.get('OPENROUTER_API_KEY') or os.environ.get('GEMINI_API_KEY')
+
+            if api_key:
+                try:
+                    url = "https://openrouter.ai/api/v1/chat/completions"
+                    headers = {
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://tvy-ai-supreme.local",
+                        "X-Title": "TVY-AI SUPREME"
+                    }
                     
-            except Exception as e:
-                logger.error(f"Lỗi Exception OpenRouter: {traceback.format_exc()}")
-                ai_response = f"⚠️ Lỗi kết nối đến OpenRouter: {str(e)}"
-        else:
-            ai_response = f"⚠️ Máy chủ chưa được cấu hình OPENROUTER_API_KEY ở Environment Variables."
+                    payload = {
+                        "model": "openrouter/free", 
+                        "messages": [
+                            {"role": "system", "content": system_content},
+                            {"role": "user", "content": enhanced_query}
+                        ]
+                    }
+                    
+                    resp = requests.post(url, json=payload, headers=headers, timeout=60)
+                    
+                    if resp.status_code == 200:
+                        res_data = resp.json()
+                        ai_response = res_data['choices'][0]['message']['content']
+                    else:
+                        logger.error(f"Lỗi OpenRouter: {resp.text}")
+                        ai_response = f"⚠️ Lỗi từ OpenRouter API ({resp.status_code}): {resp.text}"
+                        
+                except Exception as e:
+                    logger.error(f"Lỗi Exception OpenRouter: {traceback.format_exc()}")
+                    ai_response = f"⚠️ Lỗi kết nối đến OpenRouter: {str(e)}"
+            else:
+                ai_response = f"⚠️ Máy chủ chưa được cấu hình OPENROUTER_API_KEY hoặc GEMINI_API_KEY ở Environment Variables."
 
         messages.append({
             "role": "ai",
@@ -1068,7 +1161,7 @@ def music_status_api():
     })
 
 # ================================================================
-# PROMPT OPTIMIZER & TEXT-TO-SPEECH (TTS)
+# PROMPT OPTIMIZER & TEXT-TO-SPEECH (TTS) & CODE RUNNER
 # ================================================================
 
 @app.route('/api/prompt/optimize', methods=['POST'])
@@ -1094,6 +1187,22 @@ def text_to_speech():
         "message": "Đã khởi tạo dữ liệu giọng nói AI thành công.",
         "audio_url": "/static/music/demo.wav"
     })
+
+@app.route('/api/voice/tts', methods=['POST'])
+@limit_rate(max_requests=10, window_seconds=60)
+def handle_tts():
+    text = request.json.get('text', '')
+    audio_fp = voice_service.text_to_speech_bytes(text)
+    if audio_fp:
+        return send_file(audio_fp, mimetype="audio/mp3")
+    return jsonify({"error": "Không thể tạo giọng nói"}), 500
+
+@app.route('/api/code/run', methods=['POST'])
+@limit_rate(max_requests=5, window_seconds=60)
+def handle_run_code():
+    code = request.json.get('code', '')
+    result = CodeInterpreter.execute_python(code)
+    return jsonify(result)
 
 # ================================================================
 # USAGE & PAYMENT & ADMIN API ROUTES
@@ -1258,24 +1367,6 @@ def export_conversation(conv_id):
         'Content-Type': 'text/plain; charset=utf-8',
         'Content-Disposition': f'attachment; filename={safe_filename}'
     }
-    
-# API Giọng Nói TTS
-@app.route('/api/voice/tts', methods=['POST'])
-@limit_rate(max_requests=10, window_seconds=60)
-def handle_tts():
-    text = request.json.get('text', '')
-    audio_fp = voice_service.text_to_speech_bytes(text)
-    if audio_fp:
-        return send_file(audio_fp, mimetype="audio/mp3")
-    return jsonify({"error": "Không thể tạo giọng nói"}), 500
-
-# API Trình Thực Thi Code (Code Interpreter)
-@app.route('/api/code/run', methods=['POST'])
-@limit_rate(max_requests=5, window_seconds=60)
-def handle_run_code():
-    code = request.json.get('code', '')
-    result = CodeInterpreter.execute_python(code)
-    return jsonify(result)
 
 # ================================================================
 # SOCKET.IO & GLOBAL ERROR HANDLERS
@@ -1308,9 +1399,11 @@ if __name__ == '__main__':
 
     print("""
 ╔═══════════════════════════════════════════════════════════════════════╗
-║  T.VỸ-AI-SUPREME v12.8.0 (DYNAMIC DUAL ENGINE & AI IMAGE GENERATOR)   ║
+║  T.VỸ-AI-SUPREME v12.9.0 (DYNAMIC ENGINE & LANGCHAIN AGENT AGENT)    ║
 ║  Bản quyền: T.VỸ-VIP-FILE                                             ║
-║  🎨 Tự động suy nghĩ và đề xuất kích thước ảnh phù hợp với ngữ cảnh    ║
+║  🤖 Tích hợp LangChain Agent với Gemini & OpenAI Models               ║
+║  🛠️ Tự động gọi Tools: Tạo ảnh, Tạo Nhạc, Trình thực thi Python       ║
+║  🎨 Tự động phân tích ngữ cảnh & tối ưu kích thước ảnh                ║
 ║  🌐 Tự động phản hồi theo đúng ngôn ngữ người dùng gửi câu hỏi        ║
 ║  📦 Tự động phân chia dự án lớn thành 4-5 file/lượt & Vòng lặp Tiếp tục║
 ╚═══════════════════════════════════════════════════════════════════════╝

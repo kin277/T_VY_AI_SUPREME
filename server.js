@@ -1,86 +1,140 @@
-require('dotenv').config(); // 1. Đọc cấu hình từ file .env khi chạy dưới local
-const express = require('express');
+import express from 'express';
+import dotenv from 'dotenv';
+import { GoogleGenAI, Type } from '@google/genai';
+
+dotenv.config();
+
 const app = express();
-
 app.use(express.json());
-app.use(express.static('public')); // Chứa giao diện web
 
-// 2. Lấy API Key từ Biến Môi Trường (không sợ bị lộ trên GitHub)
-const HF_API_KEY = process.env.HF_API_KEY; 
+// Khởi tạo Gemini AI Client
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// Model FLUX.1-schnell (Vẽ siêu nhanh & đẹp)
-const MODEL_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell";
+// ==========================================
+// 1. ĐỊNH NGHĨA CÁC TOOL (GỌI API THỰC TẾ)
+// ==========================================
 
-// Hàm tự động dịch mọi ngôn ngữ sang Tiếng Anh
-async function translateToEnglish(text) {
+// Logic lấy thời tiết THỰC TẾ từ wttr.in
+async function getWeather({ location }) {
     try {
-        const response = await fetch(
-            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=autodetect|en`
-        );
-        const data = await response.json();
+        console.log(`🔍 Đang tra cứu thời tiết thật cho: ${location}...`);
         
-        if (data.responseData && data.responseData.translatedText) {
-            return data.responseData.translatedText;
+        // Gọi API wttr.in (Trả về JSON format=j1)
+        const response = await fetch(`https://wttr.in/${encodeURIComponent(location)}?format=j1`);
+        
+        if (!response.ok) {
+            return { error: `Không tìm thấy thông tin thời tiết cho địa điểm "${location}".` };
         }
-        return text;
+
+        const data = await response.json();
+        const current = data.current_condition[0];
+
+        // Ưu tiên lấy mô tả tiếng Việt nếu API hỗ trợ, không thì lấy tiếng Anh
+        const conditionText = current.lang_vi?.[0]?.value || current.weatherDesc?.[0]?.value || "Không rõ";
+
+        // Trả về dữ liệu thực tế cho Gemini suy luận
+        return {
+            location: location,
+            temperature: `${current.temp_C}°C`,
+            feels_like: `${current.FeelsLikeC}°C`,
+            condition: conditionText,
+            humidity: `${current.humidity}%`,
+            wind_speed: `${current.windspeedKmph} km/h`
+        };
     } catch (error) {
-        console.error("Lỗi dịch thuật:", error);
-        return text;
+        console.error("Lỗi khi gọi API thời tiết:", error);
+        return { error: "Không thể kết nối đến máy chủ thời tiết lúc này." };
     }
 }
 
-// Endpoint tạo ảnh
-app.post('/api/generate-image', async (req, res) => {
-    try {
-        const { prompt } = req.body;
-        if (!prompt) {
-            return res.status(400).json({ error: 'Vui lòng nhập mô tả bức ảnh!' });
-        }
+// Bảng ánh xạ hàm để Server tự gọi khi AI yêu cầu
+const toolFunctions = {
+    getWeather: getWeather
+};
 
-        // Kiểm tra xem đã cài đặt API Key chưa
-        if (!HF_API_KEY) {
-            return res.status(500).json({ error: 'Chưa cấu hình HF_API_KEY trong Biến môi trường (Environment Variable)!' });
-        }
-
-        // 1. Dịch câu mô tả sang tiếng Anh
-        const translatedPrompt = await translateToEnglish(prompt);
-        console.log(`[T_VY_AI] Gốc: "${prompt}" -> Dịch: "${translatedPrompt}"`);
-
-        // 2. Gửi request sang Hugging Face
-        const hfResponse = await fetch(MODEL_URL, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${HF_API_KEY}`,
-                "Content-Type": "application/json"
+// Khai báo Schema Tool cho Gemini hiểu
+const weatherDeclaration = {
+    name: 'getWeather',
+    description: 'Lấy thông tin thời tiết hiện tại theo tên địa điểm thực tế',
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            location: {
+                type: Type.STRING,
+                description: 'Tên thành phố hoặc tỉnh thành (VD: Hà Nội, TP.HCM, Đà Nẵng, Tokyo)',
             },
-            body: JSON.stringify({ inputs: translatedPrompt })
-        });
+        },
+        required: ['location'],
+    },
+};
 
-        if (!hfResponse.ok) {
-            const errorText = await hfResponse.text();
-            throw new Error(`Hugging Face API lỗi: ${errorText}`);
+// ==========================================
+// 2. ROUTE /chat XỬ LÝ ĐA NĂNG
+// ==========================================
+app.post('/chat', async (req, res) => {
+    try {
+        const { message } = req.body;
+
+        if (!message) {
+            return res.status(400).json({ error: "Vui lòng nhập câu hỏi!" });
         }
 
-        // 3. Chuyển ảnh sang Base64
-        const arrayBuffer = await hfResponse.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const base64Image = `data:image/jpeg;base64,${buffer.toString('base64')}`;
-
-        // 4. Trả kết quả về Frontend
-        res.json({
-            originalPrompt: prompt,
-            translatedPrompt: translatedPrompt,
-            image: base64Image
+        // Bước A: Gửi yêu cầu tới Gemini kèm danh sách Tools
+        let response = await ai.models.generateContent({
+            model: 'gemini-2.0-flash',
+            contents: message,
+            config: {
+                tools: [{ functionDeclarations: [weatherDeclaration] }],
+            },
         });
+
+        // Bước B: Kiểm tra xem Gemini có yêu cầu gọi Tool không
+        const functionCalls = response.functionCalls;
+
+        if (functionCalls && functionCalls.length > 0) {
+            const call = functionCalls[0];
+            const functionName = call.name;
+            const functionArgs = call.args;
+
+            console.log(`🤖 Gemini yêu cầu chạy Tool: ${functionName}`, functionArgs);
+
+            // Chạy hàm tương ứng trên Server
+            if (toolFunctions[functionName]) {
+                // Gọi API thực tế
+                const toolResult = await toolFunctions[functionName](functionArgs);
+
+                // Gửi kết quả dữ liệu thật về cho Gemini tổng hợp
+                const secondResponse = await ai.models.generateContent({
+                    model: 'gemini-2.0-flash',
+                    contents: [
+                        { role: 'user', parts: [{ text: message }] },
+                        { role: 'model', parts: response.candidates[0].content.parts },
+                        {
+                            role: 'user',
+                            parts: [{
+                                functionResponse: {
+                                    name: functionName,
+                                    response: toolResult
+                                }
+                            }]
+                        }
+                    ]
+                });
+
+                return res.json({ reply: secondResponse.text });
+            }
+        }
+
+        // Nếu câu hỏi thông thường (không liên quan đến thời tiết), Gemini trả lời thẳng
+        res.json({ reply: response.text });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: error.message || 'Lỗi hệ thống khi tạo ảnh.' });
+        console.error("Lỗi khi xử lý Chat:", error);
+        res.status(500).json({ error: "Có lỗi xảy ra khi xử lý phản hồi từ AI." });
     }
 });
 
-// 3. Sử dụng PORT động do Render cấp (hoặc mặc định 3000 ở local)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`🚀 T_VY_AI Server đang chạy tại cổng: ${PORT}`);
+    console.log(`🚀 Server đang chạy tại http://localhost:${PORT}`);
 });

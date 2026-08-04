@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/kin277/T_VY_AI_SUPREME#readme",
   "dependencies": {
+    "@google/genai": "^2.15.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1"
   }
