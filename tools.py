@@ -12,7 +12,7 @@ from langchain_community.tools import ArxivQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.tools import DuckDuckGoSearchRun
-from langchain_tavily import TavilySearchResults
+from langchain_community.tools.tavily_search import TavilySearchResults
 
 # 1. Python REPL
 python_repl_tool = PythonREPLTool()
