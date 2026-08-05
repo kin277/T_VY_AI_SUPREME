@@ -2990,411 +2990,190 @@
             }
         });
 
-        // --- UI Suy Nghĩ Sâu ---
-        let thinkInterval;
-        function showDeepThink() {
-            const ind = document.getElementById('deepThinkIndicator');
-            const status = document.getElementById('thinkStatus');
-            const stages = [
-                "🔍 Đang phân tích câu hỏi & kích hoạt Plugin...",
-                "📚 Tìm kiếm & Tổng hợp kiến thức...",
-                "🧠 Xây dựng lập luận suy luận sâu...",
-                "✍️ Đang hoàn thiện câu trả lời..."
-            ];
-            let stageIndex = 0;
-            if (ind) {
-                ind.style.display = 'block';
-                chatContainer.appendChild(ind);
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-                
-                if (status) status.textContent = stages[0];
-                if (thinkInterval) clearInterval(thinkInterval);
-                thinkInterval = setInterval(() => {
-                    stageIndex = (stageIndex + 1) % stages.length;
-                    if(status) status.textContent = stages[stageIndex];
-                }, 1000);
-            }
-        }
-        
-        function hideDeepThink() {
-            const ind = document.getElementById('deepThinkIndicator');
-            if (ind) ind.style.display = 'none';
-            if (thinkInterval) clearInterval(thinkInterval);
-        }
-
-        function loadUsage() {
-            usageInfo.innerHTML = '<i class="fa-solid fa-bolt"></i> ♾️ Không giới hạn Ultra';
-        }
-
-        levelSelect.addEventListener('change', function() {
-            currentLevel = this.value;
-            levelBadge.textContent = chatName.textContent = LEVEL_NAMES[currentLevel];
-            loadUsage();
-            showToast(`⚙️ Đã chuyển sang cấp độ: ${LEVEL_NAMES[currentLevel]}`, 'info');
-        });
-
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', function() {
-                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-                this.classList.add('active');
-                const tab = this.dataset.tab;
-                if (tab === 'history') { openModal('historyModal'); renderHistoryModal(); }
-                else if (tab === 'plugins') { openModal('pluginsModal'); }
-                else if (tab === 'settings') { openModal('settingsModal'); }
-                else if (tab === 'upgrade') { openModal('upgradeModal'); }
-            });
-        });
-
         // ---------------------------------------------------------
-        // 2. DANH SÁCH PLUGIN TIỆN ÍCH CHUẨN XÁC HOÀN CHỈNH
+        // 2. DỮ LIỆU & LOGIC KHO PLUGIN STORE (TÍCH HỢP 23 CÔNG CỤ)
         // ---------------------------------------------------------
-        const defaultPlugins = [
-            {
-                id: 'python_runner',
-                name: 'Thư viện chạy code Python',
-                category: 'Lập trình (Coding)',
-                author: 'LangChain',
-                badge: 'official',
-                icon: 'fa-brands fa-python',
-                command: 'pip install langchain-experimental',
-                desc: 'Cho phép thực thi và chạy mã lệnh Python trực tiếp thông qua môi trường sandbox an toàn.',
-                enabled: true
-            },
-            {
-                id: 'github_tools',
-                name: 'GitHub Repository Toolkit',
-                category: 'Lập trình (Coding)',
-                author: 'GitHub',
-                badge: 'official',
-                icon: 'fa-brands fa-github',
-                command: 'pip install pygithub',
-                desc: 'Tự động duyệt repo, đọc commit, quản lý pull request và phân tích mã nguồn GitHub.',
-                enabled: true
-            },
-            {
-                id: 'pandas_analytics',
-                name: 'Pandas & Data Analysis',
-                category: 'Dữ liệu (Data)',
-                author: 'OpenAI',
-                badge: 'official',
-                icon: 'fa-solid fa-chart-simple',
-                command: 'pip install pandas numpy matplotlib',
-                desc: 'Trích xuất, xử lý bảng biểu CSV/Excel và tạo biểu đồ trực quan hóa dữ liệu tự động.',
-                enabled: true
-            },
-            {
-                id: 'wolfram_alpha',
-                name: 'Wolfram Alpha Engine',
-                category: 'Khoa học & Math',
-                author: 'Wolfram',
-                badge: 'official',
-                icon: 'fa-solid fa-square-root-variable',
-                command: 'pip install wolframalpha',
-                desc: 'Giải phương trình toán học phức tạp, tính toán vật lý, hóa học và khoa học dữ liệu chuẩn xác.',
-                enabled: false
-            },
-            {
-                id: 'arxiv_paper_search',
-                name: 'ArXiv Science Paper Search',
-                category: 'Nghiên cứu',
-                author: 'ArXiv.org',
-                badge: 'community',
-                icon: 'fa-solid fa-book-bookmark',
-                command: 'pip install arxiv',
-                desc: 'Tra cứu hàng triệu bài báo nghiên cứu khoa học, AI, vật lý và toán học trực tiếp từ ArXiv.',
-                enabled: true
-            },
-            {
-                id: 'google_web_search',
-                name: 'Google Live Web Search',
-                category: 'Tìm kiếm',
-                author: 'Google',
-                badge: 'official',
-                icon: 'fa-brands fa-google',
-                command: 'pip install googlesearch-python',
-                desc: 'Cập nhật tin tức, sự kiện thời sự và dữ liệu thời gian thực mới nhất từ Google Search.',
-                enabled: true
-            },
-            {
-                id: 'web_scraper_pro',
-                name: 'Web Scraper & Parsing',
-                category: 'Dữ liệu (Data)',
-                author: 'T.Vỹ Core',
-                badge: 'official',
-                icon: 'fa-solid fa-spider',
-                command: 'pip install beautifulsoup4 requests',
-                desc: 'Đọc nội dung bất kỳ đường link trang web nào và tổng hợp lại cho AI phân tích.',
-                enabled: true
-            },
-            {
-                id: 'mermaid_diagrams',
-                name: 'Mermaid Diagram Renderer',
-                category: 'Trực quan hóa',
-                author: 'Mermaid JS',
-                badge: 'official',
-                icon: 'fa-solid fa-diagram-project',
-                command: 'npm install mermaid',
-                desc: 'Chuyển văn bản thành sơ đồ quy trình, Gantt chart, sơ đồ kiến trúc phần mềm cực đẹp.',
-                enabled: true
-            },
-            {
-                id: 'dalle_midjourney_gen',
-                name: 'AI Image Generator',
-                category: 'Sáng tạo (Media)',
-                author: 'DALL-E 3',
-                badge: 'official',
-                icon: 'fa-solid fa-image',
-                command: 'pip install openai-image',
-                desc: 'Tạo hình ảnh chất lượng cao theo mô tả văn bản trực tiếp trong giao diện chat.',
-                enabled: true
-            },
-            {
-                id: 'pdf_word_extractor',
-                name: 'Document Reader (PDF/Docx)',
-                category: 'Năng suất',
-                author: 'T.Vỹ Core',
-                badge: 'official',
-                icon: 'fa-solid fa-file-pdf',
-                command: 'pip install pypdf python-docx',
-                desc: 'Đọc văn bản từ file PDF, Word và tóm tắt nhanh nội dung tài liệu dung lượng lớn.',
-                enabled: true
-            },
-            {
-                id: 'youtube_summarizer',
-                name: 'YouTube Transcript & Summary',
-                category: 'Media',
-                author: 'Community',
-                badge: 'community',
-                icon: 'fa-brands fa-youtube',
-                command: 'pip install youtube-transcript-api',
-                desc: 'Trích xuất phụ đề video YouTube và tóm tắt ý chính bài giảng/clip chỉ trong vài giây.',
-                enabled: true
-            },
-            {
-                id: 'notion_sync_tool',
-                name: 'Notion Workspace Sync',
-                category: 'Năng suất',
-                author: 'Notion',
-                badge: 'official',
-                icon: 'fa-solid fa-note-sticky',
-                command: 'pip install notion-client',
-                desc: 'Đồng bộ câu trả lời, ghi chú và danh sách công việc trực tiếp vào Notion.',
-                enabled: false
-            }
+        const PLUGINS_DATA = [
+            { id: "python_repl_tool", name: "Python REPL", author: "Core", desc: "Thực thi mã Python cục bộ hoặc trên cloud, trả về kết quả trực tiếp.", icon: "fa-brands fa-python", type: "official", enabled: true },
+            { id: "github_search_repos", name: "GitHub Search", author: "Community", desc: "Tìm kiếm repositories, mã nguồn và issues trên GitHub.", icon: "fa-brands fa-github", type: "community", enabled: false },
+            { id: "analyze_data_file", name: "Data Analyzer", author: "Core", desc: "Phân tích file CSV, Excel và xuất biểu đồ dữ liệu.", icon: "fa-solid fa-chart-pie", type: "official", enabled: true },
+            { id: "wolfram_tool", name: "Wolfram Alpha", author: "Math", desc: "Giải toán phức tạp, phân tích và truy vấn dữ liệu khoa học.", icon: "fa-solid fa-calculator", type: "official", enabled: false },
+            { id: "arxiv_tool", name: "ArXiv Papers", author: "Science", desc: "Tìm kiếm và tóm tắt các bài báo khoa học từ nguồn ArXiv.", icon: "fa-solid fa-book-journal-whills", type: "community", enabled: false },
+            { id: "wikipedia_tool", name: "Wikipedia", author: "Knowledge", desc: "Tra cứu thông tin và kiến thức từ bách khoa toàn thư Wikipedia.", icon: "fa-brands fa-wikipedia-w", type: "official", enabled: true },
+            { id: "duckduckgo_tool", name: "DuckDuckGo", author: "Search", desc: "Tìm kiếm web ẩn danh, cào kết quả thời gian thực.", icon: "fa-solid fa-magnifying-glass", type: "community", enabled: true },
+            { id: "tavily_tool", name: "Tavily Search", author: "AI Search", desc: "Công cụ tìm kiếm thông tin trên Internet chuyên biệt cho AI.", icon: "fa-solid fa-globe", type: "official", enabled: false },
+            { id: "download_file_from_url", name: "URL Downloader", author: "Utils", desc: "Tải dữ liệu từ URL bất kỳ và tự động đưa vào ngữ cảnh chat.", icon: "fa-solid fa-download", type: "community", enabled: false },
+            { id: "read_pdf_file", name: "PDF Reader", author: "Core", desc: "Đọc, trích xuất văn bản và phân tích sâu tài liệu PDF.", icon: "fa-solid fa-file-pdf", type: "official", enabled: true },
+            { id: "generate_qr_code", name: "QR Generator", author: "Utils", desc: "Tạo mã QR nhanh cho văn bản, đường dẫn hoặc thông tin liên hệ.", icon: "fa-solid fa-qrcode", type: "community", enabled: false },
+            { id: "convert_currency", name: "Currency Converter", author: "Finance", desc: "Chuyển đổi tiền tệ toàn cầu dựa trên tỷ giá cập nhật liên tục.", icon: "fa-solid fa-money-bill-transfer", type: "community", enabled: true },
+            { id: "translate_text", name: "Deep Translator", author: "Linguistics", desc: "Dịch thuật đa ngôn ngữ với độ chính xác cao.", icon: "fa-solid fa-language", type: "official", enabled: true },
+            { id: "create_word_file", name: "Word Creator", author: "Office", desc: "Khởi tạo, định dạng và xuất báo cáo dưới dạng tệp .docx.", icon: "fa-solid fa-file-word", type: "official", enabled: false },
+            { id: "create_excel_file", name: "Excel Creator", author: "Office", desc: "Tạo bảng tính, xử lý và xuất dữ liệu ra file .xlsx.", icon: "fa-solid fa-file-excel", type: "official", enabled: false },
+            { id: "send_email", name: "Email Sender", author: "Communication", desc: "Tự động soạn thảo và gửi email trực tiếp thông qua API.", icon: "fa-solid fa-envelope-open-text", type: "community", enabled: false },
+            { id: "shorten_url", name: "URL Shortener", author: "Utils", desc: "Hỗ trợ rút gọn đường link dài thành định dạng ngắn gọn dễ nhớ.", icon: "fa-solid fa-link", type: "community", enabled: false },
+            { id: "generate_strong_password", name: "Password Gen", author: "Security", desc: "Trình tạo mật khẩu ngẫu nhiên đạt chuẩn siêu bảo mật.", icon: "fa-solid fa-key", type: "community", enabled: false },
+            { id: "scrape_web_content", name: "Web Scraper", author: "Data", desc: "Bóc tách dữ liệu từ các website trực tuyến, gom văn bản và liên kết.", icon: "fa-solid fa-spider", type: "official", enabled: false },
+            { id: "get_youtube_transcript", name: "YT Transcript", author: "Media", desc: "Trích xuất phụ đề (transcript) của video YouTube để tóm tắt.", icon: "fa-brands fa-youtube", type: "community", enabled: false },
+            { id: "convert_timezone", name: "Timezone Converter", author: "Utils", desc: "Tính toán và quy đổi các múi giờ quốc tế chuẩn xác.", icon: "fa-solid fa-clock", type: "community", enabled: false },
+            { id: "zip_files", name: "Zip Archiver", author: "File Ops", desc: "Nén nhanh nhiều tập tin, thư mục thành một file .zip.", icon: "fa-solid fa-file-zipper", type: "official", enabled: false },
+            { id: "resize_image", name: "Image Resizer", author: "Media", desc: "Thay đổi kích thước, cắt và nén tối ưu hóa hình ảnh trực tuyến.", icon: "fa-solid fa-image", type: "community", enabled: false }
         ];
 
-        // Lấy danh sách plugin từ localStorage hoặc lấy mặc định
-        let currentPlugins = JSON.parse(localStorage.getItem('tv_plugins')) || defaultPlugins;
-
-        function savePluginsToStorage() {
-            localStorage.setItem('tv_plugins', JSON.stringify(currentPlugins));
-        }
-
-        function renderPluginsGrid(pluginsToRender = currentPlugins) {
+        function renderPluginsGrid(filterText = "") {
             const grid = document.getElementById('pluginsGrid');
             if (!grid) return;
-
-            if (pluginsToRender.length === 0) {
-                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 30px;">Không tìm thấy plugin nào phù hợp.</div>';
+            grid.innerHTML = "";
+            const filtered = PLUGINS_DATA.filter(p => p.name.toLowerCase().includes(filterText.toLowerCase()) || p.desc.toLowerCase().includes(filterText.toLowerCase()));
+            
+            if (filtered.length === 0) {
+                grid.innerHTML = "<p style='color:var(--text-muted); grid-column: 1/-1; text-align:center;'>Không tìm thấy plugin nào phù hợp.</p>";
                 return;
             }
 
-            grid.innerHTML = pluginsToRender.map(p => `
-                <div class="plugin-card">
-                    <div class="plugin-top">
-                        <div class="plugin-icon-box"><i class="${p.icon}"></i></div>
-                        <div class="plugin-info">
-                            <h4>${p.name}</h4>
-                            <span class="author">Tác giả: ${p.author}</span>
+            filtered.forEach(plugin => {
+                const badgeClass = plugin.type === 'official' ? 'official' : 'community';
+                const badgeText = plugin.type === 'official' ? '<i class="fa-solid fa-check-circle"></i> Official' : 'Community';
+                
+                grid.innerHTML += `
+                    <div class="plugin-card">
+                        <div class="plugin-top">
+                            <div class="plugin-icon-box"><i class="${plugin.icon}"></i></div>
+                            <div class="plugin-info">
+                                <h4>${plugin.name}</h4>
+                                <span class="author">By ${plugin.author}</span>
+                            </div>
+                        </div>
+                        <div class="plugin-desc">${plugin.desc}</div>
+                        <div class="plugin-bottom">
+                            <span class="plugin-badge ${badgeClass}">${badgeText}</span>
+                            <label class="switch">
+                                <input type="checkbox" id="plugin_toggle_${plugin.id}" ${plugin.enabled ? 'checked' : ''} onchange="togglePlugin('${plugin.id}', this.checked)">
+                                <span class="slider-toggle"></span>
+                            </label>
                         </div>
                     </div>
-                    <div class="plugin-desc">${p.desc}</div>
-                    <div style="font-size:10px; font-family:var(--font-mono); color:var(--accent-primary); background:rgba(0,0,0,0.2); padding:4px 8px; border-radius:4px;">${p.command}</div>
-                    <div class="plugin-bottom">
-                        <span class="plugin-badge ${p.badge}">${p.badge === 'official' ? 'Chính thức' : 'Cộng đồng'}</span>
-                        <label class="switch">
-                            <input type="checkbox" ${p.enabled ? 'checked' : ''} onchange="togglePlugin('${p.id}')">
-                            <span class="slider-toggle"></span>
-                        </label>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            });
         }
 
         function filterPlugins() {
-            const query = document.getElementById('pluginSearchInput').value.toLowerCase().trim();
-            const filtered = currentPlugins.filter(p => 
-                p.name.toLowerCase().includes(query) || 
-                p.desc.toLowerCase().includes(query) || 
-                p.category.toLowerCase().includes(query)
-            );
-            renderPluginsGrid(filtered);
+            const val = document.getElementById('pluginSearchInput').value;
+            renderPluginsGrid(val);
         }
 
-        function togglePlugin(id) {
-            const plugin = currentPlugins.find(p => p.id === id);
-            if (plugin) {
-                plugin.enabled = !plugin.enabled;
-                savePluginsToStorage();
-                showToast(`${plugin.enabled ? '✅ Đã bật' : '❌ Đã tắt'} plugin ${plugin.name}`, plugin.enabled ? 'success' : 'info');
+        function togglePlugin(id, isEnabled) {
+            const p = PLUGINS_DATA.find(x => x.id === id);
+            if(p) {
+                p.enabled = isEnabled;
+                if(isEnabled) showToast(`✅ Đã BẬT công cụ: ${p.name}`, 'success');
+                else showToast(`🔴 Đã TẮT công cụ: ${p.name}`, 'warning');
             }
         }
 
-        function enableAllPlugins(status) {
-            currentPlugins.forEach(p => p.enabled = status);
-            savePluginsToStorage();
-            renderPluginsGrid();
-            showToast(status ? '⚡ Đã bật tất cả Plugin!' : '🔌 Đã tắt tất cả Plugin!', 'info');
+        function enableAllPlugins(state) {
+            PLUGINS_DATA.forEach(p => p.enabled = state);
+            renderPluginsGrid(document.getElementById('pluginSearchInput').value);
+            showToast(state ? '✅ Đã BẬT tất cả Plugin!' : '🔴 Đã TẮT tất cả Plugin!', 'info');
         }
 
         // ---------------------------------------------------------
-        // 3. LOGIC CÀI ĐẶT HỆ THỐNG (SETTINGS MODAL TABS)
+        // 3. LOGIC SETTINGS (CÀI ĐẶT)
         // ---------------------------------------------------------
         function switchTab(tabId) {
-            document.querySelectorAll('.settings-sidebar .tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
-            const selectedBtn = Array.from(document.querySelectorAll('.settings-sidebar .tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
-            if (selectedBtn) selectedBtn.classList.add('active');
-
-            const selectedContent = document.getElementById(tabId);
-            if (selectedContent) selectedContent.classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`.tab-btn[onclick="switchTab('${tabId}')"]`).classList.add('active');
+            document.getElementById(tabId).classList.add('active');
         }
-
-        function exportData(format) {
-            if (format === 'json') {
-                const data = localStorage.getItem('tv_conversations') || '{}';
-                downloadFile(data, `Backup_Chat_${Date.now()}.json`, 'application/json');
-            } else if (format === 'markdown') {
-                exportChatMarkdown();
-            }
-        }
-
-        function clearAllConversations() {
-            if (confirm('⚠️ Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện không?')) {
-                localStorage.removeItem('tv_conversations');
-                conversationsList = {};
-                renderSidebarHistory();
-                createNewChat();
-                showToast('🗑️ Đã xóa sạch lịch sử chat!', 'success');
-            }
-        }
-
-        function toggleDataTraining(checked) {
-            localStorage.setItem('tv_opt_out', !checked);
-            showToast(checked ? '✅ Đã cho phép cải thiện mô hình' : '🔒 Đã tắt chia sẻ dữ liệu', 'info');
-        }
-
-        let savedMemories = JSON.parse(localStorage.getItem('tv_memories')) || [
-            "Người dùng là lập trình viên thích giao diện Dark Mode.",
-            "Ưu tiên sử dụng Mermaid JS để vẽ sơ đồ quy trình."
-        ];
 
         function renderMemoryList() {
-            const list = document.getElementById('memoryList');
-            if (!list) return;
-            if (savedMemories.length === 0) {
-                list.innerHTML = '<li style="color:var(--text-muted)">Chưa có thông tin ghi nhớ nào.</li>';
-                return;
-            }
-            list.innerHTML = savedMemories.map((m, i) => `
-                <li>
-                    <span>• ${m}</span>
-                    <button class="btn btn-danger btn-sm" onclick="deleteMemory(${i})">Xóa</button>
-                </li>
-            `).join('');
-        }
-
-        function deleteMemory(index) {
-            savedMemories.splice(index, 1);
-            localStorage.setItem('tv_memories', JSON.stringify(savedMemories));
-            renderMemoryList();
-            showToast('🗑️ Đã xóa thông tin bộ nhớ!', 'info');
-        }
-
-        function changeFontFamily(font) {
-            document.body.style.fontFamily = font;
-            localStorage.setItem('tv_font_family', font);
-        }
-
-        function changeFontSize(size) {
-            if (size === 'small') document.body.style.fontSize = '14px';
-            else if (size === 'medium') document.body.style.fontSize = '16px';
-            else if (size === 'large') document.body.style.fontSize = '18px';
-            localStorage.setItem('tv_font_size', size);
+            const ml = document.getElementById('memoryList');
+            if(!ml) return;
+            const memories = [
+                "Người dùng là lập trình viên chuyên nghiệp.",
+                "Sống tại Việt Nam, múi giờ GMT+7.",
+                "Thích câu trả lời ngắn gọn, có code minh họa."
+            ];
+            ml.innerHTML = memories.map(m => `<li><span>${m}</span> <button class="btn-icon" style="width:24px;height:24px;font-size:10px;"><i class="fa-solid fa-trash"></i></button></li>`).join('');
         }
 
         function populateVoiceList() {
-            if (!('speechSynthesis' in window)) return;
-            const select = document.getElementById('ttsVoiceSelect');
-            if (!select) return;
-            const voices = speechSynthesis.getVoices();
-            select.innerHTML = voices.map(v => `<option value="${v.lang}" data-name="${v.name}">${v.name} (${v.lang})</option>`).join('');
-        }
-
-        if ('speechSynthesis' in window) {
-            speechSynthesis.onvoiceschanged = populateVoiceList;
-        }
-
-        function openChangePasswordModal() {
-            const p = prompt('Nhập mật khẩu mới cho tài khoản:');
-            if (p) showToast('✅ Đã đổi mật khẩu thành công!', 'success');
-        }
-
-        function copyApiKey() {
-            const keyInput = document.getElementById('userApiKey');
-            if (keyInput) {
-                navigator.clipboard.writeText(keyInput.value);
-                showToast('📋 Đã sao chép API Key!', 'success');
+            if(typeof speechSynthesis === 'undefined') return;
+            const voiceSelect = document.getElementById('ttsVoiceSelect');
+            if(!voiceSelect) return;
+            let voices = speechSynthesis.getVoices();
+            if(voices.length === 0) {
+                speechSynthesis.onvoiceschanged = () => {
+                    voices = speechSynthesis.getVoices();
+                    fillVoices(voices, voiceSelect);
+                };
+            } else {
+                fillVoices(voices, voiceSelect);
             }
         }
 
-        function regenerateApiKey() {
-            if (confirm('Tạo lại API Key mới? API Key cũ sẽ bị vô hiệu hóa.')) {
-                const keyInput = document.getElementById('userApiKey');
-                if (keyInput) {
-                    keyInput.value = 'tvai_sk_live_' + Math.random().toString(36).substring(2, 15);
-                    showToast('🔑 Đã tạo API Key mới!', 'success');
+        function fillVoices(voices, selectEl) {
+            selectEl.innerHTML = '';
+            voices.forEach(v => {
+                if(v.lang.includes('vi') || v.lang.includes('en')) {
+                    const opt = document.createElement('option');
+                    opt.textContent = `${v.name} (${v.lang})`;
+                    opt.setAttribute('data-lang', v.lang);
+                    opt.setAttribute('data-name', v.name);
+                    if(v.lang.includes('vi')) opt.selected = true;
+                    selectEl.appendChild(opt);
                 }
-            }
+            });
+        }
+
+        function changeFontFamily(font) {
+            document.documentElement.style.setProperty('--font-main', font);
+        }
+
+        function changeFontSize(size) {
+            const sizes = { 'small': '13px', 'medium': '14px', 'large': '16px' };
+            document.getElementById('chatContainer').style.fontSize = sizes[size] || '14px';
         }
 
         function saveAllSettings() {
-            const instructions = document.getElementById('customInstructions').value;
-            localStorage.setItem('tv_custom_instructions', instructions);
-            showToast('💾 Đã lưu cấu hình cài đặt!', 'success');
+            showToast('✅ Đã lưu cấu hình hệ thống!', 'success');
             closeModal('settingsModal');
         }
 
         // ---------------------------------------------------------
-        // 4. CHỨC NĂNG CHAT, TẠO MỚI, TRẢ LỜI & CLAUDE ARTIFACTS
+        // 4. LOGIC TRÒ CHUYỆN & GIAO DIỆN CHAT
         // ---------------------------------------------------------
-        function createNewChat() {
-            window.currentConversationId = 'conv_' + Date.now();
-            chatContainer.innerHTML = '';
-            
-            // Re-append welcome hero & indicators
-            const hero = document.createElement('div');
-            hero.className = 'welcome-hero';
-            hero.id = 'welcomeHero';
-            hero.innerHTML = `
-                <div class="hero-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-                <h1>T.VỸ-AI-SUPREME v13.0 Ultra</h1>
-                <p>Hệ thống AI thế hệ mới nâng cao năng suất, sáng tạo nội dung, lập trình và hỗ trợ công việc đa nhiệm vượt trội.</p>
-                <div class="suggestion-cards">
-                    <div class="suggestion-card" onclick="setInputAndSend('Vẽ sơ đồ quy trình xử lý đơn hàng bằng Mermaid JS')">
-                        <div class="title"><i class="fa-solid fa-diagram-project" style="color:#6366f1;"></i> Vẽ sơ đồ Mermaid</div>
-                        <div class="desc">Tạo sơ đồ luồng/quy trình trực quan</div>
-                    </div>
-                    <div class="suggestion-card" onclick="setInputAndSend('Sáng tạo kịch bản video ngắn thu hút về trí tuệ nhân tạo')">
-                        <div class="title"><i class="fa-solid fa-pen-nib" style="color:#a855f7;"></i> Sáng tạo nội dung</div>
-                        <div class="desc">Viết kịch bản video TikTok/Reels ấn tượng</div>
-                    </div>
-                </div>
-            `;
-            chatContainer.appendChild(hero);
-            renderSidebarHistory();
-            showToast('✨ Đã mở cuộc trò chuyện mới!', 'info');
+        
+        // Cập nhật mức độ AI
+        levelSelect.addEventListener('change', function() {
+            currentLevel = this.value;
+            levelBadge.textContent = LEVEL_NAMES[currentLevel];
+            chatName.textContent = LEVEL_NAMES[currentLevel];
+            showToast(`🚀 Chuyển sang mô hình: ${LEVEL_NAMES[currentLevel]}`, 'info');
+        });
+
+        // Xử lý Navigation Sidebar
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                this.classList.add('active');
+                
+                const tab = this.getAttribute('data-tab');
+                if (tab === 'history') openModal('historyModal');
+                if (tab === 'plugins') openModal('pluginsModal');
+                if (tab === 'upgrade') openModal('upgradeModal');
+                if (tab === 'settings') openModal('settingsModal');
+            });
+        });
+
+        function clearAllMessages() {
+            if(confirm("Bạn có chắc chắn muốn xóa toàn bộ cuộc trò chuyện hiện tại?")) {
+                const msgs = document.querySelectorAll('.message-wrapper');
+                msgs.forEach(m => m.remove());
+                document.getElementById('welcomeHero').style.display = 'flex';
+                showToast('🗑 Đã xóa toàn bộ tin nhắn.', 'info');
+                document.getElementById('functionMenu').classList.remove('show');
+            }
         }
 
         function setInputAndSend(text) {
@@ -3402,340 +3181,322 @@
             sendMessage();
         }
 
-        function sendMessage() {
-            const promptText = inputField.value.trim();
-            if (!promptText && attachedFiles.length === 0) return;
+        function addMessage(text, isUser = false, isHtml = false) {
+            document.getElementById('welcomeHero').style.display = 'none';
+            const wrapper = document.createElement('div');
+            wrapper.className = `message-wrapper ${isUser ? 'user' : 'ai'}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = isUser ? (isLoggedIn ? '<i class="fa-solid fa-user-astronaut"></i>' : 'U') : '<i class="fa-solid fa-robot"></i>';
+            
+            const msgContent = document.createElement('div');
+            msgContent.className = `message ${isUser ? 'user' : 'ai'}`;
+            msgContent.dataset.rawText = text; // Lưu bản gốc
 
-            const welcomeHero = document.getElementById('welcomeHero');
-            if (welcomeHero) welcomeHero.remove();
-
-            if (!window.currentConversationId) {
-                window.currentConversationId = 'conv_' + Date.now();
+            if (isHtml) {
+                msgContent.innerHTML = text;
+            } else {
+                if (isUser) {
+                    msgContent.textContent = text;
+                } else {
+                    msgContent.innerHTML = marked.parse(text);
+                }
             }
 
-            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            // Tools cho tin nhắn AI
+            const tools = document.createElement('div');
+            tools.className = 'message-tools';
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'time';
+            const now = new Date();
+            timeSpan.textContent = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            if (!isUser) {
+                tools.innerHTML = `
+                    <button class="tool-btn" onclick="copyText(this)" title="Sao chép"><i class="fa-regular fa-copy"></i></button>
+                    <button class="tool-btn" onclick="speakMsgText(this)" title="Đọc văn bản"><i class="fa-solid fa-volume-high"></i> Đọc</button>
+                    <button class="tool-btn" title="Thích"><i class="fa-regular fa-thumbs-up"></i></button>
+                    <button class="tool-btn" title="Báo cáo"><i class="fa-regular fa-thumbs-down"></i></button>
+                    <button class="tool-btn" title="Tạo lại" onclick="regenerateLast()"><i class="fa-solid fa-rotate-right"></i></button>
+                `;
+            } else {
+                tools.innerHTML = `<button class="tool-btn" onclick="editMessage(this)" title="Chỉnh sửa"><i class="fa-solid fa-pen"></i></button>`;
+            }
+            tools.appendChild(timeSpan);
+            msgContent.appendChild(tools);
 
-            // User message wrapper
-            const userWrapper = document.createElement('div');
-            userWrapper.className = 'message-wrapper user';
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(msgContent);
+            chatContainer.appendChild(wrapper);
+            
+            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+            
+            if(!isUser) {
+                // Khởi tạo syntax highlight và mermaid
+                msgContent.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                    addCodeActions(block.parentElement);
+                });
+                
+                try {
+                    mermaid.init(undefined, msgContent.querySelectorAll('.language-mermaid'));
+                } catch(e) {}
+            }
+            return msgContent;
+        }
 
-            let fileAttachHTML = '';
-            if (attachedFiles.length > 0) {
-                fileAttachHTML = `<div style="margin-bottom:6px; font-size:12px; opacity:0.9;">📎 File đính kèm: ${attachedFiles.map(f => f.name).join(', ')}</div>`;
+        function addCodeActions(preBlock) {
+            if (preBlock.querySelector('.code-header')) return;
+            const header = document.createElement('div');
+            header.className = 'code-header';
+            
+            let lang = 'Code';
+            const codeEl = preBlock.querySelector('code');
+            if(codeEl && codeEl.className) {
+                const match = codeEl.className.match(/language-(\w+)/);
+                if(match) lang = match[1].toUpperCase();
             }
 
-            userWrapper.innerHTML = `
-                <div class="message user" data-raw-text="${escapeHTML(promptText)}">
-                    ${fileAttachHTML}
-                    ${escapeHTML(promptText)}
-                    <div class="message-tools">
-                        <span class="time">${timeStr}</span>
-                    </div>
+            header.innerHTML = `
+                <span>${lang}</span>
+                <div class="code-actions">
+                    <button class="code-run-btn" title="Chạy code (Nếu hỗ trợ)"><i class="fa-solid fa-play"></i></button>
+                    <button class="code-copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
                 </div>
-                <div class="message-avatar">👤</div>
             `;
-            chatContainer.appendChild(userWrapper);
+            preBlock.insertBefore(header, preBlock.firstChild);
+        }
 
+        function copyCode(btn) {
+            const pre = btn.closest('pre');
+            const code = pre.querySelector('code').innerText;
+            navigator.clipboard.writeText(code);
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
+            setTimeout(() => btn.innerHTML = originalText, 2000);
+        }
+
+        function copyText(btn) {
+            const msg = btn.closest('.message').dataset.rawText;
+            navigator.clipboard.writeText(msg);
+            btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+            setTimeout(() => btn.innerHTML = '<i class="fa-regular fa-copy"></i>', 2000);
+            showToast('Đã sao chép vào khay nhớ tạm', 'info');
+        }
+
+        async function typeWriter(msgElement, text) {
+            sendBtn.style.display = 'none';
+            stopBtn.style.display = 'flex';
+            
+            msgElement.dataset.rawText = text;
+            let currentText = '';
+            
+            // Giả lập stream chunk
+            const chunks = text.split(/(?=\s+)|(?=<)|(?=>)/); 
+            
+            return new Promise((resolve) => {
+                let i = 0;
+                
+                function nextChunk() {
+                    if (currentAbortController && currentAbortController.signal.aborted) {
+                        finalizeTyping();
+                        return;
+                    }
+                    if (i < chunks.length) {
+                        currentText += chunks[i];
+                        msgElement.innerHTML = marked.parse(currentText);
+                        
+                        chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'instant' });
+                        i++;
+                        setTimeout(nextChunk, Math.random() * 20 + 5);
+                    } else {
+                        finalizeTyping();
+                    }
+                }
+                
+                function finalizeTyping() {
+                    msgElement.innerHTML = marked.parse(text);
+                    
+                    // Gắn lại phần tools
+                    const tools = document.createElement('div');
+                    tools.className = 'message-tools';
+                    const now = new Date();
+                    tools.innerHTML = `
+                        <button class="tool-btn" onclick="copyText(this)" title="Sao chép"><i class="fa-regular fa-copy"></i></button>
+                        <button class="tool-btn" onclick="speakMsgText(this)" title="Đọc văn bản"><i class="fa-solid fa-volume-high"></i> Đọc</button>
+                        <button class="tool-btn" title="Thích"><i class="fa-regular fa-thumbs-up"></i></button>
+                        <button class="tool-btn" title="Báo cáo"><i class="fa-regular fa-thumbs-down"></i></button>
+                        <button class="tool-btn" title="Tạo lại" onclick="regenerateLast()"><i class="fa-solid fa-rotate-right"></i></button>
+                        <span class="time" style="margin-left:auto;font-size:10px;opacity:0.7;">${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}</span>
+                    `;
+                    msgElement.appendChild(tools);
+
+                    // Syntax Highlight & Mermaid
+                    msgElement.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                        addCodeActions(block.parentElement);
+                    });
+                    try { mermaid.init(undefined, msgElement.querySelectorAll('.language-mermaid')); } catch(e) {}
+                    
+                    // Nếu có Artifact code block (HTML/React), hiển thị nút Preview
+                    if (msgElement.innerHTML.includes('language-html') || msgElement.innerHTML.includes('language-react')) {
+                         const previewBtn = document.createElement('button');
+                         previewBtn.className = 'btn btn-primary btn-sm';
+                         previewBtn.style.marginTop = '10px';
+                         previewBtn.innerHTML = '<i class="fa-solid fa-eye"></i> Xem Artifact Live Preview';
+                         previewBtn.onclick = () => openLivePreview(text);
+                         msgElement.appendChild(previewBtn);
+                    }
+
+                    sendBtn.style.display = 'flex';
+                    stopBtn.style.display = 'none';
+                    if(document.getElementById('soundEffectToggle').checked) playDingSound();
+                    resolve();
+                }
+                
+                nextChunk();
+            });
+        }
+
+        function playDingSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, ctx.currentTime);
+                gain.gain.setValueAtTime(0, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.5);
+            } catch(e) {}
+        }
+
+        async function sendMessage() {
+            const text = inputField.value.trim();
+            if (!text && attachedFiles.length === 0) return;
+            
+            let userContent = text;
+            if (attachedFiles.length > 0) {
+                userContent += `\n\n*(Đã đính kèm ${attachedFiles.length} tệp)*`;
+            }
+
+            addMessage(userContent, true);
             inputField.value = '';
             inputField.style.height = 'auto';
             attachedFiles = [];
             renderFilePreview();
-
-            // Prepare AI response wrapper
-            const aiWrapper = document.createElement('div');
-            aiWrapper.className = 'message-wrapper ai';
-            const aiMsgDiv = document.createElement('div');
-            aiMsgDiv.className = 'message ai';
             
-            aiWrapper.innerHTML = `<div class="message-avatar"><i class="fa-solid fa-robot"></i></div>`;
-            aiWrapper.appendChild(aiMsgDiv);
-            chatContainer.appendChild(aiWrapper);
+            const deepThink = document.getElementById('deepThinkIndicator');
+            const thinkStatus = document.getElementById('thinkStatus');
+            
+            if (currentLevel === 'pro3' || currentLevel === 'plus') {
+                deepThink.style.display = 'block';
+                thinkStatus.textContent = "Đang kích hoạt quy trình Chain-of-Thought (CoT)...";
+                await new Promise(r => setTimeout(r, 800));
+                thinkStatus.textContent = "Truy vấn Kho Plugin và cơ sở dữ liệu nội bộ...";
+                await new Promise(r => setTimeout(r, 1000));
+                thinkStatus.textContent = "Tổng hợp thông tin và tạo phản hồi...";
+                await new Promise(r => setTimeout(r, 800));
+            } else {
+                deepThink.style.display = 'block';
+                thinkStatus.textContent = "Đang xử lý dữ liệu...";
+                await new Promise(r => setTimeout(r, 800));
+            }
+            
+            deepThink.style.display = 'none';
+            
+            // Generate Fake Response mô phỏng
+            let responseText = `Đây là phản hồi hệ thống mô phỏng từ mức độ **${LEVEL_NAMES[currentLevel]}**.\n\n`;
+            
+            const activePlugins = PLUGINS_DATA.filter(p => p.enabled);
+            if (activePlugins.length > 0) {
+                responseText += `Tôi nhận thấy bạn đang bật **${activePlugins.length} công cụ Plugin**. Hệ thống sẽ ưu tiên sử dụng các tiện ích mở rộng này để giải quyết yêu cầu của bạn nhanh chóng và chính xác.\n\n`;
+            }
 
-            showDeepThink();
-            sendBtn.style.display = 'none';
-            stopBtn.style.display = 'flex';
+            if (text.toLowerCase().includes('mermaid')) {
+                responseText += "Đây là một sơ đồ mô phỏng bạn yêu cầu:\n\n```mermaid\ngraph TD\nA[Bắt đầu] --> B{Kiểm tra dữ liệu}\nB -- Hợp lệ --> C[Gửi thông qua API]\nB -- Lỗi --> D[Báo lỗi]\nC --> E[Kết thúc]\nD --> E\n```\n";
+            } else if (text.toLowerCase().includes('code') || text.toLowerCase().includes('html')) {
+                responseText += "Dưới đây là một đoạn mã HTML/CSS ví dụ, bạn có thể xem trực quan qua tính năng Artifact Live Preview:\n\n```html\n<!DOCTYPE html>\n<html>\n<head>\n<style>\nbody { font-family: sans-serif; text-align: center; margin-top: 50px; background: #f0f2f5; }\nbutton { padding: 12px 24px; background: #6366f1; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }\nbutton:hover { background: #4f46e5; transform: scale(1.05); transition: 0.2s; }\n</style>\n</head>\n<body>\n  <h1>Xin chào từ Artifact Live Preview!</h1>\n  <button onclick=\"alert('Chức năng Plugin đang hoạt động tốt!')\">Kiểm tra hệ thống</button>\n</body>\n</html>\n```\n";
+            } else {
+                responseText += "Hệ thống T.VỸ-AI-SUPREME v13.0 với đa luồng AI và tích hợp hơn 20 Plugin đã sẵn sàng hỗ trợ bạn. Bạn có thể yêu cầu tạo báo cáo Word, Excel, rút gọn Link, gửi Email, phân tích dữ liệu chuyên sâu hoặc tìm kiếm Github một cách cực kỳ trực quan.";
+            }
 
             currentAbortController = new AbortController();
-
-            // Phản hồi mô phỏng kết hợp render Markdown & Plugins
-            setTimeout(() => {
-                hideDeepThink();
-                
-                let activePluginsList = currentPlugins.filter(p => p.enabled).map(p => p.name).join(', ');
-                let replyContent = generateAIResponse(promptText, activePluginsList);
-
-                aiMsgDiv.dataset.rawText = replyContent;
-
-                // Marked Render
-                let htmlOutput = (typeof marked !== 'undefined' && marked.parse) ? marked.parse(replyContent) : replyContent;
-                
-                aiMsgDiv.innerHTML = htmlOutput + `
-                    <div class="message-tools">
-                        <button class="tool-btn" onclick="navigator.clipboard.writeText(this.closest('.message').dataset.rawText); showToast('📋 Đã sao chép!','success');"><i class="fa-solid fa-copy"></i> Sao chép</button>
-                        <button class="tool-btn" onclick="speakMsgText(this)"><i class="fa-solid fa-volume-high"></i> Đọc</button>
-                        <span class="time">${timeStr}</span>
-                    </div>
-                `;
-
-                // Highlight code & Mermaid rendering
-                if (typeof hljs !== 'undefined') {
-                    aiMsgDiv.querySelectorAll('pre code').forEach((block) => {
-                        hljs.highlightElement(block);
-                        // Add copy button & Artifact Live Preview button to code block
-                        const parentPre = block.parentNode;
-                        const codeHeader = document.createElement('div');
-                        codeHeader.className = 'code-header';
-                        codeHeader.innerHTML = `
-                            <span>${block.className.replace('language-', '').toUpperCase() || 'CODE'}</span>
-                            <div class="code-actions">
-                                <button class="code-run-btn" onclick="renderArtifactFromCode(this)"><i class="fa-solid fa-play"></i> Xem Live Preview</button>
-                                <button class="code-copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-container').querySelector('code').innerText); showToast('📋 Đã chép mã!','success');">Copy</button>
-                            </div>
-                        `;
-                        const codeContainer = document.createElement('div');
-                        codeContainer.className = 'code-container';
-                        parentPre.parentNode.insertBefore(codeContainer, parentPre);
-                        codeContainer.appendChild(codeHeader);
-                        codeContainer.appendChild(parentPre);
-                    });
-                }
-
-                // Render Mermaid Diagrams nếu có
-                if (typeof mermaid !== 'undefined') {
-                    aiMsgDiv.querySelectorAll('.language-mermaid').forEach((block) => {
-                        const code = block.innerText;
-                        const mDiv = document.createElement('div');
-                        mDiv.className = 'mermaid';
-                        mDiv.textContent = code;
-                        block.parentNode.parentNode.replaceWith(mDiv);
-                    });
-                    try { mermaid.run(); } catch(e){}
-                }
-
-                sendBtn.style.display = 'flex';
-                stopBtn.style.display = 'none';
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-
-                saveConversation(window.currentConversationId, promptText, replyContent);
-
-            }, 1800);
+            const msgEl = addMessage('', false);
+            await typeWriter(msgEl, responseText);
+            currentAbortController = null;
         }
 
         function stopGeneration() {
             if (currentAbortController) {
                 currentAbortController.abort();
+                currentAbortController = null;
+                sendBtn.style.display = 'flex';
+                stopBtn.style.display = 'none';
+                showToast('Đã dừng tạo câu trả lời.', 'warning');
             }
-            hideDeepThink();
-            sendBtn.style.display = 'flex';
-            stopBtn.style.display = 'none';
-            showToast('⏹️ Đã dừng tạo phản hồi!', 'warning');
         }
 
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-            );
-        }
-
-        function generateAIResponse(prompt, plugins) {
-            const lower = prompt.toLowerCase();
-            if (lower.includes('mermaid') || lower.includes('sơ đồ') || lower.includes('quy trình')) {
-                return `Dưới đây là sơ đồ quy trình trực quan được khởi tạo bằng plugin **Mermaid JS**:\n\n\`\`\`mermaid\ngraph TD\n    A[Nhận Đơn Hàng] --> B{Kiem Tra Kho}\n    B -- Còn hàng --> C[Đóng Gói Sản Phẩm]\n    B -- Hết hàng --> D[Thông Báo Khách Hàng]\n    C --> E[Vận Chuyển Giao Hàng]\n    E --> F[Hoàn Tất Đơn Hàng]\n\`\`\`\n\nBạn có thể chỉnh sửa sơ đồ hoặc thêm các bước quy trình khác tùy ý!`;
+        function regenerateLast() {
+            const aiMsgs = document.querySelectorAll('.message-wrapper.ai');
+            if(aiMsgs.length > 0) {
+                aiMsgs[aiMsgs.length - 1].remove();
+                sendMessage();
             }
-            if (lower.includes('code') || lower.includes('lập trình') || lower.includes('html') || lower.includes('python')) {
-                return `Dưới đây là đoạn mã nguồn mẫu hoàn chỉnh cho yêu cầu của bạn:\n\n\`\`\`html\n<!DOCTYPE html>\n<html>\n<head>\n    <style>\n        body { background: #0f172a; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }\n        .card { background: #1e293b; padding: 24px; border-radius: 12px; border: 1px solid #334155; text-align: center; }\n        button { background: #6366f1; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }\n    </style>\n</head>\n<body>\n    <div class="card">\n        <h2>T.VỸ AI Live Preview</h2>\n        <p>Bấm nút bên dưới để thử nghiệm tương tác!</p>\n        <button onclick="alert('Đã kích hoạt Claude Live Preview Artifact!')">Click Me!</button>\n    </div>\n</body>\n</html>\n\`\`\`\n\n👉 *Bấm vào nút **"Xem Live Preview"** ở góc phải khung code trên để xem giao diện chạy trực tiếp!*`;
-            }
-            return `Chào bạn! Tôi là **T.VỸ-AI-SUPREME v13.0 Ultra**.\n\nTôi đã tiếp nhận câu hỏi: "*${prompt}*"\n\n⚡ **Plugin đang kích hoạt**: [${plugins || 'Mặc định'}]\n\nTôi có thể hỗ trợ bạn thực hiện các tác vụ sau:\n1. **Lập trình & Viết mã**: Python, HTML/CSS, JavaScript, C++, SQL...\n2. **Sáng tạo nội dung**: Kịch bản TikTok, bài viết PR, Email chuyên nghiệp.\n3. **Trực quan hóa**: Vẽ sơ đồ Mermaid, biểu đồ phân tích dữ liệu.\n\nNếu cần tùy chỉnh gì thêm, hãy cho tôi biết ngay nhé!`;
         }
 
-        // ---------------------------------------------------------
-        // 5. CLAUDE ARTIFACTS LIVE PREVIEW PANEL LOGIC
-        // ---------------------------------------------------------
-        function renderArtifactFromCode(btn) {
-            const codeContainer = btn.closest('.code-container');
-            const codeBlock = codeContainer.querySelector('code');
-            if (!codeBlock) return;
-            const codeText = codeBlock.innerText;
-            openLivePreview(codeText);
-        }
-
-        function openLivePreview(code) {
+        // Chức năng Artifact Live Preview
+        function openLivePreview(markdownText) {
             const pane = document.getElementById('artifactPreviewPane');
-            const frame = document.getElementById('artifactFrame');
-            if (!pane || !frame) return;
-
+            const iframe = document.getElementById('artifactFrame');
             pane.classList.add('active');
             
-            const doc = frame.contentWindow.document;
-            doc.open();
-            doc.write(code.includes('<html>') ? code : `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:20px;}</style></head><body>${code}</body></html>`);
-            doc.close();
-
-            showToast('👁️ Đã mở khung Live Preview Artifact!', 'info');
-        }
-
-        function refreshLivePreview() {
-            const frame = document.getElementById('artifactFrame');
-            if (frame) frame.contentWindow.location.reload();
+            // Trích xuất mã HTML
+            const match = markdownText.match(/```html([\s\S]*?)```/);
+            let code = match ? match[1] : "<h1>Không tìm thấy mã HTML hợp lệ.</h1>";
+            
+            iframe.srcdoc = code;
         }
 
         function closeLivePreview() {
-            const pane = document.getElementById('artifactPreviewPane');
-            if (pane) pane.classList.remove('active');
+            document.getElementById('artifactPreviewPane').classList.remove('active');
+            document.getElementById('artifactFrame').srcdoc = '';
+        }
+        
+        function refreshLivePreview() {
+            const iframe = document.getElementById('artifactFrame');
+            const currentCode = iframe.srcdoc;
+            iframe.srcdoc = '';
+            setTimeout(() => iframe.srcdoc = currentCode, 50);
         }
 
-        // ---------------------------------------------------------
-        // 6. TRỢ LÝ CÔNG CỤ TẮT AI (DROPDOWN MENU ACTIONS)
-        // ---------------------------------------------------------
-        function aiTextAndEmail() { setInputAndSend('Viết một email chuyên nghiệp gửi đối tác đề xuất hợp tác dự án công nghệ AI.'); }
-        function aiCreativeAndMedia() { setInputAndSend('Sáng tạo kịch bản video TikTok 60 giây thu hút về xu hướng trí tuệ nhân tạo.'); }
-        function aiDevAndData() { setInputAndSend('Viết hàm Python phân tích file CSV dữ liệu bán hàng và vẽ biểu đồ.'); }
-        function aiMultiAndPrompt() { setInputAndSend('Tối ưu hóa đoạn prompt sau để AI trả lời sâu và chuẩn xác hơn: "Hãy viết bài văn về công nghệ"'); }
-        function clearAllMessages() {
-            if (confirm('Xóa toàn bộ các tin nhắn trong khung chat hiện tại?')) {
-                createNewChat();
-            }
-        }
+        // Dummy Tool Menu functions
+        function aiTextAndEmail() { setInputAndSend("Hãy viết một email chuyên nghiệp gửi đối tác về việc..."); document.getElementById('functionMenu').classList.remove('show'); }
+        function aiCreativeAndMedia() { setInputAndSend("Sáng tạo một kịch bản Tiktok viral về chủ đề AI..."); document.getElementById('functionMenu').classList.remove('show'); }
+        function aiDevAndData() { setInputAndSend("Viết một script Python để phân tích file dữ liệu đính kèm..."); document.getElementById('functionMenu').classList.remove('show'); }
+        function aiMultiAndPrompt() { setInputAndSend("Tối ưu hóa prompt sau để đạt hiệu quả cao nhất: ..."); document.getElementById('functionMenu').classList.remove('show'); }
 
-        // ---------------------------------------------------------
-        // 7. LỊCH SỬ CHAT (LOCALSTORAGE STORAGE)
-        // ---------------------------------------------------------
-        function saveConversation(id, userText, aiText) {
-            let store = JSON.parse(localStorage.getItem('tv_conversations')) || {};
-            if (!store[id]) {
-                store[id] = { title: userText.substring(0, 30) + '...', messages: [] };
-            }
-            store[id].messages.push({ role: 'user', text: userText });
-            store[id].messages.push({ role: 'ai', text: aiText });
-            localStorage.setItem('tv_conversations', JSON.stringify(store));
-            renderSidebarHistory();
-        }
-
-        function renderSidebarHistory() {
-            const list = document.getElementById('sidebarHistoryList');
-            if (!list) return;
-            const store = JSON.parse(localStorage.getItem('tv_conversations')) || {};
-            const keys = Object.keys(store).reverse();
-
-            if (keys.length === 0) {
-                list.innerHTML = '<div style="font-size:11px;color:var(--text-muted);padding:8px;">Chưa có lịch sử.</div>';
-                return;
-            }
-
-            list.innerHTML = keys.map(k => `
-                <div class="history-item ${k === window.currentConversationId ? 'active' : ''}" onclick="loadConversation('${k}')">
-                    <span><i class="fa-regular fa-message" style="margin-right:6px;"></i>${store[k].title}</span>
-                    <button class="del-btn" onclick="deleteHistoryItem('${k}', event)">✕</button>
-                </div>
-            `).join('');
-        }
-
-        function renderHistoryModal() {
-            const list = document.getElementById('historyList');
-            if (!list) return;
-            const store = JSON.parse(localStorage.getItem('tv_conversations')) || {};
-            const keys = Object.keys(store).reverse();
-
-            if (keys.length === 0) {
-                list.innerHTML = '<p style="color:var(--text-muted)">Chưa có dữ liệu trò chuyện.</p>';
-                return;
-            }
-
-            list.innerHTML = keys.map(k => `
-                <div class="history-item" onclick="loadConversation('${k}'); closeModal('historyModal');" style="padding:12px; margin-bottom:8px; border:1px solid var(--border-color);">
-                    <div>
-                        <strong>${store[k].title}</strong>
-                        <div style="font-size:11px;color:var(--text-muted);">${store[k].messages.length} tin nhắn</div>
-                    </div>
-                    <button class="btn btn-danger btn-sm" onclick="deleteHistoryItem('${k}', event)">Xóa</button>
-                </div>
-            `).join('');
-        }
-
-        function loadConversation(id) {
-            const store = JSON.parse(localStorage.getItem('tv_conversations')) || {};
-            if (!store[id]) return;
-
-            window.currentConversationId = id;
-            chatContainer.innerHTML = '';
-
-            store[id].messages.forEach(m => {
-                const wrapper = document.createElement('div');
-                wrapper.className = `message-wrapper ${m.role}`;
-                
-                let contentHTML = (typeof marked !== 'undefined' && marked.parse) ? marked.parse(m.text) : m.text;
-
-                if (m.role === 'user') {
-                    wrapper.innerHTML = `
-                        <div class="message user" data-raw-text="${escapeHTML(m.text)}">${escapeHTML(m.text)}</div>
-                        <div class="message-avatar">👤</div>
-                    `;
-                } else {
-                    wrapper.innerHTML = `
-                        <div class="message-avatar"><i class="fa-solid fa-robot"></i></div>
-                        <div class="message ai" data-raw-text="${escapeHTML(m.text)}">${contentHTML}</div>
-                    `;
-                }
-                chatContainer.appendChild(wrapper);
-            });
-
-            renderSidebarHistory();
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        function deleteHistoryItem(id, event) {
-            event.stopPropagation();
-            let store = JSON.parse(localStorage.getItem('tv_conversations')) || {};
-            delete store[id];
-            localStorage.setItem('tv_conversations', JSON.stringify(store));
-            if (id === window.currentConversationId) createNewChat();
-            renderSidebarHistory();
-            renderHistoryModal();
-            showToast('🗑️ Đã xóa đoạn chat!', 'info');
-        }
-
-        function searchMessages() {
-            const query = searchInput.value.toLowerCase().trim();
-            if (!query) return;
-            const messages = document.querySelectorAll('.message');
-            let found = false;
-            messages.forEach(m => {
-                if (m.innerText.toLowerCase().includes(query)) {
-                    m.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    m.style.border = '2px solid var(--accent-primary)';
-                    setTimeout(() => m.style.border = '', 3000);
-                    found = true;
-                }
-            });
-            if (!found) showToast('🔍 Không tìm thấy từ khóa trong chat!', 'warning');
-        }
-
-        // ---------------------------------------------------------
-        // 8. KHU VỰC NÂNG CẤP TÀI KHOẢN & MOMO
-        // ---------------------------------------------------------
+        // Dummy Payment
         function upgradeTier(tier) {
-            showToast(`🚀 Đã gửi yêu cầu nâng cấp gói ${tier.toUpperCase()}!`, 'success');
-            closeModal('upgradeModal');
+            showToast(`Vui lòng đăng nhập để nâng cấp gói ${tier.toUpperCase()}`, 'warning');
         }
-
         function upgradeWithMomo(tier) {
-            alert(`Thanh toán MoMo cho gói ${tier.toUpperCase()}.\nVui lòng chuyển khoản đến SĐT MoMo: 0987654321 với nội dung: UPGRADE ${tier.toUpperCase()}`);
+            showToast(`Đang chuyển hướng cổng thanh toán MoMo cho gói ${tier.toUpperCase()}...`, 'info');
+        }
+        
+        function createNewChat() {
+            const msgs = document.querySelectorAll('.message-wrapper');
+            msgs.forEach(m => m.remove());
+            document.getElementById('welcomeHero').style.display = 'flex';
+            showToast('✨ Đã tạo đoạn chat mới!', 'success');
         }
 
-        // Khoản khởi tạo khi load xong trang
-        document.addEventListener('DOMContentLoaded', () => {
-            renderPluginsGrid();
-            renderSidebarHistory();
-            
-            // Restore saved settings
-            const font = localStorage.getItem('tv_font_family');
-            if (font) changeFontFamily(font);
-
-            const instructions = localStorage.getItem('tv_custom_instructions');
-            if (instructions && document.getElementById('customInstructions')) {
-                document.getElementById('customInstructions').value = instructions;
-            }
-        });
     </script>
 </body>
 </html>
