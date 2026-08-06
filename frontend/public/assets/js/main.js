@@ -65,11 +65,13 @@ const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 giờ
 // BIẾN QUẢN LÝ TRẠNG THÁI CHỜ & HỦY REQUEST
 let isGenerating = false;
 let currentAbortController = null;
+let deepThinkInterval = null;
 
 // BIẾN QUẢN LÝ VOICE MODE & SPEECH RECOGNITION
 let recognition = null;
 let isListening = false;
 let isVoiceTriggered = false;
+let availableVoices = [];
 
 const LEVEL_NAMES = {
     basic: 'AI Thường',
@@ -96,6 +98,7 @@ function unlockUI() {
     if (inputField) {
         inputField.disabled = false;
         inputField.placeholder = "Nhập tin nhắn của bạn...";
+        inputField.style.height = 'auto'; // Reset height
         inputField.focus();
     }
     if (sendBtn) sendBtn.style.display = 'inline-block';
@@ -163,10 +166,10 @@ function renderMermaidInContainer(container) {
 }
 
 // ================================================================
-// TÍNH NĂNG 1: CLAUDE ARTIFACTS - SPLIT SCREEN LIVE PREVIEW
+// FORMAT MARKDOWN TO HTML (NÂNG CẤP HIỂN THỊ VĂN BẢN & CODE BLOCK)
 // ================================================================
 function escapeHtml(text) {
-    return text
+    return String(text)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -174,6 +177,57 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
+function formatMarkdown(text) {
+    if (!text) return '';
+    let parsed = text;
+
+    // 1. Chuyển đổi Khối Code (Code Blocks với nút Copy)
+    const codeBlockRegex = /```([a-zA-Z0-9_+-]*)\n([\s\S]*?)```/g;
+    parsed = parsed.replace(codeBlockRegex, (match, lang, code) => {
+        if (lang.toLowerCase() === 'mermaid') {
+            return `<pre class="mermaid-code">${code}</pre>`;
+        }
+        const blockId = 'code-' + Math.random().toString(36).substr(2, 9);
+        window['code_block_' + blockId] = code;
+        return `
+            <div class="code-block-wrapper" style="margin: 10px 0; border-radius: 8px; overflow: hidden; background: #1e1e2e; color: #d4d4d4;">
+                <div style="background: #282a36; padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.8em; color: #f8f8f2; border-bottom: 1px solid #44475a;">
+                    <span style="font-weight: bold; text-transform: uppercase;">${lang || 'CODE'}</span>
+                    <button type="button" onclick="copyRawCode('${blockId}')" style="background: #6272a4; color: white; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em;">📋 Copy Code</button>
+                </div>
+                <pre style="margin: 0; padding: 12px; overflow-x: auto; font-family: monospace; font-size: 0.9em; line-height: 1.4;"><code>${escapeHtml(code)}</code></pre>
+            </div>
+        `;
+    });
+
+    // 2. Format tiêu đề, in đậm, nghiêng, gạch ngang, inline code
+    parsed = parsed.replace(/^### (.*$)/gim, '<h3 style="margin: 10px 0 6px 0; font-size: 1.1em;">$1</h3>');
+    parsed = parsed.replace(/^## (.*$)/gim, '<h2 style="margin: 12px 0 8px 0; font-size: 1.25em;">$1</h2>');
+    parsed = parsed.replace(/^# (.*$)/gim, '<h1 style="margin: 14px 0 10px 0; font-size: 1.4em;">$1</h1>');
+    parsed = parsed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    parsed = parsed.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    parsed = parsed.replace(/~~(.*?)~~/g, '<del>$1</del>');
+    parsed = parsed.replace(/`([^`]+)`/g, '<code style="background: rgba(110,118,129,0.2); padding: 2px 5px; border-radius: 4px; font-family: monospace;">$1</code>');
+
+    // 3. Danh sách bullet và xuống dòng
+    parsed = parsed.replace(/^\s*[\-\*]\s+(.*)$/gim, '<li style="margin-left: 20px;">$1</li>');
+    parsed = parsed.replace(/\n/g, '<br>');
+
+    return parsed;
+}
+
+function copyRawCode(blockId) {
+    const rawCode = window['code_block_' + blockId];
+    if (rawCode) {
+        navigator.clipboard.writeText(rawCode).then(() => {
+            showToast('✅ Đã copy mã nguồn vào khay nhớ tạm!', 'success');
+        });
+    }
+}
+
+// ================================================================
+// TÍNH NĂNG 1: CLAUDE ARTIFACTS - SPLIT SCREEN LIVE PREVIEW
+// ================================================================
 function ensurePreviewPane() {
     let pane = document.getElementById('artifactPreviewPane');
     if (!pane) {
@@ -203,7 +257,7 @@ function ensurePreviewPane() {
                     <button onclick="closeLivePreview()" style="padding: 6px 12px; background: #ff4d4f; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">✕ Đóng</button>
                 </div>
             </div>
-            <iframe id="artifactFrame" style="width: 100%; height: calc(100% - 50px); border: none; background: #ffffff;"></iframe>
+            <iframe id="artifactFrame" sandbox="allow-scripts allow-same-origin" style="width: 100%; height: calc(100% - 50px); border: none; background: #ffffff;"></iframe>
         `;
         document.body.appendChild(pane);
     }
@@ -216,8 +270,6 @@ function openLivePreview(code) {
     const frame = document.getElementById('artifactFrame');
     window.currentArtifactCode = code;
     pane.style.right = '0';
-
-    // Đưa mã nguồn vào iframe thời gian thực
     frame.srcdoc = code;
 }
 
@@ -286,6 +338,16 @@ function renderSourceCardsHtml(sources) {
 // ================================================================
 // TÍNH NĂNG 3: VOICE MODE (NHẬN DẠNG & ĐỌC PHẢN HỒI TIẾNG VIỆT)
 // ================================================================
+function loadVoices() {
+    if ('speechSynthesis' in window) {
+        availableVoices = window.speechSynthesis.getVoices();
+    }
+}
+if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+}
+
 function initVoiceMode() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -326,7 +388,6 @@ function initVoiceMode() {
             voiceBtn.innerHTML = '🎤';
         }
 
-        // Tự động gửi tin nhắn sau khi nói xong
         if (inputField && inputField.value.trim().length > 0) {
             isVoiceTriggered = true;
             sendMessage();
@@ -367,10 +428,8 @@ function toggleVoiceRecognition() {
 function speakVietnamese(text) {
     if (!('speechSynthesis' in window)) return;
     
-    // Hủy các giọng đọc đang phát dở
     window.speechSynthesis.cancel();
 
-    // Lọc bỏ thẻ HTML và Markdown code trước khi đọc
     let cleanText = text
         .replace(/<[^>]*>/g, '')
         .replace(/```[\s\S]*?```/g, 'Mã nguồn chi tiết đã được hiển thị trên màn hình.')
@@ -384,8 +443,7 @@ function speakVietnamese(text) {
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
 
-    // Tìm giọng đọc tiếng Việt thích hợp nếu hệ thống hỗ trợ
-    const voices = window.speechSynthesis.getVoices();
+    const voices = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
     const viVoice = voices.find(v => v.lang.includes('vi') || v.lang.includes('VI'));
     if (viVoice) {
         utterance.voice = viVoice;
@@ -394,7 +452,6 @@ function speakVietnamese(text) {
     window.speechSynthesis.speak(utterance);
 }
 
-// Khởi tạo Voice Mode ngay khi load script
 initVoiceMode();
 
 // ================================================================
@@ -565,7 +622,7 @@ if (localStorage.getItem('tv_theme') === 'dark') {
 if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 
 // ================================================================
-// TOGGLE MENU & DÒNG SUY NGHĨ (DEEP THINK)
+// TOGGLE MENU & DÒNG SUY NGHĨ (DEEP THINK ENHANCED)
 // ================================================================
 function toggleMenu() {
     const menu = document.getElementById('functionMenu');
@@ -595,20 +652,37 @@ function showDeepThink(stage = 0) {
         thinkEl = document.createElement('div');
         thinkEl.id = 'deepThinkIndicator';
         thinkEl.className = 'deep-think-box';
-        thinkEl.style.padding = '10px 14px';
-        thinkEl.style.margin = '10px 0';
-        thinkEl.style.borderRadius = '8px';
-        thinkEl.style.background = 'var(--color-primary-light)';
-        thinkEl.style.color = 'var(--color-text)';
-        thinkEl.style.fontSize = '0.9em';
-        thinkEl.style.borderLeft = '4px solid #4a6ee0';
+        thinkEl.style.cssText = `
+            padding: 10px 14px;
+            margin: 10px 0;
+            border-radius: 8px;
+            background: var(--color-primary-light);
+            color: var(--color-text);
+            font-size: 0.9em;
+            border-left: 4px solid #4a6ee0;
+            transition: all 0.3s ease;
+        `;
         chatContainer.appendChild(thinkEl);
     }
-    thinkEl.innerHTML = `⚙️ <i>${stages[stage % stages.length]}</i>`;
+
+    let currentStage = stage;
+    thinkEl.innerHTML = `⚙️ <i>${stages[currentStage % stages.length]}</i>`;
     chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    if (deepThinkInterval) clearInterval(deepThinkInterval);
+    deepThinkInterval = setInterval(() => {
+        currentStage++;
+        if (thinkEl) {
+            thinkEl.innerHTML = `⚙️ <i>${stages[currentStage % stages.length]}</i>`;
+        }
+    }, 2500);
 }
 
 function hideDeepThink() {
+    if (deepThinkInterval) {
+        clearInterval(deepThinkInterval);
+        deepThinkInterval = null;
+    }
     const el = document.getElementById('deepThinkIndicator');
     if (el) el.remove();
 }
@@ -817,7 +891,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 // ================================================================
-// ADD MESSAGE & EDIT/COPY CỦA NGƯỜI DÙNG & AI (NÂNG CẤP ARTIFACTS & SOURCES)
+// ADD MESSAGE & EDIT/COPY CỦA NGƯỜI DÙNG & AI (NÂNG CẤP MARKDOWN & ARTIFACTS)
 // ================================================================
 function addMessage(role, content, sources = null) {
     if (!chatContainer) return;
@@ -828,20 +902,13 @@ function addMessage(role, content, sources = null) {
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message ' + role;
     
-    // Tạo ID ngẫu nhiên cho từng block tin nhắn
     const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
     msgDiv.id = msgId;
-    msgDiv.dataset.rawText = content; // Lưu dữ liệu thô vào dataset
+    msgDiv.dataset.rawText = content;
 
     let formattedContent = content;
 
-    // 1. CHUYỂN ĐỔI MERMAID DIAGRAM
-    const mermaidRegex = /```mermaid\s*([\s\S]*?)\s*```/g;
-    formattedContent = formattedContent.replace(mermaidRegex, (match, code) => {
-        return `<pre class="mermaid-code">${code}</pre>`;
-    });
-
-    // 2. CHUYỂN ĐỔI ARTIFACTS (HTML/UI/SVG) LÀM NÚT XEM TRƯỚC LIVE PREVIEW
+    // 1. Xử lý Claude Artifacts trước khi format Markdown
     if (role === 'ai') {
         const artifactRegex = /```(html|svg|xml)\s*([\s\S]*?)\s*```/gi;
         formattedContent = formattedContent.replace(artifactRegex, (match, lang, code) => {
@@ -862,7 +929,10 @@ function addMessage(role, content, sources = null) {
         });
     }
 
-    // 3. XỬ LÝ PERPLEXITY SOURCE CARDS Ở ĐẦU TIN NHẮN AI
+    // 2. Format Markdown chuẩn cho văn bản thường và Code Blocks
+    formattedContent = formatMarkdown(formattedContent);
+
+    // 3. Xử lý Perplexity Source Cards
     let sourcesHeader = '';
     if (role === 'ai' && sources) {
         sourcesHeader = renderSourceCardsHtml(sources);
@@ -880,7 +950,6 @@ function addMessage(role, content, sources = null) {
     } else if (role === 'system') {
         msgDiv.innerHTML = `<div class="msg-content">${formattedContent}</div>`;
     } else {
-        // Role AI
         msgDiv.innerHTML = `
             ${sourcesHeader}
             <div class="msg-content" id="content-${msgId}">${formattedContent}</div>
@@ -899,7 +968,6 @@ function addMessage(role, content, sources = null) {
     renderMermaidInContainer(msgDiv);
 }
 
-// Chức năng Copy tin nhắn
 function copyMessage(msgId) {
     const msgDiv = document.getElementById(msgId);
     if (msgDiv) {
@@ -912,7 +980,6 @@ function copyMessage(msgId) {
     }
 }
 
-// Chức năng chuyển sang giao diện Sửa
 function editMessage(msgId) {
     if (isGenerating) {
         showToast('⚠️ Vui lòng đợi AI trả lời xong hoặc bấm "Dừng" trước khi sửa!', 'warning');
@@ -934,27 +1001,22 @@ function editMessage(msgId) {
     `;
     
     const actionsDiv = msgDiv.querySelector('.msg-actions');
-    if (actionsDiv) actionsDiv.style.display = 'none'; // Ẩn tạm nút sửa/copy
+    if (actionsDiv) actionsDiv.style.display = 'none';
 }
 
-// Hủy chỉnh sửa và quay về trạng thái cũ
 function cancelEdit(msgId) {
     const msgDiv = document.getElementById(msgId);
     if (!msgDiv) return;
     const rawText = msgDiv.dataset.rawText;
     const contentDiv = document.getElementById(`content-${msgId}`);
     
-    let formattedContent = rawText.replace(/```mermaid\s*([\s\S]*?)\s*```/g, (match, code) => {
-        return `<pre class="mermaid-code">${code}</pre>`;
-    });
-    contentDiv.innerHTML = formattedContent;
+    contentDiv.innerHTML = formatMarkdown(rawText);
 
     const actionsDiv = msgDiv.querySelector('.msg-actions');
     if (actionsDiv) actionsDiv.style.display = 'flex';
     renderMermaidInContainer(contentDiv);
 }
 
-// Lưu và gửi câu hỏi mới
 function saveEdit(msgId) {
     const textarea = document.getElementById(`edit-input-${msgId}`);
     if (!textarea) return;
@@ -966,18 +1028,14 @@ function saveEdit(msgId) {
     }
 
     const msgDiv = document.getElementById(msgId);
-    msgDiv.dataset.rawText = newText; // Cập nhật data mới
+    msgDiv.dataset.rawText = newText;
 
-    let formattedContent = newText.replace(/```mermaid\s*([\s\S]*?)\s*```/g, (match, code) => {
-        return `<pre class="mermaid-code">${code}</pre>`;
-    });
-    document.getElementById(`content-${msgId}`).innerHTML = formattedContent;
+    document.getElementById(`content-${msgId}`).innerHTML = formatMarkdown(newText);
 
     const actionsDiv = msgDiv.querySelector('.msg-actions');
     if (actionsDiv) actionsDiv.style.display = 'flex';
     renderMermaidInContainer(contentDiv);
 
-    // XÓA TẤT CẢ CÁC TIN NHẮN SAU TIN NHẮN ĐANG SỬA
     let wrapper = msgDiv.parentElement;
     let nextWrapper = wrapper.nextElementSibling;
     while(nextWrapper) {
@@ -986,13 +1044,71 @@ function saveEdit(msgId) {
         toRemove.remove();
     }
 
-    // Gửi yêu cầu lại lên server
     sendMessageInternal(newText, true); 
 }
 
 // ================================================================
-// UPLOAD & PHÂN TÍCH FILE
+// UPLOAD & PHÂN TÍCH FILE (CÓ BỔ SUNG DRAG & DROP)
 // ================================================================
+function handleFileUploadProcess(file) {
+    if (!file) return;
+
+    const allowedExts = ['.pdf', '.docx', '.txt'];
+    const fileName = file.name.toLowerCase();
+    const isValid = allowedExts.some(ext => fileName.endsWith(ext));
+
+    if (!isValid) {
+        showToast('❌ Chỉ hỗ trợ định dạng PDF, DOCX và TXT!', 'error');
+        if (fileInput) fileInput.value = '';
+        return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+        showToast('❌ Dung lượng file vượt quá 15MB!', 'error');
+        if (fileInput) fileInput.value = '';
+        return;
+    }
+
+    addMessage('user', `📁 **Đã gửi tài liệu:** ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('conversation_id', currentConversationId || '');
+    formData.append('level', levelSelect ? levelSelect.value : 'pro');
+    formData.append('smart_synthesis', 'true');
+
+    showTyping();
+    lockUI();
+
+    fetch('/api/upload_and_analyze', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        unlockUI();
+        if (fileInput) fileInput.value = '';
+
+        if (data.error) {
+            addMessage('ai', '❌ Lỗi phân tích file: ' + data.error);
+            return;
+        }
+
+        if (data.conversation_id) {
+            currentConversationId = data.conversation_id;
+            if (exportBtn) exportBtn.style.display = 'inline-block';
+        }
+
+        addMessage('ai', `📑 **Kết quả phân tích tài liệu chuyên sâu (${file.name}):**\n\n${data.analysis || data.summary || data.message}`, data.sources);
+        loadUsage();
+    })
+    .catch(err => {
+        unlockUI();
+        if (fileInput) fileInput.value = '';
+        addMessage('ai', '❌ Lỗi tải hoặc phân tích file: ' + err.message);
+    });
+}
+
 function triggerFileUpload() {
     if (isGenerating) {
         showToast('⚠️ Vui lòng đợi AI xử lý xong trước khi tải file lên!', 'warning');
@@ -1014,63 +1130,26 @@ if (uploadBtn) {
 
 if (fileInput) {
     fileInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+        handleFileUploadProcess(e.target.files[0]);
+    });
+}
 
-        const allowedExts = ['.pdf', '.docx', '.txt'];
-        const fileName = file.name.toLowerCase();
-        const isValid = allowedExts.some(ext => fileName.endsWith(ext));
-
-        if (!isValid) {
-            showToast('❌ Chỉ hỗ trợ định dạng PDF, DOCX và TXT!', 'error');
-            fileInput.value = '';
-            return;
+// Bổ sung Drag and Drop cho khung chat
+if (chatContainer) {
+    chatContainer.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        chatContainer.style.border = '2px dashed #4a6ee0';
+    });
+    chatContainer.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        chatContainer.style.border = 'none';
+    });
+    chatContainer.addEventListener('drop', (e) => {
+        e.preventDefault();
+        chatContainer.style.border = 'none';
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleFileUploadProcess(e.dataTransfer.files[0]);
         }
-
-        if (file.size > 15 * 1024 * 1024) {
-            showToast('❌ Dung lượng file vượt quá 15MB!', 'error');
-            fileInput.value = '';
-            return;
-        }
-
-        addMessage('user', `📁 **Đã gửi tài liệu:** ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('conversation_id', currentConversationId || '');
-        formData.append('level', levelSelect ? levelSelect.value : 'pro');
-        formData.append('smart_synthesis', 'true');
-
-        showTyping();
-        lockUI();
-
-        fetch('/api/upload_and_analyze', {
-            method: 'POST',
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-            unlockUI();
-            fileInput.value = '';
-
-            if (data.error) {
-                addMessage('ai', '❌ Lỗi phân tích file: ' + data.error);
-                return;
-            }
-
-            if (data.conversation_id) {
-                currentConversationId = data.conversation_id;
-                if (exportBtn) exportBtn.style.display = 'inline-block';
-            }
-
-            addMessage('ai', `📑 **Kết quả phân tích tài liệu chuyên sâu (${file.name}):**\n\n${data.analysis || data.summary || data.message}`, data.sources);
-            loadUsage();
-        })
-        .catch(err => {
-            unlockUI();
-            fileInput.value = '';
-            addMessage('ai', '❌ Lỗi tải hoặc phân tích file: ' + err.message);
-        });
     });
 }
 
@@ -1093,10 +1172,10 @@ function sendMessage() {
     }
 
     inputField.value = '';
+    inputField.style.height = 'auto';
     sendMessageInternal(text, false);
 }
 
-// Hàm xử lý trung tâm cho cả gửi lần đầu & gửi do Sửa câu hỏi
 function sendMessageInternal(text, isResend = false) {
     if (!isResend) {
         addMessage('user', text);
@@ -1104,16 +1183,15 @@ function sendMessageInternal(text, isResend = false) {
 
     const level = levelSelect ? levelSelect.value : 'pro';
 
-    // Nhận dạng chính xác yêu cầu lập trình / phức tạp
     const isCodeRequest = /code|viết chương trình|script|function|class|html|css|javascript|python|java|c\+\+|c#|sql|sửa lỗi|debug|tạo ứng dụng|shader|tạo file|file/i.test(text);
     const isComplexQuery = text.length > 50 || /phân tích|so sánh|giải thích chi tiết|tổng hợp|nghiên cứu|chiến lược|tối ưu hóa/i.test(text);
     const requiresWebSynthesis = isCodeRequest || isComplexQuery;
 
     showTyping();
     showDeepThink(0);
-    lockUI(); // Khóa UI và hiện Nút Dừng
+    lockUI();
     
-    currentAbortController = new AbortController(); // Khởi tạo Controller ngắt kết nối
+    currentAbortController = new AbortController();
 
     fetch('/chat', {
         method: 'POST',
@@ -1156,10 +1234,9 @@ function sendMessageInternal(text, isResend = false) {
 
         addMessage('ai', aiResponseText, sourcesList);
 
-        // NẾU GỬI BẰNG PHƯƠNG THỨC NÓI -> TỰ ĐỘNG ĐỌC LẠI BẰNG TIẾNG VIỆT
         if (isVoiceTriggered) {
             speakVietnamese(aiResponseText);
-            isVoiceTriggered = false; // Reset trạng thái
+            isVoiceTriggered = false;
         }
 
         loadUsage();
@@ -1174,7 +1251,7 @@ function sendMessageInternal(text, isResend = false) {
     })
     .catch(err => {
         if (err.name === 'AbortError') {
-            return; // Người dùng chủ động bấm Dừng, đã xử lý trong stopGenerating()
+            return;
         }
         unlockUI();
         addMessage('ai', '❌ Lỗi kết nối: ' + err.message);
@@ -1189,6 +1266,12 @@ if (inputField) {
             e.preventDefault();
             sendMessage();
         }
+    });
+
+    // Tự động co giãn khung nhập văn bản khi xuống dòng
+    inputField.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 180) + 'px';
     });
 }
 
@@ -1221,7 +1304,7 @@ function loadHistory() {
             }
             list.innerHTML = convs.map(c => `
                 <div class="history-item" onclick="loadConversation('${c.id}')">
-                    <span>${c.name}</span>
+                    <span>${escapeHtml(c.name)}</span>
                     <span style="color:#8a8aaa;font-size:12px;">${new Date(c.updated_at || c.created_at).toLocaleString()}</span>
                     <button class="delete-btn" onclick="event.stopPropagation();deleteConversation('${c.id}')">✕</button>
                 </div>
@@ -1712,5 +1795,5 @@ if (typeof io !== 'undefined') {
     initSocket();
 }
 
-console.log('🚀 T.VỸ-AI-SUPREME v16.0: Đã tích hợp trọn vẹn Claude Artifacts Live Preview, Perplexity Source Cards & Voice Mode Tiếng Việt!');
+console.log('🚀 T.VỸ-AI-SUPREME v16.0 FULL: Đã tích hợp trọn vẹn Claude Artifacts Live Preview, Perplexity Source Cards & Voice Mode Tiếng Việt!');
 console.log('📌 Bản quyền tác giả: T.VỸ-VIP-FILE');

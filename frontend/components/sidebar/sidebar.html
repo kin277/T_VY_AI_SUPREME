@@ -1,0 +1,42 @@
+<aside class="sidebar" id="appSidebar">
+    <div class="sidebar-brand">
+        <div class="logo"><i class="fa-solid fa-brain"></i> T.VỸ.AI</div>
+        <span class="version">v13.0 Ultra</span>
+    </div>
+
+    <button class="btn-new-chat" onclick="createNewChat()">
+        <i class="fa-solid fa-plus"></i> Đoạn chat mới
+    </button>
+
+    <div class="level-selector">
+        <span class="label">Cấp độ AI</span>
+        <select id="levelSelect">
+            <option value="basic">AI Thường</option>
+            <option value="pro" selected>AI Pro</option>
+            <option value="plus">AI Plus</option>
+            <option value="pro3">AI 3.0 Pro</option>
+        </select>
+        <div id="usageInfo"><i class="fa-solid fa-bolt"></i> Lượt còn lại: ♾️ Không giới hạn Ultra</div>
+    </div>
+
+    <nav>
+        <button class="nav-item" data-tab="history"><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử</button>
+        <button class="nav-item" data-tab="plugins"><i class="fa-solid fa-plug-circle-plus"></i> Kho Plugin</button>
+        <button class="nav-item" data-tab="upgrade"><i class="fa-solid fa-crown"></i> Nâng cấp</button>
+        <button class="nav-item" data-tab="settings"><i class="fa-solid fa-gear"></i> Cài đặt</button>
+    </nav>
+
+    <div class="sidebar-history" id="sidebarHistory">
+        <div class="sidebar-history-title">Lịch sử trò chuyện</div>
+        <div id="sidebarHistoryList"></div>
+    </div>
+
+    <div class="user-profile" id="userProfile">
+        <div class="avatar" id="userAvatar">👤</div>
+        <div class="info">
+            <div class="name" id="userName">Khách</div>
+            <div class="status" id="userStatus">Chế độ khách</div>
+        </div>
+        <button id="logoutBtn" style="display:none;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;" title="Đăng xuất" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
+    </div>
+</aside>

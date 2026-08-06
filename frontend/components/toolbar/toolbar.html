@@ -1,0 +1,38 @@
+<div class="toolbar">
+    <div class="menu-wrapper">
+        <button class="menu-btn" id="menuToggle" onclick="toggleMenu()">
+            <i class="fa-solid fa-sparkles" style="color:var(--accent-primary);"></i> Công cụ AI <i class="fa-solid fa-chevron-up" style="font-size:10px;"></i>
+        </button>
+        <div class="dropdown-menu" id="functionMenu">
+            <button onclick="aiTextAndEmail()"><i class="fa-solid fa-file-pen"></i> Trợ lý Văn bản & Email</button>
+            <button onclick="aiCreativeAndMedia()"><i class="fa-solid fa-wand-magic-sparkles"></i> Sáng tạo Kịch bản & Âm nhạc</button>
+            <button onclick="aiDevAndData()"><i class="fa-solid fa-code-compare"></i> Lập trình & Phân tích Dữ liệu</button>
+            <button onclick="aiMultiAndPrompt()"><i class="fa-solid fa-network-wired"></i> AI Đa luồng & Nâng cấp Prompt</button>
+            <hr>
+            <button onclick="openModal('pluginsModal')"><i class="fa-solid fa-plug-circle-plus" style="color:var(--accent-primary);"></i> Bật / Tắt Plugin AI</button>
+            <hr>
+            <button onclick="exportChatCombined()"><i class="fa-solid fa-file-export"></i> Tải về nhật ký Chat (.MD / .TXT)</button>
+            <hr>
+            <button class="danger" onclick="clearAllMessages()"><i class="fa-solid fa-trash"></i> Xóa toàn bộ chat</button>
+        </div>
+    </div>
+
+    <button class="menu-btn" onclick="document.getElementById('fileUploadInput').click()">
+        <i class="fa-solid fa-paperclip" style="color:var(--accent-primary);"></i> Tải file
+    </button>
+    <input type="file" id="fileUploadInput" style="display:none" onchange="handleFileUpload(event)" multiple />
+</div>
+
+<div class="input-wrapper">
+    <div id="filePreviewArea" class="file-preview-area"></div>
+    <div class="input-area">
+        <textarea id="inputField" rows="1" placeholder="Hỏi T.VỸ-AI bất kỳ điều gì (Enter để gửi, Shift+Enter để xuống dòng)..."></textarea>
+        
+        <button class="btn-icon" id="micBtn" title="Nhập bằng giọng nói" onclick="toggleVoiceInput()" style="margin-bottom:3px;">
+            <i class="fa-solid fa-microphone"></i>
+        </button>
+
+        <button class="send-btn" id="sendBtn" title="Gửi tin nhắn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+        <button class="btn-stop-gen" id="stopBtn" title="Dừng tạo trả lời" onclick="stopGeneration()"><i class="fa-solid fa-square"></i></button>
+    </div>
+</div>

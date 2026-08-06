@@ -1,0 +1,379 @@
+<!-- Modal Lịch sử -->
+<div class="modal-overlay hidden" id="historyModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Lịch sử trò chuyện</h2>
+            <button class="close-btn" onclick="closeModal('historyModal')">&times;</button>
+        </div>
+        <div id="historyList">Đang tải...</div>
+    </div>
+</div>
+
+<!-- Modal Kho Plugin -->
+<div class="modal-overlay hidden" id="pluginsModal">
+    <div class="modal-box" style="max-width: 780px; width: 92%;">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-plug-circle-plus" style="color:var(--accent-primary);"></i> Kho Plugin & Tiện ích Mở rộng AI</h2>
+            <button class="close-btn" onclick="closeModal('pluginsModal')">&times;</button>
+        </div>
+        
+        <div class="plugins-header-bar">
+            <input type="text" id="pluginSearchInput" class="plugins-search-input" placeholder="🔍 Tìm kiếm plugin (Python, GitHub, Pandas, Wolfram, ArXiv...)..." oninput="filterPlugins()" />
+            <button class="btn btn-secondary btn-sm" onclick="enableAllPlugins(true)">Bật tất cả</button>
+            <button class="btn btn-outline btn-sm" onclick="enableAllPlugins(false)">Tắt tất cả</button>
+        </div>
+
+        <div class="plugins-grid" id="pluginsGrid"></div>
+    </div>
+</div>
+
+<!-- Modal Nâng cấp -->
+<div class="modal-overlay hidden" id="upgradeModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Nâng cấp AI</h2>
+            <button class="close-btn" onclick="closeModal('upgradeModal')">&times;</button>
+        </div>
+        <div id="upgradeList">
+            <div class="upgrade-card" style="display:flex;justify-content:space-between;align-items:center;padding:12px;margin-bottom:10px;background:var(--bg-glass);border:1px solid var(--border-color);border-radius:var(--radius-md);">
+                <div>
+                    <div style="font-weight:700;">🔵 AI Pro</div>
+                    <div style="font-size:12px;color:var(--text-muted);">Trả lời chi tiết, tìm web</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-weight:700;color:var(--accent-primary);">20.000đ/tháng</span>
+                    <button class="btn-auth btn-register" onclick="upgradeTier('pro')">Nâng cấp</button>
+                </div>
+            </div>
+            <div class="upgrade-card" style="display:flex;justify-content:space-between;align-items:center;padding:12px;margin-bottom:10px;background:var(--bg-glass);border:1px solid var(--border-color);border-radius:var(--radius-md);">
+                <div>
+                    <div style="font-weight:700;">🟣 AI Plus</div>
+                    <div style="font-size:12px;color:var(--text-muted);">Phân tích sâu, suy luận logic</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-weight:700;color:var(--accent-primary);">50.000đ/tháng</span>
+                    <button class="btn-auth btn-register" onclick="upgradeTier('plus')">Nâng cấp</button>
+                </div>
+            </div>
+            <div class="upgrade-card" style="display:flex;justify-content:space-between;align-items:center;padding:12px;margin-bottom:10px;background:var(--bg-glass);border:1px solid var(--border-color);border-radius:var(--radius-md);">
+                <div>
+                    <div style="font-weight:700;">🔴 AI 3.0 Pro</div>
+                    <div style="font-size:12px;color:var(--text-muted);">Siêu thông minh, dự đoán</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-weight:700;color:var(--accent-primary);">100.000đ/tháng</span>
+                    <button class="btn-auth btn-register" onclick="upgradeTier('pro3')">Nâng cấp</button>
+                </div>
+            </div>
+
+            <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border-color);">
+                <p style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:8px;">💳 Thanh toán qua MoMo</p>
+                <button onclick="upgradeWithMomo('pro')" style="width:100%;padding:10px;margin-bottom:6px;background:#a83279;color:#fff;border:none;border-radius:var(--radius-sm);font-weight:700;cursor:pointer;">Nâng cấp Pro - 20.000đ</button>
+                <button onclick="upgradeWithMomo('plus')" style="width:100%;padding:10px;margin-bottom:6px;background:#8b5cf6;color:#fff;border:none;border-radius:var(--radius-sm);font-weight:700;cursor:pointer;">Nâng cấp Plus - 50.000đ</button>
+                <button onclick="upgradeWithMomo('pro3')" style="width:100%;padding:10px;margin-bottom:6px;background:#ef4444;color:#fff;border:none;border-radius:var(--radius-sm);font-weight:700;cursor:pointer;">Nâng cấp 3.0 Pro - 100.000đ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cài đặt hệ thống -->
+<div id="settingsModal" class="modal-overlay hidden">
+  <div class="modal-container">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-gear"></i> Cài đặt hệ thống AI</h2>
+      <button class="close-btn" onclick="closeModal('settingsModal')">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <aside class="settings-sidebar">
+        <button class="tab-btn active" onclick="switchTab('privacyTab')">
+          <i class="fa-solid fa-shield-halved"></i> Dữ liệu & Quyền riêng tư
+        </button>
+        <button class="tab-btn" onclick="switchTab('preferencesTab')">
+          <i class="fa-solid fa-sliders"></i> Cấu hình AI
+        </button>
+        <button class="tab-btn" onclick="switchTab('uiTab')">
+          <i class="fa-solid fa-palette"></i> Giao diện & UI/UX
+        </button>
+        <button class="tab-btn" onclick="switchTab('accountTab')">
+          <i class="fa-solid fa-user-lock"></i> Tài khoản & Gói cước
+        </button>
+        <button class="tab-btn" onclick="switchTab('integrationsTab')">
+          <i class="fa-solid fa-plug"></i> Tích hợp & Công cụ
+        </button>
+      </aside>
+
+      <main class="settings-content">
+        <section id="privacyTab" class="tab-content active">
+          <h3>Quản lý Dữ liệu & Quyền riêng tư</h3>
+          <hr>
+          <div class="setting-item">
+            <div class="setting-info">
+              <label>Xuất dữ liệu trò chuyện</label>
+              <p>Tải toàn bộ lịch sử chat về máy tính dưới các định dạng lưu trữ.</p>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-secondary" onclick="exportData('json')">Export JSON</button>
+              <button class="btn btn-secondary" onclick="exportData('markdown')">Export Markdown</button>
+            </div>
+          </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="danger-text">Xóa toàn bộ lịch sử</label>
+              <p>Xóa toàn bộ các đoạn chat hiện có khỏi tài khoản. Hành động này không thể hoàn tác.</p>
+            </div>
+            <button class="btn btn-danger" onclick="clearAllConversations()">Xóa tất cả chat</button>
+          </div>
+          <div class="setting-item col">
+            <label>Quản lý bộ nhớ AI (Saved Memories)</label>
+            <p>Danh sách thông tin AI đã ghi nhớ từ các cuộc trò chuyện trước:</p>
+            <ul id="memoryList" class="memory-list"></ul>
+          </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <label>Quyền sử dụng dữ liệu huấn luyện</label>
+              <p>Cho phép hệ thống sử dụng dữ liệu ẩn danh để cải thiện mô hình AI (Opt-out training).</p>
+            </div>
+            <input type="checkbox" id="dataTrainingToggle" checked onchange="toggleDataTraining(this.checked)">
+          </div>
+        </section>
+
+        <section id="preferencesTab" class="tab-content">
+          <h3>Cá nhân hóa & Cấu hình AI</h3>
+          <hr>
+          <div class="setting-item col">
+            <label for="customInstructions">Hướng dẫn tùy chỉnh (System Prompt / Custom Instructions)</label>
+            <textarea id="customInstructions" rows="3" placeholder="Ví dụ: Tôi là lập trình viên Senior, hãy luôn trả lời ngắn gọn và ưu tiên kèm mã nguồn clean code..."></textarea>
+          </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <label for="defaultModelSelect">Mô hình mặc định</label>
+              <p>Chọn mô hình ưu tiên khi mở đoạn chat mới.</p>
+            </div>
+            <select id="defaultModelSelect">
+              <option value="supreme-fast">Fast AI (Tốc độ cao)</option>
+              <option value="supreme-smart" selected>Smart AI (Thông minh / Phân tích sâu)</option>
+              <option value="supreme-coder">Coder Pro (Chuyên biệt lập trình)</option>
+            </select>
+          </div>
+          <h4>Chế độ Nâng cao (Developer Settings)</h4>
+          <div class="setting-item">
+            <div class="setting-info">
+              <label>Temperature (Độ sáng tạo): <span id="tempValue">0.7</span></label>
+              <p>Giá trị càng cao, câu trả lời càng đa dạng và sáng tạo.</p>
+            </div>
+            <input type="range" id="tempSlider" min="0" max="2" step="0.1" value="0.7" oninput="document.getElementById('tempValue').innerText = this.value">
+          </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <label>Top-P: <span id="topPValue">0.9</span></label>
+            </div>
+            <input type="range" id="topPSlider" min="0" max="1" step="0.05" value="0.9" oninput="document.getElementById('topPValue').innerText = this.value">
+          </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <label>Max Tokens: <span id="maxTokensValue">2048</span></label>
+            </div>
+            <input type="range" id="maxTokensSlider" min="256" max="8192" step="256" value="2048" oninput="document.getElementById('maxTokensValue').innerText = this.value">
+          </div>
+        </section>
+
+        <section id="uiTab" class="tab-content">
+          <h3>Giao diện & Trải nghiệm (UI/UX)</h3>
+          <hr>
+          <div class="setting-item">
+            <div class="setting-info">
+              <label for="fontSelect">Phông chữ hiển thị</label>
+            </div>
+            <select id="fontSelect" onchange="changeFontFamily(this.value)">
+              <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans (Mặc định)</option>
+              <option value="'Roboto', sans-serif">Roboto</option>
+              <option value="'Fira Code', monospace">Fira Code (Code style)</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <label for="fontSizeSelect">Kích thước chữ</label>
+            </div>
+            <select id="fontSizeSelect" onchange="changeFontSize(this.value)">
+              <option value="small">Nhỏ (14px)</option>
+              <option value="medium" selected>Vừa (16px)</option>
+              <option value="large">Lớn (18px)</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <label>Đọc văn bản thành tiếng (Text-to-Speech)</label>
+              <p>Phát âm thanh đọc phản hồi từ AI.</p>
+            </div>
+            <div class="tts-controls">
+              <select id="ttsVoiceSelect"></select>
+              <input type="range" id="ttsSpeed" min="0.5" max="2" step="0.1" value="1" title="Tốc độ đọc">
+            </div>
+          </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <label>Âm thanh thông báo</label>
+              <p>Phát tiếng "ting" khi AI phản hồi xong câu hỏi dài.</p>
+            </div>
+            <input type="checkbox" id="soundEffectToggle" checked>
+          </div>
+          <div class="setting-item col">
+            <label>Bảng Phím tắt (Keyboard Shortcuts)</label>
+            <div class="shortcuts-grid">
+              <div><kbd>Enter</kbd> : Gửi tin nhắn</div>
+              <div><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>O</kbd> : Tạo cuộc trò chuyện mới</div>
+              <div><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd> : Sao chép phản hồi cuối</div>
+              <div><kbd>Escape</kbd> : Đóng cửa sổ Cài đặt</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="accountTab" class="tab-content">
+          <h3>Tài khoản & Gói dịch vụ</h3>
+          <hr>
+          <div class="setting-item">
+            <div class="setting-info">
+              <label>Thông tin bảo mật</label>
+              <p>Thay đổi mật khẩu, bật xác thực 2 yếu tố (2FA).</p>
+            </div>
+            <button class="btn btn-secondary" onclick="openChangePasswordModal()">Đổi mật khẩu</button>
+          </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <label>Xác thực 2 yếu tố (2FA)</label>
+              <p>Tăng cường bảo mật đăng nhập.</p>
+            </div>
+            <input type="checkbox" id="twoFactorToggle">
+          </div>
+          <div class="setting-item col">
+            <label>Gói cước & Hạn mức sử dụng (Quota)</label>
+            <div class="quota-card">
+              <div class="quota-status">Gói hiện tại: <strong>PRO VIP</strong></div>
+              <div class="progress-bar">
+                <div class="progress" style="width: 45%;"></div>
+              </div>
+              <p>Đã dùng: <strong>45,000 / 100,000 Tokens</strong> hôm nay</p>
+              <button class="btn btn-primary" onclick="openModal('upgradeModal')">Nâng cấp hạn mức / VIP</button>
+            </div>
+          </div>
+          <div class="setting-item col">
+            <label>Thiết bị đang đăng nhập</label>
+            <ul class="session-list">
+              <li><i class="fa-solid fa-desktop"></i> Chrome - Windows (Thiết bị này) <span class="badge">Online</span></li>
+              <li><i class="fa-solid fa-mobile-screen"></i> Safari - iPhone 15 Pro</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="integrationsTab" class="tab-content">
+          <h3>Tích hợp & API</h3>
+          <hr>
+          <div class="setting-item col">
+            <label>Quản lý API Key cá nhân</label>
+            <p>Sử dụng API Key để kết nối ứng dụng bên ngoài với tài khoản AI của bạn.</p>
+            <div class="api-key-box">
+              <input type="text" id="userApiKey" readonly value="tvai_sk_live_98a76b54c3210ef" />
+              <button class="btn btn-secondary" onclick="copyApiKey()"><i class="fa-solid fa-copy"></i> Sao chép</button>
+              <button class="btn btn-danger" onclick="regenerateApiKey()">Tạo mới</button>
+            </div>
+          </div>
+          <div class="setting-item col">
+            <label>Kết nối tài khoản bên ngoài</label>
+            <div class="integration-grid">
+              <div class="integration-card connected">
+                <i class="fa-brands fa-google"></i>
+                <span>Google Drive</span>
+                <button class="btn btn-sm btn-outline">Đã kết nối</button>
+              </div>
+              <div class="integration-card">
+                <i class="fa-brands fa-github"></i>
+                <span>GitHub</span>
+                <button class="btn btn-sm btn-primary">Kết nối</button>
+              </div>
+              <div class="integration-card">
+                <i class="fa-solid fa-note-sticky"></i>
+                <span>Notion</span>
+                <button class="btn btn-sm btn-primary">Kết nối</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('settingsModal')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveAllSettings()">Lưu thay đổi</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Đăng nhập / Đăng ký -->
+<div class="modal-overlay hidden" id="loginModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Tài khoản</h2>
+            <button class="close-btn" onclick="closeModal('loginModal')">&times;</button>
+        </div>
+        
+        <div class="auth-tabs">
+            <button class="auth-tab active" id="loginTab" onclick="switchAuthTab('login')">Đăng nhập</button>
+            <button class="auth-tab" id="registerTab" onclick="switchAuthTab('register')">Đăng ký</button>
+        </div>
+        
+        <div id="loginForm">
+            <div class="auth-input-group">
+                <label>Tên đăng nhập hoặc Email</label>
+                <input type="text" id="localLoginUser" placeholder="Nhập username hoặc email..." required />
+            </div>
+            <div class="auth-input-group">
+                <label>Mật khẩu</label>
+                <input type="password" id="localLoginPass" placeholder="Nhập mật khẩu..." required />
+            </div>
+            <button class="btn-auth-submit" onclick="loginLocal()">Đăng nhập Cục bộ</button>
+
+            <div class="auth-divider"><span>HOẶC ĐĂNG NHẬP BẰNG</span></div>
+
+            <button onclick="loginGoogle()" style="width:100%;padding:10px;background:#fff;color:#333;border:1px solid var(--border-color);border-radius:var(--radius-md);cursor:pointer;font-weight:600;margin-bottom:8px;"><i class="fa-brands fa-google"></i> Google</button>
+            <button onclick="loginFacebook()" style="width:100%;padding:10px;background:#1877f2;color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;font-weight:600;margin-bottom:8px;"><i class="fa-brands fa-facebook"></i> Facebook</button>
+            <button onclick="loginGitHub()" style="width:100%;padding:10px;background:#24292e;color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;font-weight:600;"><i class="fa-brands fa-github"></i> GitHub</button>
+        </div>
+        
+        <div id="registerForm" style="display:none;">
+            <div class="auth-input-group">
+                <label>Tên đăng nhập</label>
+                <input type="text" id="localRegUser" placeholder="Nhập tên tài khoản..." required />
+            </div>
+            <div class="auth-input-group">
+                <label>Địa chỉ Email</label>
+                <input type="email" id="localRegEmail" placeholder="Nhập email cá nhân..." required />
+            </div>
+            <div class="auth-input-group">
+                <label>Mật khẩu</label>
+                <input type="password" id="localRegPass" placeholder="Tạo mật khẩu..." required />
+            </div>
+            <div class="auth-input-group">
+                <label>Xác nhận mật khẩu</label>
+                <input type="password" id="localRegConfirmPass" placeholder="Nhập lại mật khẩu..." required />
+            </div>
+            <button class="btn-auth-submit" onclick="registerLocal()">Đăng ký Tài khoản</button>
+        </div>
+    </div>
+</div>
+
+<div class="search-result" id="searchResult" style="position:fixed;bottom:90px;right:20px;background:var(--bg-card);padding:10px 16px;border-radius:var(--radius-md);border:1px solid var(--border-color);font-size:13px;z-index:999;display:none;"></div>
+
+<!-- Live Preview Pane -->
+<div id="artifactPreviewPane">
+    <div class="artifact-header">
+        <strong style="color: var(--text-main); font-size: 15px; display:flex; align-items:center; gap:8px;">
+            <i class="fa-solid fa-eye" style="color:var(--accent-primary);"></i> Claude Artifact Live Preview
+        </strong>
+        <div style="display: flex; gap: 8px;">
+            <button type="button" onclick="refreshLivePreview()" style="padding: 6px 12px; background: var(--bg-glass); border: 1px solid var(--border-color); color:var(--text-main); border-radius: 4px; cursor: pointer; font-size: 13px;">🔄 Tải lại</button>
+            <button type="button" onclick="closeLivePreview()" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">✕ Đóng</button>
+        </div>
+    </div>
+    <iframe id="artifactFrame" title="Artifact Live Preview Pane"></iframe>
+</div>
