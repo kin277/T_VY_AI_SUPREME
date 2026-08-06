@@ -1,10 +1,14 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import cors from 'cors'; // 👈 BẮT BUỘC KHI DÙNG RENDER
 import { GoogleGenAI, Type } from '@google/genai';
 
 dotenv.config();
 
 const app = express();
+
+// 1. Cấu hình CORS để cho phép Frontend kết nối tới Render
+app.use(cors());
 app.use(express.json());
 
 // Khởi tạo Gemini AI Client
@@ -14,12 +18,9 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 // 1. ĐỊNH NGHĨA CÁC TOOL (GỌI API THỰC TẾ)
 // ==========================================
 
-// Logic lấy thời tiết THỰC TẾ từ wttr.in
 async function getWeather({ location }) {
     try {
         console.log(`🔍 Đang tra cứu thời tiết thật cho: ${location}...`);
-        
-        // Gọi API wttr.in (Trả về JSON format=j1)
         const response = await fetch(`https://wttr.in/${encodeURIComponent(location)}?format=j1`);
         
         if (!response.ok) {
@@ -28,11 +29,8 @@ async function getWeather({ location }) {
 
         const data = await response.json();
         const current = data.current_condition[0];
-
-        // Ưu tiên lấy mô tả tiếng Việt nếu API hỗ trợ, không thì lấy tiếng Anh
         const conditionText = current.lang_vi?.[0]?.value || current.weatherDesc?.[0]?.value || "Không rõ";
 
-        // Trả về dữ liệu thực tế cho Gemini suy luận
         return {
             location: location,
             temperature: `${current.temp_C}°C`,
@@ -47,12 +45,8 @@ async function getWeather({ location }) {
     }
 }
 
-// Bảng ánh xạ hàm để Server tự gọi khi AI yêu cầu
-const toolFunctions = {
-    getWeather: getWeather
-};
+const toolFunctions = { getWeather };
 
-// Khai báo Schema Tool cho Gemini hiểu
 const weatherDeclaration = {
     name: 'getWeather',
     description: 'Lấy thông tin thời tiết hiện tại theo tên địa điểm thực tế',
@@ -68,6 +62,13 @@ const weatherDeclaration = {
     },
 };
 
+const SYSTEM_INSTRUCTION = "Bạn là trợ lý AI thông minh. Hãy trả lời trực tiếp, đầy đủ câu hỏi của người dùng bằng tiếng Việt. Tuyệt đối không xuất các câu thoại chào mừng mô phỏng hay danh sách plugin.";
+
+// Route kiểm tra Server Render có đang sống hay không
+app.get('/', (req, res) => {
+    res.send("🚀 Server Render đang hoạt động bình thường!");
+});
+
 // ==========================================
 // 2. ROUTE /chat XỬ LÝ ĐA NĂNG
 // ==========================================
@@ -79,18 +80,20 @@ app.post('/chat', async (req, res) => {
             return res.status(400).json({ error: "Vui lòng nhập câu hỏi!" });
         }
 
-        // Bước A: Gửi yêu cầu tới Gemini kèm danh sách Tools
+        // Bước A: Gửi yêu cầu tới Gemini
         let response = await ai.models.generateContent({
             model: 'gemini-2.0-flash',
             contents: message,
             config: {
+                systemInstruction: SYSTEM_INSTRUCTION,
                 tools: [{ functionDeclarations: [weatherDeclaration] }],
             },
         });
 
-        // Bước B: Kiểm tra xem Gemini có yêu cầu gọi Tool không
         const functionCalls = response.functionCalls;
+        let finalAnswer = response.text;
 
+        // Bước B: Nếu có Function Call
         if (functionCalls && functionCalls.length > 0) {
             const call = functionCalls[0];
             const functionName = call.name;
@@ -98,12 +101,9 @@ app.post('/chat', async (req, res) => {
 
             console.log(`🤖 Gemini yêu cầu chạy Tool: ${functionName}`, functionArgs);
 
-            // Chạy hàm tương ứng trên Server
             if (toolFunctions[functionName]) {
-                // Gọi API thực tế
                 const toolResult = await toolFunctions[functionName](functionArgs);
 
-                // Gửi kết quả dữ liệu thật về cho Gemini tổng hợp
                 const secondResponse = await ai.models.generateContent({
                     model: 'gemini-2.0-flash',
                     contents: [
@@ -118,23 +118,29 @@ app.post('/chat', async (req, res) => {
                                 }
                             }]
                         }
-                    ]
+                    ],
+                    config: { systemInstruction: SYSTEM_INSTRUCTION }
                 });
 
-                return res.json({ reply: secondResponse.text });
+                finalAnswer = secondResponse.text;
             }
         }
 
-        // Nếu câu hỏi thông thường (không liên quan đến thời tiết), Gemini trả lời thẳng
-        res.json({ reply: response.text });
+        // Trả về đủ key để Frontend đọc kiểu nào cũng nhận được đúng dữ liệu
+        return res.json({ 
+            reply: finalAnswer,
+            message: finalAnswer,
+            text: finalAnswer 
+        });
 
     } catch (error) {
         console.error("Lỗi khi xử lý Chat:", error);
-        res.status(500).json({ error: "Có lỗi xảy ra khi xử lý phản hồi từ AI." });
+        res.status(500).json({ error: "Có lỗi xảy ra khi xử lý phản hồi từ AI.", details: error.message });
     }
 });
 
+// Render sẽ tự động cấp cổng PORT qua process.env.PORT
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`🚀 Server đang chạy tại http://localhost:${PORT}`);
+    console.log(`🚀 Server đang chạy tại cổng ${PORT}`);
 });

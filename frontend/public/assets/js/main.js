@@ -4,6 +4,20 @@
 // Claude Artifacts, Perplexity Source Cards & Voice Mode Tiếng Việt
 // ================================================================
 
+// 🚨 CẤU HÌNH SERVER RENDER 🚨
+// Nếu Frontend và Backend nằm chung 1 dự án trên Render: Để chuỗi rỗng ""
+// Nếu Frontend chạy riêng (Vercel, GitHub Pages, Netlify, VS Code Live Server): Thay link Render vào bên dưới!
+const RENDER_BASE_URL = "https://t-vy-ai-supreme-1.onrender.com"; 
+
+function getApiUrl(path) {
+    if (!path.startsWith('/')) path = '/' + path;
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    if (!RENDER_BASE_URL || window.location.origin === RENDER_BASE_URL) {
+        return path;
+    }
+    return RENDER_BASE_URL.replace(/\/$/, '') + path;
+}
+
 // ===== DOM ELEMENTS =====
 const chatContainer = document.getElementById('chatContainer');
 const inputField = document.getElementById('inputField');
@@ -487,7 +501,7 @@ function openRegisterModal() {
 }
 
 function checkLogin() {
-    fetch('/api/auth/me')
+    fetch(getApiUrl('/api/auth/me'))
         .then(res => res.json())
         .then(data => {
             if (data.error) {
@@ -519,8 +533,6 @@ function showGuestMode() {
     if (userStatus) userStatus.textContent = 'Chế độ khách';
     if (logoutBtn) logoutBtn.style.display = 'none';
     if (upgradeReq) upgradeReq.style.display = 'none';
-    
-    showToast('🔓 Bạn đang sử dụng chế độ Khách. Một số chức năng bị giới hạn.', 'info');
 }
 
 function showUserMode(user) {
@@ -701,7 +713,7 @@ function loginGoogle() {
     firebase.auth().signInWithPopup(provider)
         .then((result) => {
             const user = result.user;
-            return fetch('/api/auth/google', {
+            return fetch(getApiUrl('/api/auth/google'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -741,7 +753,7 @@ function loginFacebook() {
     firebase.auth().signInWithPopup(provider)
         .then((result) => {
             const user = result.user;
-            return fetch('/api/auth/facebook', {
+            return fetch(getApiUrl('/api/auth/facebook'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -788,7 +800,7 @@ function loginGitHub() {
         if (popup && popup.closed) {
             clearInterval(checkPopup);
             setTimeout(() => {
-                fetch('/api/auth/me')
+                fetch(getApiUrl('/api/auth/me'))
                     .then(res => res.json())
                     .then(data => {
                         if (!data.error) location.reload();
@@ -806,7 +818,7 @@ function logout() {
         : Promise.resolve();
 
     signOutPromise
-        .then(() => fetch('/api/auth/logout', { method: 'POST' }))
+        .then(() => fetch(getApiUrl('/api/auth/logout'), { method: 'POST' }))
         .then(() => location.reload())
         .catch(error => {
             showToast('❌ Lỗi đăng xuất: ' + error.message, 'error');
@@ -827,7 +839,7 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 
 function initSocket() {
     if (typeof io === 'undefined') return;
-    socket = io();
+    socket = RENDER_BASE_URL ? io(RENDER_BASE_URL) : io();
     socket.on('connect', () => {
         console.log('✅ Connected to socket');
         socket.emit('join', { room: 'global' });
@@ -845,7 +857,7 @@ function initSocket() {
 function loadUsage() {
     if (!levelSelect || !usageInfo) return;
     const tier = levelSelect.value;
-    fetch(`/api/usage/${tier}`)
+    fetch(getApiUrl(`/api/usage/${tier}`))
         .then(res => res.json())
         .then(data => {
             if (data.unlimited) {
@@ -1080,7 +1092,7 @@ function handleFileUploadProcess(file) {
     showTyping();
     lockUI();
 
-    fetch('/api/upload_and_analyze', {
+    fetch(getApiUrl('/api/upload_and_analyze'), {
         method: 'POST',
         body: formData
     })
@@ -1099,7 +1111,8 @@ function handleFileUploadProcess(file) {
             if (exportBtn) exportBtn.style.display = 'inline-block';
         }
 
-        addMessage('ai', `📑 **Kết quả phân tích tài liệu chuyên sâu (${file.name}):**\n\n${data.analysis || data.summary || data.message}`, data.sources);
+        const analysisText = data.analysis || data.summary || data.message || data.reply || data.text;
+        addMessage('ai', `📑 **Kết quả phân tích tài liệu chuyên sâu (${file.name}):**\n\n${analysisText}`, data.sources);
         loadUsage();
     })
     .catch(err => {
@@ -1162,13 +1175,9 @@ function sendMessage() {
     if (!text) return;
 
     if (!isLoggedIn) {
-        showToast('🔒 Vui lòng đăng nhập để sử dụng chức năng này.', 'warning');
+        // Cho phép gửi thử tin nhắn ngay cả ở chế độ Khách nếu không yêu cầu bắt buộc đăng nhập
         const upgradeReq = document.getElementById('upgradeRequired');
-        if (upgradeReq) {
-            upgradeReq.style.display = 'block';
-            upgradeReq.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        return;
+        if (upgradeReq) upgradeReq.style.display = 'none';
     }
 
     inputField.value = '';
@@ -1193,7 +1202,7 @@ function sendMessageInternal(text, isResend = false) {
     
     currentAbortController = new AbortController();
 
-    fetch('/chat', {
+    fetch(getApiUrl('/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1229,7 +1238,8 @@ function sendMessageInternal(text, isResend = false) {
             if (exportBtn) exportBtn.style.display = 'inline-block';
         }
         
-        const aiResponseText = data.message || 'Đã xử lý thành công.';
+        // Đọc linh hoạt cả `reply`, `message`, hoặc `text` từ backend Render
+        const aiResponseText = data.reply || data.message || data.text || 'Đã xử lý thành công.';
         const sourcesList = data.sources || data.web_sources || null;
 
         addMessage('ai', aiResponseText, sourcesList);
@@ -1241,12 +1251,13 @@ function sendMessageInternal(text, isResend = false) {
 
         loadUsage();
         if (data.conversation_id) {
-            fetch('/conversations')
+            fetch(getApiUrl('/conversations'))
                 .then(r => r.json())
                 .then(d => {
                     const conv = d.conversations?.find(c => c.id === data.conversation_id);
                     if (conv && chatName) chatName.textContent = conv.name || 'AI Pro';
-                });
+                })
+                .catch(() => {});
         }
     })
     .catch(err => {
@@ -1254,7 +1265,7 @@ function sendMessageInternal(text, isResend = false) {
             return;
         }
         unlockUI();
-        addMessage('ai', '❌ Lỗi kết nối: ' + err.message);
+        addMessage('ai', '❌ Lỗi kết nối máy chủ: ' + err.message);
     });
 }
 
@@ -1279,7 +1290,7 @@ if (inputField) {
 // CONVERSATIONS & HISTORY
 // ================================================================
 function loadConversations() {
-    fetch('/conversations')
+    fetch(getApiUrl('/conversations'))
         .then(res => res.json())
         .then(data => {
             const convs = data.conversations || [];
@@ -1294,7 +1305,7 @@ function loadHistory() {
     if (!list) return;
     list.innerHTML = 'Đang tải...';
 
-    fetch('/conversations')
+    fetch(getApiUrl('/conversations'))
         .then(res => res.json())
         .then(data => {
             const convs = data.conversations || [];
@@ -1319,7 +1330,7 @@ function loadConversation(id) {
         return;
     }
 
-    fetch(`/conversation/${id}`)
+    fetch(getApiUrl(`/conversation/${id}`))
         .then(res => res.json())
         .then(data => {
             if (data.conversation) {
@@ -1346,7 +1357,7 @@ function loadConversation(id) {
 
 function deleteConversation(id) {
     if (!confirm('Xóa đoạn chat này?')) return;
-    fetch(`/delete/${id}`, { method: 'DELETE' })
+    fetch(getApiUrl(`/delete/${id}`), { method: 'DELETE' })
         .then(() => {
             if (id === currentConversationId) {
                 currentConversationId = null;
@@ -1369,7 +1380,7 @@ if (exportBtn) {
             showToast('Không có đoạn chat để xuất', 'error');
             return;
         }
-        window.location.href = `/api/export/${currentConversationId}`;
+        window.location.href = getApiUrl(`/api/export/${currentConversationId}`);
     });
 }
 
@@ -1428,7 +1439,7 @@ function upgradeTier(tier) {
     const tierNames = { 'pro': 'Pro', 'plus': 'Plus', 'pro3': '3.0 Pro' };
     if (!confirm(`Xác nhận nâng cấp lên gói ${tierNames[tier]}?`)) return;
 
-    fetch('/api/upgrade', {
+    fetch(getApiUrl('/api/upgrade'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tier: tier })
@@ -1461,7 +1472,7 @@ function upgradeWithMomo(tier) {
     const tierNames = { 'pro': 'Pro', 'plus': 'Plus', 'pro3': '3.0 Pro' };
     if (!confirm(`Xác nhận nâng cấp lên gói ${tierNames[tier]} qua MoMo?`)) return;
 
-    fetch('/api/payment/create', {
+    fetch(getApiUrl('/api/payment/create'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tier: tier })
@@ -1515,13 +1526,8 @@ function hideTyping() {
 // ================================================================
 function requireAuthAndExecute(callback) {
     if (!isLoggedIn) {
-        const upgradeReq = document.getElementById('upgradeRequired');
-        if (upgradeReq) {
-            upgradeReq.style.display = 'block';
-            upgradeReq.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        showToast('🔒 Vui lòng đăng nhập để sử dụng chức năng này.', 'warning');
-        return;
+        // Nếu ở chế độ Khách nhưng muốn dùng tính năng nâng cao, hiển thị nhắc nhở
+        showToast('💡 Đang chạy ở chế độ trải nghiệm...', 'info');
     }
     callback();
 }
@@ -1539,7 +1545,7 @@ function useMultiAI() {
         inputField.value = '';
         showTyping();
         lockUI();
-        fetch('/api/multi_ai', {
+        fetch(getApiUrl('/api/multi_ai'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: text, web_synthesis: true })
@@ -1557,7 +1563,7 @@ function useMultiAI() {
                     html += `📌 **${r.model}** (Độ chính xác: ${r.accuracy || 95}%):\n${r.response}\n\n`;
                 });
             } else {
-                html += data.message || 'Đã phân tích xong câu hỏi qua hệ thống đa luồng.';
+                html += data.message || data.reply || data.text || 'Đã phân tích xong câu hỏi qua hệ thống đa luồng.';
             }
             if (data.best) {
                 html += `🏆 **Kết quả tốt nhất:** ${data.best.model || data.best}`;
@@ -1581,7 +1587,7 @@ function summarizeText() {
         inputField.value = '';
         showTyping();
         lockUI();
-        fetch('/api/summarize', {
+        fetch(getApiUrl('/api/summarize'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: text, max_sentences: 5, smart_summary: true })
@@ -1593,9 +1599,10 @@ function summarizeText() {
                 addMessage('ai', '❌ ' + data.error);
                 return;
             }
+            const summaryResult = data.summary || data.reply || data.message || data.text;
             const origLen = data.original_length || text.length;
-            const sumLen = data.summarized_length || (data.summary ? data.summary.length : 0);
-            addMessage('ai', `📝 **Tóm tắt chuyên sâu:**\n\n${data.summary}\n\n📊 Độ dài gốc: ${origLen} ký tự → ${sumLen} ký tự`, data.sources);
+            const sumLen = data.summarized_length || (summaryResult ? summaryResult.length : 0);
+            addMessage('ai', `📝 **Tóm tắt chuyên sâu:**\n\n${summaryResult}\n\n📊 Độ dài gốc: ${origLen} ký tự → ${sumLen} ký tự`, data.sources);
         })
         .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối dịch vụ tóm tắt'); });
     });
@@ -1616,7 +1623,7 @@ function translateText() {
         inputField.value = '';
         showTyping();
         lockUI();
-        fetch('/api/translate', {
+        fetch(getApiUrl('/api/translate'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: text, lang: lang })
@@ -1628,7 +1635,8 @@ function translateText() {
                 addMessage('ai', '❌ ' + data.error);
                 return;
             }
-            addMessage('ai', `🌐 **Dịch chuẩn xác sang [${lang}]:**\n\n${data.translated}`);
+            const translatedText = data.translated || data.reply || data.message || data.text;
+            addMessage('ai', `🌐 **Dịch chuẩn xác sang [${lang}]:**\n\n${translatedText}`);
         })
         .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối dịch thuật'); });
     });
@@ -1649,7 +1657,7 @@ function generateVideo() {
         inputField.value = '';
         showTyping();
         lockUI();
-        fetch('/api/generate_video', {
+        fetch(getApiUrl('/api/generate_video'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt: text, template: template, web_synthesis: true })
@@ -1683,7 +1691,7 @@ function analyzeData() {
             addMessage('user', '📊 Yêu cầu phân tích dải số: ' + text);
             inputField.value = '';
             showTyping();
-            fetch('/api/analyze_numbers', {
+            fetch(getApiUrl('/api/analyze_numbers'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ numbers: numbers })
@@ -1702,7 +1710,7 @@ function analyzeData() {
             addMessage('user', '📊 Yêu cầu phân tích văn bản: ' + text);
             inputField.value = '';
             showTyping();
-            fetch('/api/analyze_text', {
+            fetch(getApiUrl('/api/analyze_text'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: text })
@@ -1738,7 +1746,7 @@ function generateMusicWithLyrics() {
         inputField.value = '';
         showTyping();
         lockUI();
-        fetch('/api/generate_music', {
+        fetch(getApiUrl('/api/generate_music'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1764,7 +1772,7 @@ function generateMusicWithLyrics() {
             html += `📝 **Lời bài hát:**\n${data.lyrics || 'Đã tạo xong giai điệu audio.'}\n\n`;
             if (data.download_url || data.music_file) {
                 const link = data.download_url || `/static/audio/${data.music_file}`;
-                html += `🔊 **Tải bản thu âm hoàn chỉnh:** <a href="${link}" download style="color:var(--color-primary);text-decoration:underline;">Tải File Nhạc MP3</a>`;
+                html += `🔊 **Tải bản thu âm hoàn chỉnh:** <a href="${getApiUrl(link)}" download style="color:var(--color-primary);text-decoration:underline;">Tải File Nhạc MP3</a>`;
             }
             addMessage('ai', html, data.sources);
         })
