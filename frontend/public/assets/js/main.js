@@ -5,8 +5,6 @@
 // ================================================================
 
 // 🚨 CẤU HÌNH SERVER RENDER 🚨
-// Nếu Frontend và Backend nằm chung 1 dự án trên Render: Để chuỗi rỗng ""
-// Nếu Frontend chạy riêng (Vercel, GitHub Pages, Netlify, VS Code Live Server): Thay link Render vào bên dưới!
 const RENDER_BASE_URL = "https://t-vy-ai-supreme-1.onrender.com"; 
 
 function getApiUrl(path) {
@@ -112,7 +110,7 @@ function unlockUI() {
     if (inputField) {
         inputField.disabled = false;
         inputField.placeholder = "Nhập tin nhắn của bạn...";
-        inputField.style.height = 'auto'; // Reset height
+        inputField.style.height = 'auto';
         inputField.focus();
     }
     if (sendBtn) sendBtn.style.display = 'inline-block';
@@ -1167,7 +1165,7 @@ if (chatContainer) {
 }
 
 // ================================================================
-// SEND MESSAGE (TÍCH HỢP VOICE READ-BACK & PERPLEXITY SOURCES)
+// SEND MESSAGE (TÍCH HỢP DUAL ROUTE & CHỐNG RELOAD FORM)
 // ================================================================
 function sendMessage() {
     if (!inputField || isGenerating) return; 
@@ -1175,7 +1173,6 @@ function sendMessage() {
     if (!text) return;
 
     if (!isLoggedIn) {
-        // Cho phép gửi thử tin nhắn ngay cả ở chế độ Khách nếu không yêu cầu bắt buộc đăng nhập
         const upgradeReq = document.getElementById('upgradeRequired');
         if (upgradeReq) upgradeReq.style.display = 'none';
     }
@@ -1185,7 +1182,7 @@ function sendMessage() {
     sendMessageInternal(text, false);
 }
 
-function sendMessageInternal(text, isResend = false) {
+async function sendMessageInternal(text, isResend = false) {
     if (!isResend) {
         addMessage('user', text);
     }
@@ -1202,28 +1199,41 @@ function sendMessageInternal(text, isResend = false) {
     
     currentAbortController = new AbortController();
 
-    fetch(getApiUrl('/chat'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            message: text,
-            conversation_id: currentConversationId,
-            level: level,
-            intent_recognition: true,
-            web_synthesis: requiresWebSynthesis,
-            comprehensive_answer: true,
-            full_code: true, 
-            strict_code_focus: isCodeRequest, 
-            no_ai_self_description: true,    
-            direct_output_only: true,        
-            auto_format_language: true,      
-            ethical_safety_check: true,      
-            untruncated_code: true           
-        }),
-        signal: currentAbortController.signal
-    })
-    .then(res => res.json())
-    .then(data => {
+    const requestPayload = {
+        message: text,
+        conversation_id: currentConversationId,
+        level: level,
+        intent_recognition: true,
+        web_synthesis: requiresWebSynthesis,
+        comprehensive_answer: true,
+        full_code: true, 
+        strict_code_focus: isCodeRequest, 
+        no_ai_self_description: true,    
+        direct_output_only: true,        
+        auto_format_language: true,      
+        ethical_safety_check: true,      
+        untruncated_code: true           
+    };
+
+    try {
+        // Tự động thử route `/api/chat` trước, nếu 404 sẽ tự chuyển sang `/chat`
+        let response = await fetch(getApiUrl('/api/chat'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestPayload),
+            signal: currentAbortController.signal
+        });
+
+        if (response.status === 404) {
+            response = await fetch(getApiUrl('/chat'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestPayload),
+                signal: currentAbortController.signal
+            });
+        }
+
+        const data = await response.json();
         unlockUI();
         
         if (data.error) {
@@ -1238,7 +1248,6 @@ function sendMessageInternal(text, isResend = false) {
             if (exportBtn) exportBtn.style.display = 'inline-block';
         }
         
-        // Đọc linh hoạt cả `reply`, `message`, hoặc `text` từ backend Render
         const aiResponseText = data.reply || data.message || data.text || 'Đã xử lý thành công.';
         const sourcesList = data.sources || data.web_sources || null;
 
@@ -1259,17 +1268,20 @@ function sendMessageInternal(text, isResend = false) {
                 })
                 .catch(() => {});
         }
-    })
-    .catch(err => {
-        if (err.name === 'AbortError') {
-            return;
-        }
+    } catch(err) {
+        if (err.name === 'AbortError') return;
         unlockUI();
-        addMessage('ai', '❌ Lỗi kết nối máy chủ: ' + err.message);
+        addMessage('ai', '❌ Lỗi kết nối máy chủ Render: ' + err.message);
+    }
+}
+
+if (sendBtn) {
+    sendBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        sendMessage();
     });
 }
 
-if (sendBtn) sendBtn.addEventListener('click', sendMessage);
 if (inputField) {
     inputField.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
@@ -1279,10 +1291,18 @@ if (inputField) {
         }
     });
 
-    // Tự động co giãn khung nhập văn bản khi xuống dòng
     inputField.addEventListener('input', function() {
         this.style.height = 'auto';
         this.style.height = Math.min(this.scrollHeight, 180) + 'px';
+    });
+}
+
+// Bắt sự kiện Submit của Form (Nếu có) để tuyệt đối không bị Reload trang
+const parentForm = inputField ? inputField.closest('form') : document.querySelector('form');
+if (parentForm) {
+    parentForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        sendMessage();
     });
 }
 
@@ -1526,7 +1546,6 @@ function hideTyping() {
 // ================================================================
 function requireAuthAndExecute(callback) {
     if (!isLoggedIn) {
-        // Nếu ở chế độ Khách nhưng muốn dùng tính năng nâng cao, hiển thị nhắc nhở
         showToast('💡 Đang chạy ở chế độ trải nghiệm...', 'info');
     }
     callback();
@@ -1803,5 +1822,4 @@ if (typeof io !== 'undefined') {
     initSocket();
 }
 
-console.log('🚀 T.VỸ-AI-SUPREME v16.0 FULL: Đã tích hợp trọn vẹn Claude Artifacts Live Preview, Perplexity Source Cards & Voice Mode Tiếng Việt!');
-console.log('📌 Bản quyền tác giả: T.VỸ-VIP-FILE');
+console.log('🚀 T.VỸ-AI-SUPREME v16.0 FULL FIX: Đã tối ưu hóa kết nối Render & chống Reload trang!');
