@@ -1996,7 +1996,7 @@
                 <div id="usageInfo"><i class="fa-solid fa-bolt"></i> Lượt còn lại: ♾️ Không giới hạn Ultra</div>
             </div>
 
-            <!-- NAVIGATION (ĐÃ BỔ SUNG MỤC PLUGIN) -->
+            <!-- NAVIGATION -->
             <nav>
                 <button class="nav-item" data-tab="history"><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử</button>
                 <button class="nav-item" data-tab="plugins"><i class="fa-solid fa-plug-circle-plus"></i> Kho Plugin</button>
@@ -2994,21 +2994,18 @@
         // 2. DỮ LIỆU & LOGIC KHO PLUGIN STORE (TÍCH HỢP CÁC CÔNG CỤ)
         // ---------------------------------------------------------
         const PLUGINS_DATA = [
-            { id: "python_repl_tool", name: "Python REPL", author: "Core", desc: "Thực thi mã Python cục bộ hoặc trên cloud, trả về kết quả trực tiếp.", icon: "fa-brands fa-python", type: "official", enabled: true },
-            { id: "github_search_repos", name: "GitHub Search", author: "Community", desc: "Tìm kiếm repo, phân tích mã nguồn từ GitHub.", icon: "fa-brands fa-github", type: "community", enabled: true },
-            { id: "data_analysis", name: "Phân tích Dữ liệu (Pandas)", author: "Core", desc: "Đọc file Excel/CSV, phân tích dữ liệu chuyên sâu và vẽ biểu đồ.", icon: "fa-solid fa-chart-pie", type: "official", enabled: true },
-            { id: "word_processor", name: "Word & Docs Tools", author: "Core", desc: "Tạo, định dạng và xử lý tài liệu văn bản chuyên nghiệp.", icon: "fa-solid fa-file-word", type: "official", enabled: true },
-            { id: "email_assistant", name: "Smart Email", author: "Core", desc: "Soạn thảo email chuyên nghiệp, tự động phản hồi theo ngữ cảnh.", icon: "fa-solid fa-envelope", type: "official", enabled: true },
-            { id: "link_shortener", name: "Rút gọn Link", author: "Community", desc: "Tạo link rút gọn siêu tốc (bit.ly, tinyurl...).", icon: "fa-solid fa-link", type: "community", enabled: false }
+            { id: "python_repl", name: "Python Interpreter", desc: "Thực thi mã Python, phân tích dữ liệu và vẽ biểu đồ trực tiếp.", author: "Official", type: "official", enabled: true, icon: "fa-brands fa-python" },
+            { id: "web_search", name: "Live Web Search", desc: "Tìm kiếm web thời gian thực để cập nhật thông tin mới nhất.", author: "T.VỸ-AI", type: "official", enabled: true, icon: "fa-solid fa-globe" },
+            { id: "github_tools", name: "GitHub Copilot", desc: "Đọc repo, pull request và phân tích mã nguồn từ GitHub.", author: "Community", type: "community", enabled: false, icon: "fa-brands fa-github" },
+            { id: "wolfram", name: "Wolfram Alpha", desc: "Giải toán, phân tích dữ liệu tính toán khoa học chuyên sâu.", author: "Official", type: "official", enabled: false, icon: "fa-solid fa-square-root-variable" }
         ];
 
-        // Plugin Functions
         function renderPluginsGrid() {
             const grid = document.getElementById('pluginsGrid');
             if (!grid) return;
-            const searchQ = (document.getElementById('pluginSearchInput')?.value || '').toLowerCase();
+            const searchVal = document.getElementById('pluginSearchInput').value.toLowerCase();
             
-            grid.innerHTML = PLUGINS_DATA.filter(p => p.name.toLowerCase().includes(searchQ) || p.desc.toLowerCase().includes(searchQ)).map((p, i) => `
+            grid.innerHTML = PLUGINS_DATA.filter(p => p.name.toLowerCase().includes(searchVal) || p.desc.toLowerCase().includes(searchVal)).map(p => `
                 <div class="plugin-card">
                     <div class="plugin-top">
                         <div class="plugin-icon-box"><i class="${p.icon}"></i></div>
@@ -3029,383 +3026,307 @@
             `).join('');
         }
 
-        function filterPlugins() { renderPluginsGrid(); }
-
-        function togglePlugin(id, state) {
-            const plugin = PLUGINS_DATA.find(x => x.id === id);
-            if(plugin) plugin.enabled = state;
-            showToast(`Đã ${state ? 'bật' : 'tắt'} plugin ${plugin.name}`, 'info');
+        function filterPlugins() {
+            renderPluginsGrid();
         }
 
-        function enableAllPlugins(state) {
-            PLUGINS_DATA.forEach(p => p.enabled = state);
+        function togglePlugin(id, status) {
+            const plugin = PLUGINS_DATA.find(p => p.id === id);
+            if (plugin) {
+                plugin.enabled = status;
+                showToast(`Đã ${status ? 'bật' : 'tắt'} plugin: ${plugin.name}`, 'info');
+            }
+        }
+
+        function enableAllPlugins(status) {
+            PLUGINS_DATA.forEach(p => p.enabled = status);
             renderPluginsGrid();
-            showToast(`Đã ${state ? 'bật' : 'tắt'} tất cả plugin`, 'info');
+            showToast(`Đã ${status ? 'bật' : 'tắt'} tất cả plugin!`, 'success');
         }
 
         // ---------------------------------------------------------
-        // 3. LOGIC CÁC TAB CÀI ĐẶT & LIVE PREVIEW
+        // 3. LOGIC CÀI ĐẶT & UI
         // ---------------------------------------------------------
         function switchTab(tabId) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.querySelector(`.tab-btn[onclick="switchTab('${tabId}')"]`).classList.add('active');
+            document.querySelectorAll('.settings-sidebar .tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.settings-content .tab-content').forEach(c => c.classList.remove('active'));
+            event.currentTarget.classList.add('active');
             document.getElementById(tabId).classList.add('active');
         }
-        
+
+        function changeFontFamily(font) {
+            document.body.style.fontFamily = font;
+        }
+
+        function changeFontSize(size) {
+            const chatC = document.getElementById('chatContainer');
+            if (!chatC) return;
+            chatC.style.fontSize = size === 'small' ? '14px' : size === 'large' ? '18px' : '16px';
+        }
+
+        function saveAllSettings() {
+            showToast('✅ Đã lưu cấu hình cài đặt thành công!', 'success');
+            closeModal('settingsModal');
+        }
+
+        function clearAllConversations() {
+            if(confirm("Xóa toàn bộ lịch sử trò chuyện?")) {
+                document.getElementById('sidebarHistoryList').innerHTML = '';
+                clearAllMessages();
+                showToast("Đã xóa sạch lịch sử!", "success");
+            }
+        }
+
+        function toggleDataTraining(status) {
+            showToast(`Dữ liệu huấn luyện đã được ${status ? 'bật' : 'tắt'}.`, 'info');
+        }
+
+        function exportData(type) {
+            exportChatCombined();
+        }
+
+        function openChangePasswordModal() {
+            showToast('Chức năng đổi mật khẩu đang được bảo trì.', 'warning');
+        }
+
+        function copyApiKey() {
+            const key = document.getElementById('userApiKey').value;
+            navigator.clipboard.writeText(key);
+            showToast('Đã sao chép API Key!', 'success');
+        }
+
+        function regenerateApiKey() {
+            if(confirm("Tạo API Key mới sẽ vô hiệu hóa Key cũ. Tiếp tục?")) {
+                document.getElementById('userApiKey').value = "tvai_sk_live_" + Math.random().toString(36).substring(2, 15);
+                showToast('Đã tạo API Key mới!', 'success');
+            }
+        }
+
         function renderMemoryList() {
-            const list = document.getElementById('memoryList');
-            if(list) list.innerHTML = `
-                <li><span>Ngôn ngữ ưu tiên: Tiếng Việt</span> <i class="fa-solid fa-trash" style="cursor:pointer; color:#ef4444;" title="Xóa" onclick="showToast('Đã xóa bộ nhớ!', 'success')"></i></li>
-                <li><span>Định dạng Code: Clean Code, ES6</span> <i class="fa-solid fa-trash" style="cursor:pointer; color:#ef4444;" title="Xóa" onclick="showToast('Đã xóa bộ nhớ!', 'success')"></i></li>
+            const ml = document.getElementById('memoryList');
+            if (!ml) return;
+            ml.innerHTML = `
+                <li>Biết người dùng là lập trình viên <span><i class="fa-solid fa-trash" style="cursor:pointer;color:#ef4444;" onclick="this.parentElement.parentElement.remove()"></i></span></li>
+                <li>Biết người dùng thích tone giọng ngắn gọn <span><i class="fa-solid fa-trash" style="cursor:pointer;color:#ef4444;" onclick="this.parentElement.parentElement.remove()"></i></span></li>
             `;
         }
 
         function populateVoiceList() {
             if(typeof speechSynthesis === 'undefined') return;
-            const voices = speechSynthesis.getVoices();
-            const select = document.getElementById('ttsVoiceSelect');
-            if(select) {
-                select.innerHTML = voices.filter(v => v.lang.includes('vi')).map(v => `<option data-name="${v.name}">${v.name}</option>`).join('') || '<option>Giọng mặc định</option>';
+            let voices = speechSynthesis.getVoices();
+            const voiceSelect = document.getElementById('ttsVoiceSelect');
+            if(voices.length === 0) {
+                speechSynthesis.onvoiceschanged = () => {
+                    voices = speechSynthesis.getVoices();
+                    fillVoices(voices, voiceSelect);
+                };
+            } else {
+                fillVoices(voices, voiceSelect);
             }
         }
 
-        function changeFontFamily(val) { document.body.style.fontFamily = val; }
-        
-        function changeFontSize(val) { 
-            const chat = document.getElementById('chatContainer');
-            if(!chat) return;
-            chat.style.fontSize = val === 'small' ? '14px' : val === 'large' ? '18px' : '16px'; 
+        function fillVoices(voices, select) {
+            if(!select) return;
+            select.innerHTML = '';
+            voices.forEach((voice) => {
+                if(voice.lang.includes('vi') || voice.lang.includes('en')) {
+                    const option = document.createElement('option');
+                    option.textContent = `${voice.name} (${voice.lang})`;
+                    option.setAttribute('data-lang', voice.lang);
+                    option.setAttribute('data-name', voice.name);
+                    select.appendChild(option);
+                }
+            });
         }
 
-        function saveAllSettings() { 
-            showToast('Đã lưu toàn bộ cấu hình AI thành công!', 'success'); 
-            closeModal('settingsModal'); 
-        }
-
-        function clearAllConversations() { 
-            if(confirm('Bạn có chắc chắn muốn xóa tất cả cuộc trò chuyện không?')) showToast('Đã dọn dẹp sạch sẽ!', 'success'); 
-        }
-
-        function exportData(type) { 
-            showToast(`Đang chuẩn bị trích xuất dữ liệu định dạng ${type.toUpperCase()}...`, 'info'); 
-        }
-
-        function toggleDataTraining(st) { 
-            showToast(`Học máy từ dữ liệu của bạn đã được ${st ? 'Bật' : 'Tắt'}`, 'info'); 
-        }
-
-        // Live Preview Pane Logic
-        function refreshLivePreview() { 
-            showToast('Đang tải lại bản xem trước (Live Preview)...', 'info'); 
-        }
-
-        function closeLivePreview() { 
-            document.getElementById('artifactPreviewPane').classList.remove('active'); 
-        }
-        
-        function openLivePreview(htmlContent) {
-            const pane = document.getElementById('artifactPreviewPane');
-            const frame = document.getElementById('artifactFrame');
-            frame.srcdoc = htmlContent;
-            pane.classList.add('active');
-        }
-
-        // Menu Utilities Logic
-        function setInputAndSend(txt) {
-            document.getElementById('inputField').value = txt;
+        // ---------------------------------------------------------
+        // 4. LOGIC CHAT CORE
+        // ---------------------------------------------------------
+        function setInputAndSend(text) {
+            inputField.value = text;
             sendMessage();
         }
-        function aiTextAndEmail() { setInputAndSend('Viết cho tôi một văn bản báo cáo hoặc email chuyên nghiệp về...'); toggleMenu(); }
-        function aiCreativeAndMedia() { setInputAndSend('Lên ý tưởng kịch bản Tiktok/Youtube thu hút về...'); toggleMenu(); }
-        function aiDevAndData() { setInputAndSend('Viết mã lập trình để giải quyết bài toán và phân tích dữ liệu...'); toggleMenu(); }
-        function aiMultiAndPrompt() { setInputAndSend('Hãy tối ưu hóa và nâng cấp prompt sau để mô hình ngôn ngữ hiểu rõ hơn: ...'); toggleMenu(); }
-        function clearAllMessages() { 
-            document.querySelectorAll('.message-wrapper').forEach(e => e.remove()); 
-            showToast('Đã xóa phiên trò chuyện', 'success'); 
-            toggleMenu();
-        }
-        function createNewChat() {
-            clearAllMessages();
-            document.getElementById('welcomeHero').style.display = 'flex';
-            attachedFiles = [];
-            renderFilePreview();
-            showToast('Bắt đầu cuộc trò chuyện mới', 'info');
-        }
 
-        // ---------------------------------------------------------
-        // 4. CORE CHAT & DYNAMIC RESPONSE (BỘ SINH PHẢN HỒI THÔNG MINH)
-        // ---------------------------------------------------------
-        function appendMessage(sender, text, isRawHTML = false) {
-            document.getElementById('welcomeHero').style.display = 'none';
-            const chatContainer = document.getElementById('chatContainer');
-            const wrapper = document.createElement('div');
-            wrapper.className = `message-wrapper ${sender}`;
-            
-            const avatar = document.createElement('div');
-            avatar.className = 'message-avatar';
-            avatar.innerHTML = sender === 'user' ? '👤' : '<i class="fa-solid fa-robot"></i>';
-            
-            const msgBox = document.createElement('div');
-            msgBox.className = `message ${sender}`;
-            msgBox.dataset.rawText = text; // Lưu Text thô cho Text-to-speech / Export
+        function sendMessage() {
+            const text = inputField.value.trim();
+            if (!text && attachedFiles.length === 0) return;
 
-            if (sender === 'user') {
-                msgBox.textContent = text;
-                // Hiển thị File đính kèm nếu có
-                if(attachedFiles.length > 0) {
-                    const fileHtml = attachedFiles.map(f => `<div style="font-size:11px; background:rgba(0,0,0,0.2); padding:4px 8px; border-radius:4px; display:inline-block; margin-top:4px;"><i class="fa-solid fa-paperclip"></i> ${f.name}</div>`).join(' ');
-                    msgBox.innerHTML += `<br>${fileHtml}`;
-                }
-            } else {
-                if (isRawHTML) {
-                    msgBox.innerHTML = text; // Render trực tiếp (cho Live Preview hoặc Output đã render)
-                } else {
-                    msgBox.innerHTML = marked.parse(text); // Phân giải từ Markdown
-                }
-                
-                // Công cụ của tin nhắn AI (Copy, Voice, Live Preview)
-                const tools = document.createElement('div');
-                tools.className = 'message-tools';
-                tools.innerHTML = `
-                    <button class="tool-btn" onclick="navigator.clipboard.writeText(this.closest('.message').dataset.rawText); showToast('Đã copy!', 'success')"><i class="fa-regular fa-copy"></i> Copy</button>
-                    <button class="tool-btn" onclick="speakMsgText(this)"><i class="fa-solid fa-volume-high"></i> Đọc</button>
-                    ${text.includes('\`\`\`html') ? `<button class="tool-btn" onclick="openLivePreview(this.closest('.message').dataset.rawText.match(/\\\`\\\`\\\`html([\\s\\S]*?)\\\`\\\`\\\`/)[1])"><i class="fa-solid fa-desktop"></i> Live Preview</button>` : ''}
-                `;
-                msgBox.appendChild(tools);
-            }
+            const welcome = document.getElementById('welcomeHero');
+            if (welcome) welcome.style.display = 'none';
 
-            wrapper.appendChild(avatar);
-            wrapper.appendChild(msgBox);
-            chatContainer.insertBefore(wrapper, document.getElementById('deepThinkIndicator'));
-            
-            // Xử lý Render Biểu đồ Mermaid sau khi thêm vào DOM
-            if (sender !== 'user' && text.includes('```mermaid')) {
-                setTimeout(() => {
-                    document.querySelectorAll('.mermaid').forEach((el) => {
-                        mermaid.init(undefined, el);
-                    });
-                }, 100);
-            }
-            
-            // Syntax Highlighting cho Code Blocks
-            document.querySelectorAll('pre code').forEach((block) => {
-                hljs.highlightElement(block);
-            });
-
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            return msgBox;
-        }
-
-        // HÀM TẠO PHẢN HỒI THÔNG MINH, NHẬN DIỆN NGỮ CẢNH & THỰC THI PLUGIN
-        function generateDynamicResponse(query, files) {
-            const q = query.toLowerCase();
-            let response = "";
-            let triggeredPlugins = [];
-            const hasFile = files.length > 0;
-            const fileNames = files.map(f => f.name).join(', ');
-
-            // ==========================================
-            // KỊCH BẢN 1: TÍNH NĂNG WORD & XỬ LÝ VĂN BẢN
-            // ==========================================
-            if (q.includes("word") || q.includes("báo cáo") || q.includes("soạn") || q.includes("đơn")) {
-                if(PLUGINS_DATA.find(p=>p.id==='word_processor')?.enabled) triggeredPlugins.push("Word & Docs Tools");
-                response += `### 📝 Trợ Lý Xử Lý Văn Bản Chuyên Nghiệp\n\n`;
-                response += `Tôi đã tiếp nhận yêu cầu liên quan đến việc soạn thảo văn bản. Dưới đây là khung bản thảo theo định dạng chuẩn:\n\n`;
-                response += `> **CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM**\n> \n> **Độc lập - Tự do - Hạnh phúc**\n>\n> ---\n>\n> **ĐƠN ĐỀ NGHỊ / BÁO CÁO CÔNG VIỆC**\n>\n> **Kính gửi:** Ban Giám Đốc / Cơ quan có thẩm quyền...\n>\n> Nội dung chi tiết trình bày tại đây... đảm bảo rõ ràng, súc tích.\n\n`;
-                if(hasFile) response += `*Tôi nhận thấy bạn có gửi kèm tệp **${fileNames}**. Tôi đã trích xuất dữ liệu từ đó và lồng ghép vào báo cáo trên.*\n\n`;
-                response += `*💡 Bạn có muốn tôi xuất nội dung này ra file .docx không?*\n`;
-            }
-            
-            // ==========================================
-            // KỊCH BẢN 2: EXCEL & PHÂN TÍCH DỮ LIỆU
-            // ==========================================
-            else if (q.includes("phân tích") || q.includes("dữ liệu") || q.includes("excel") || q.includes("csv") || q.includes("thống kê")) {
-                if(PLUGINS_DATA.find(p=>p.id==='data_analysis')?.enabled) triggeredPlugins.push("Phân tích Dữ liệu (Pandas)");
-                response += `### 📊 Trợ Lý Phân Tích Dữ Liệu & Thống Kê\n\n`;
-                if (hasFile) {
-                    response += `Tôi đã quét tệp Excel/CSV bạn vừa đính kèm (**${fileNames}**). Dưới đây là bản tóm tắt phân tích tự động bằng thư viện Pandas:\n\n`;
-                    response += `- **Số dòng (ước tính):** 1,250\n- **Số cột:** 8\n- **Các trường chính:** \`ID\`, \`Doanh thu\`, \`Ngày tháng\`, \`Trạng thái\`\n\n`;
-                    response += `**Insights Nổi Bật:**\n1. Doanh thu tăng trưởng mạnh 15% vào quý 3.\n2. Phát hiện 5% dữ liệu bị thiếu ở cột \`Trạng thái\`.\n\n`;
-                    response += `\`\`\`python\nimport pandas as pd\ndf = pd.read_excel('${fileNames}')\nprint(df.describe())\n# Dữ liệu sạch sẽ, không ghi nhận Anomaly.\n\`\`\`\n\n`;
-                } else {
-                    response += `Để phân tích, vui lòng đính kèm tệp dữ liệu thực (XLSX, CSV). Dưới đây là mã nguồn phân tích biểu mẫu tôi cung cấp sẵn cho bạn:\n\n\`\`\`python\nimport pandas as pd\nimport matplotlib.pyplot as plt\n\ndata = {'Tháng': ['T1', 'T2', 'T3'], 'Doanh Thu': [150, 200, 180]}\ndf = pd.DataFrame(data)\ndf.plot(x='Tháng', y='Doanh Thu', kind='bar')\nplt.title('Biểu đồ Doanh Thu')\nplt.show()\n\`\`\`\n\n`;
-                }
-            } 
-            
-            // ==========================================
-            // KỊCH BẢN 3: SOẠN THẢO EMAIL
-            // ==========================================
-            else if (q.includes("email") || q.includes("thư") || q.includes("mail")) {
-                if(PLUGINS_DATA.find(p=>p.id==='email_assistant')?.enabled) triggeredPlugins.push("Smart Email");
-                response += `### 📧 Chuyên Viên Email AI\n\n`;
-                response += `Dưới đây là một Email Draft hoàn chỉnh được soạn thảo dựa trên yêu cầu của bạn, tuân thủ nguyên tắc chuyên nghiệp và rõ ràng:\n\n`;
-                response += `**Tiêu đề:** Phản hồi/Cập nhật tiến trình công việc\n\n`;
-                response += `**Kính gửi [Tên người nhận/Đối tác],**\n\nTôi viết email này để cập nhật về tiến độ của dự án mà chúng ta đã thảo luận. Mọi hạng mục đang được triển khai đúng kế hoạch và dự kiến hoàn tất vào thứ 6 tuần tới.\n\nNếu có bất kỳ thắc mắc nào trong quá trình đối chiếu, vui lòng phản hồi lại thư này.\n\nTrân trọng,\n**[Tên của bạn]**\n\n`;
-            }
-            
-            // ==========================================
-            // KỊCH BẢN 4: GITHUB & LẬP TRÌNH CODE
-            // ==========================================
-            else if (q.includes("github") || q.includes("code") || q.includes("lập trình") || q.includes("thuật toán")) {
-                if(PLUGINS_DATA.find(p=>p.id==='github_search_repos')?.enabled) triggeredPlugins.push("GitHub Search");
-                response += `### 💻 Kỹ Sư Phần Mềm (Developer Mode)\n\n`;
-                response += `Dựa trên ngữ cảnh lập trình, tôi đã tối ưu hóa đoạn code theo chuẩn Clean Code. Đây là giải pháp hoàn chỉnh:\n\n`;
-                response += `\`\`\`javascript\n/**\n * Giải pháp thuật toán tối ưu (Time Complexity: O(n), Space: O(1))\n * @param {Array} arr - Mảng đầu vào chứa dữ liệu số\n * @returns {Number} - Trả về giá trị lớn nhất trong mảng\n */\nfunction optimizedSolution(arr) {\n    if (!arr || arr.length === 0) return 0;\n    let max = arr[0];\n    for (let i = 1; i < arr.length; i++) {\n        if (arr[i] > max) max = arr[i];\n    }\n    return max;\n}\n\`\`\`\n\n`;
-                response += `*Mã này dễ dàng bảo trì, bạn có thể Pull Request thẳng vào Repository GitHub hiện tại.*`;
-            }
-            
-            // ==========================================
-            // KỊCH BẢN 5: RÚT GỌN LINK URL
-            // ==========================================
-            else if (q.includes("rút gọn") || q.includes("link") || q.includes("url")) {
-                const pluginStatus = PLUGINS_DATA.find(p=>p.id==='link_shortener')?.enabled;
-                if(pluginStatus) {
-                    triggeredPlugins.push("Rút gọn Link");
-                    response += `### 🔗 Dịch Vụ Rút Gọn Liên Kết\n\n`;
-                    response += `Đã xử lý thông qua API URL Shortener thành công:\n\n`;
-                    response += `- **Đích đến (Gốc):** (đã mã hóa an toàn)\n- **Link Rút Gọn:** [https://tvy.ai/shrt-8x9](https://tvy.ai/shrt-8x9)\n- **Tốc độ điều hướng:** 20ms\n\n`;
-                } else {
-                    response += `⚠️ Tính năng rút gọn liên kết hiện đang bị tắt trong cài đặt. Vui lòng vào **Kho Plugin** để bật tiện ích *Rút gọn Link*.`;
-                }
-            }
-            
-            // ==========================================
-            // KỊCH BẢN 6: VẼ BIỂU ĐỒ MERMAID.JS
-            // ==========================================
-            else if (q.includes("mermaid") || q.includes("sơ đồ") || q.includes("quy trình") || q.includes("flowchart")) {
-                response += `### 📈 Sơ Đồ Quy Trình (Mermaid Render)\n\nTôi đã vẽ sơ đồ luồng công việc tự động. Hình ảnh được render ngay bên dưới:\n\n`;
-                response += `\`\`\`mermaid\ngraph TD;\n    A[Bắt đầu] --> B{Điều kiện Hợp Lệ?};\n    B -- Đúng --> C[Xử lý Tác vụ Cơ Sở Dữ Liệu];\n    B -- Sai --> D[Trả về Lỗi (Error 400)];\n    C --> E[Xác thực Thành Công];\n    D --> F[Kết thúc Luồng];\n    E --> F;\n\`\`\`\n\n`;
-            }
-            
-            // ==========================================
-            // KỊCH BẢN 7: ARTIFACT LIVE PREVIEW (TẠO WEB UI)
-            // ==========================================
-            else if (q.includes("html") || q.includes("giao diện") || q.includes("web") || q.includes("ui")) {
-                response += `### 🌐 Artifact Live Preview Generator\n\nTuyệt vời! Tôi đã lập trình xong giao diện Web UI theo yêu cầu của bạn. \n\n👉 *Hãy bấm vào nút **Live Preview** ở góc dưới tin nhắn này để chạy thử ngay lập tức!* \n\n`;
-                response += `\`\`\`html\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  body { font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #0f172a; color: white; margin: 0; }\n  .card { background: #1e293b; padding: 2.5rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); text-align: center; border: 1px solid #334155; max-width: 400px; }\n  h1 { background: linear-gradient(to right, #6366f1, #a855f7); -webkit-background-clip: text; color: transparent; margin-top:0; }\n  p { color: #94a3b8; line-height: 1.6; }\n  button { padding: 12px 24px; background: #6366f1; border: none; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; margin-top: 15px; }\n  button:hover { background: #4f46e5; transform: scale(1.05); }\n</style>\n</head>\n<body>\n  <div class="card">\n    <h1>T.VỸ AI Web Element</h1>\n    <p>Giao diện được tạo hoàn toàn tự động bằng công nghệ Artifact Live Preview. CSS được tối ưu mượt mà.</p>\n    <button onclick="alert('Live Preview Hoạt Động Tuyệt Vời!')">Tương tác ngay</button>\n  </div>\n</body>\n</html>\n\`\`\`\n\n`;
-            }
-            
-            // ==========================================
-            // KỊCH BẢN 8: DEFAULT - FALLBACK DYNAMIC RESPONSE
-            // ==========================================
-            else {
-                response += `### 🤖 Trợ Lý Trí Tuệ Nhân Tạo (Đa nhiệm)\n\n`;
-                response += `Chào bạn! Tôi đã tiếp nhận và hiểu rõ yêu cầu: *"**${query}**"*. \n\n`;
-                response += `Với chế độ mô hình **${LEVEL_NAMES[document.getElementById('levelSelect').value] || 'Pro AI'}** đang được kích hoạt, tôi đề xuất hướng giải quyết bài toán của bạn qua các bước logic sau:\n\n`;
-                response += `1. **Phân tích cốt lõi:** Xác định định dạng đầu ra (Text, Code, hay Visualization).\n2. **Triển khai kiến thức:** Áp dụng dữ liệu theo thời gian thực để đưa ra đáp án tốt nhất.\n3. **Thực thi:** Gọi API và công cụ nếu cần thiết (như Python, Github, Phân tích dữ liệu).\n\n`;
-                if(hasFile) response += `📎 *Ghi chú bổ sung: Nhận thấy tệp đính kèm **${fileNames}**. Hệ thống đã tự động đẩy tệp này vào bộ nhớ ngữ cảnh (Context Memory) để truy xuất dữ liệu trong quá trình xử lý.*\n\n`;
-                response += `Bạn muốn tôi đi thẳng vào trọng tâm nào trước tiên? (VD: Viết code, làm rõ lý thuyết, hay vẽ sơ đồ?)`;
-            }
-
-            // Đính kèm Footer hiển thị Plugins đã chạy
-            if (triggeredPlugins.length > 0) {
-                response += `\n\n---\n*⚡ Tự động phân luồng & thực thi qua Plugin: **${triggeredPlugins.join(', ')}***`;
-            }
-
-            return response;
-        }
-
-        // Send message Engine
-        async function sendMessage() {
-            const input = inputField.value.trim();
-            if (!input && attachedFiles.length === 0) return;
-
-            const sendBtn = document.getElementById('sendBtn');
-            const stopBtn = document.getElementById('stopBtn');
-            const thinkStatus = document.getElementById('deepThinkIndicator');
-            
-            // Clear Data
+            appendMessage('user', text, [...attachedFiles]);
             inputField.value = '';
             inputField.style.height = 'auto';
-            const filesData = [...attachedFiles];
             attachedFiles = [];
             renderFilePreview();
 
-            // Render User Message
-            appendMessage('user', input || "Gửi tệp đính kèm để phân tích");
+            simulateAIResponse(text);
+        }
 
-            // UI State = "Generating"
+        function appendMessage(role, text, files = []) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `message-wrapper ${role}`;
+
+            let fileHtml = '';
+            if (files.length > 0) {
+                fileHtml = `<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">` + 
+                    files.map(f => `<span style="background:rgba(255,255,255,0.1);padding:4px 8px;border-radius:4px;font-size:12px;"><i class="fa-solid fa-file"></i> ${f.name}</span>`).join('') + 
+                `</div>`;
+            }
+
+            const rawTextEscaped = text.replace(/"/g, '&quot;');
+            
+            let htmlContent = text;
+            if(role === 'ai') {
+                htmlContent = marked.parse(text);
+            }
+
+            const avatarIcon = role === 'user' ? '👤' : '<i class="fa-solid fa-robot"></i>';
+
+            wrapper.innerHTML = `
+                <div class="message-avatar">${avatarIcon}</div>
+                <div class="message ${role}" data-raw-text="${rawTextEscaped}">
+                    ${fileHtml}
+                    <div class="message-content">${role === 'user' ? text : htmlContent}</div>
+                    ${role === 'ai' ? `
+                    <div class="message-tools">
+                        <button class="tool-btn" onclick="navigator.clipboard.writeText(this.closest('.message').dataset.rawText); showToast('Đã chép!', 'success');"><i class="fa-regular fa-copy"></i> Copy</button>
+                        <button class="tool-btn" onclick="speakMsgText(this)"><i class="fa-solid fa-volume-high"></i> Đọc</button>
+                        <span class="time">${new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>` : ''}
+                </div>
+            `;
+            
+            chatContainer.insertBefore(wrapper, document.getElementById('deepThinkIndicator'));
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            if (role === 'ai' && typeof mermaid !== 'undefined') {
+                mermaid.init(undefined, wrapper.querySelectorAll('.language-mermaid'));
+            }
+            if (role === 'ai') {
+                wrapper.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                });
+            }
+        }
+
+        function simulateAIResponse(userText) {
             sendBtn.style.display = 'none';
             stopBtn.style.display = 'flex';
-            thinkStatus.style.display = 'block';
+            const indicator = document.getElementById('deepThinkIndicator');
+            indicator.style.display = 'block';
             chatContainer.scrollTop = chatContainer.scrollHeight;
 
             currentAbortController = new AbortController();
 
-            try {
-                // Giả lập độ trễ (AI Deep Thinking)
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                
-                if (currentAbortController.signal.aborted) throw new Error('aborted');
-
-                // Sinh phản hồi dựa trên AI thông minh
-                const aiResponse = generateDynamicResponse(input, filesData);
-
-                // Ẩn "Đang suy nghĩ"
-                thinkStatus.style.display = 'none';
-                
-                // Hiển thị khung phản hồi
-                const msgBox = appendMessage('ai', aiResponse); 
-                const rawHTML = msgBox.innerHTML;
-                
-                // Áp dụng gõ chữ (Simulate Typing Effect) nếu muốn, ở đây hiển thị text ngay do markdown rendering
-                msgBox.innerHTML = rawHTML; 
-                
-                // Khôi phục UI
+            setTimeout(() => {
+                if (currentAbortController.signal.aborted) return;
+                indicator.style.display = 'none';
                 sendBtn.style.display = 'flex';
                 stopBtn.style.display = 'none';
-                
-            } catch (err) {
-                if (err.message === 'aborted') {
-                    thinkStatus.style.display = 'none';
-                    appendMessage('ai', '🚫 *Đã hủy / Dừng việc tạo phản hồi.*');
+
+                let response = `Đây là câu trả lời mô phỏng từ hệ thống **T.VỸ-AI v13.0 Ultra**. Bạn vừa yêu cầu: "${userText}"\n\n`;
+                if (userText.toLowerCase().includes("sơ đồ") || userText.toLowerCase().includes("mermaid")) {
+                    response += "Dưới đây là sơ đồ Mermaid như bạn yêu cầu:\n\n```mermaid\ngraph TD;\n    A[Bắt đầu] --> B{Điều kiện};\n    B -- Đúng --> C[Xử lý 1];\n    B -- Sai --> D[Xử lý 2];\n    C --> E[Kết thúc];\n    D --> E;\n```";
+                } else if (userText.toLowerCase().includes("code") || userText.toLowerCase().includes("lập trình")) {
+                    response += "Đây là ví dụ mã Python:\n\n```python\ndef hello_world():\n    print('Hello, T.VỸ AI Supreme!')\n\nhello_world()\n```";
                 } else {
-                    console.error(err);
-                    thinkStatus.style.display = 'none';
-                    appendMessage('ai', '❌ *Có lỗi xảy ra kết nối API. Vui lòng thử lại!*');
+                    response += "Tôi đã xử lý yêu cầu của bạn qua nhiều mô hình nội bộ. Vui lòng cho tôi biết nếu cần điều chỉnh thêm chi tiết.";
                 }
-                sendBtn.style.display = 'flex';
-                stopBtn.style.display = 'none';
-            }
+
+                appendMessage('ai', response);
+                
+                if (document.getElementById('soundEffectToggle') && document.getElementById('soundEffectToggle').checked) {
+                    const audio = new Audio('https://actions.google.com/sounds/v1/water/glass_water_pour.ogg'); // Âm thanh nhẹ
+                    audio.volume = 0.2;
+                    audio.play().catch(e=>{});
+                }
+            }, 1500);
         }
 
         function stopGeneration() {
             if (currentAbortController) {
                 currentAbortController.abort();
             }
+            document.getElementById('deepThinkIndicator').style.display = 'none';
+            sendBtn.style.display = 'flex';
+            stopBtn.style.display = 'none';
+            showToast('Đã dừng tạo phản hồi.', 'info');
         }
 
-        // Khởi chạy hệ thống sau khi DOM Load
-        document.addEventListener('DOMContentLoaded', () => {
-            renderPluginsGrid();
-            // Load mẫu Lịch sử bên thanh Sidebar
-            const historyList = document.getElementById('sidebarHistoryList');
-            if(historyList) {
-                historyList.innerHTML = `
-                    <div class="history-item active" onclick="showToast('Đã chuyển sang hội thoại', 'info')">
-                        <span>🚀 Trò chuyện lập trình (New)</span>
-                        <button class="del-btn" title="Xóa"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                    <div class="history-item" onclick="showToast('Đã tải lịch sử', 'info')">
-                        <span>Phân tích dữ liệu doanh thu Q3</span>
-                        <button class="del-btn" title="Xóa"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                    <div class="history-item" onclick="showToast('Đã tải lịch sử', 'info')">
-                        <span>Giao diện Landing Page HTML</span>
-                        <button class="del-btn" title="Xóa"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                `;
+        function createNewChat() {
+            clearAllMessages();
+            const welcome = document.getElementById('welcomeHero');
+            if (welcome) welcome.style.display = 'flex';
+            showToast('Bắt đầu đoạn chat mới', 'success');
+        }
+
+        function clearAllMessages() {
+            document.querySelectorAll('.message-wrapper').forEach(e => e.remove());
+        }
+
+        function searchMessages() {
+            const query = searchInput.value.trim().toLowerCase();
+            if(!query) return;
+            let found = 0;
+            document.querySelectorAll('.message-wrapper .message-content').forEach(el => {
+                if(el.innerText.toLowerCase().includes(query)) found++;
+            });
+            showToast(`Tìm thấy ${found} kết quả trong cuộc trò chuyện hiện tại.`, 'info');
+        }
+
+        // ---------------------------------------------------------
+        // 5. NÂNG CẤP TIỆN ÍCH & TÍNH NĂNG
+        // ---------------------------------------------------------
+        function upgradeTier(tier) {
+            if(!isLoggedIn) {
+                showToast('Vui lòng đăng nhập để nâng cấp!', 'error');
+                openLoginModal();
+                return;
             }
-            // Add Listeners cho điều hướng Sidebar Modal
-            document.querySelectorAll('.nav-item').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const tab = e.currentTarget.dataset.tab;
-                    if(tab === 'settings') openModal('settingsModal');
-                    if(tab === 'upgrade') openModal('upgradeModal');
-                    if(tab === 'plugins') openModal('pluginsModal');
-                    if(tab === 'history') openModal('historyModal'); 
-                });
+            currentLevel = tier;
+            levelSelect.value = tier;
+            levelBadge.textContent = LEVEL_NAMES[tier];
+            chatName.textContent = LEVEL_NAMES[tier];
+            closeModal('upgradeModal');
+            showToast(`Đã chọn nâng cấp: ${LEVEL_NAMES[tier]}`, 'success');
+        }
+
+        function upgradeWithMomo(tier) {
+            showToast(`Đang chuyển hướng thanh toán MoMo cho gói ${LEVEL_NAMES[tier]}...`, 'info');
+            setTimeout(() => {
+                upgradeTier(tier);
+                showToast(`Thanh toán thành công gói ${LEVEL_NAMES[tier]}!`, 'success');
+            }, 2000);
+        }
+
+        function aiTextAndEmail() { setInputAndSend("Hãy đóng vai một trợ lý chuyên nghiệp, viết cho tôi một email gửi đối tác..."); }
+        function aiCreativeAndMedia() { setInputAndSend("Viết kịch bản video TikTok 60 giây chủ đề Công nghệ AI xu hướng..."); }
+        function aiDevAndData() { setInputAndSend("Viết code Python phân tích dữ liệu CSV kèm vẽ biểu đồ Matplotlib..."); }
+        function aiMultiAndPrompt() { setInputAndSend("Phân tích đa chiều vấn đề sau và đề xuất 3 giải pháp đột phá..."); }
+
+        // Live preview (Artifacts)
+        function refreshLivePreview() {
+            const frame = document.getElementById('artifactFrame');
+            if(frame) frame.src = frame.src;
+            showToast('Đã tải lại bản xem trước.', 'info');
+        }
+
+        function closeLivePreview() {
+            const pane = document.getElementById('artifactPreviewPane');
+            if(pane) pane.classList.remove('active');
+        }
+
+        // Tích hợp thanh Sidebar Nav
+        document.querySelectorAll('nav .nav-item').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('nav .nav-item').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const tab = btn.getAttribute('data-tab');
+                if (tab === 'settings') openModal('settingsModal');
+                if (tab === 'upgrade') openModal('upgradeModal');
+                if (tab === 'history') openModal('historyModal');
+                if (tab === 'plugins') openModal('pluginsModal');
             });
         });
 
