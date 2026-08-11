@@ -654,8 +654,8 @@ function showDeepThink(stage = 0) {
     let thinkEl = document.getElementById('deepThinkIndicator');
     const stages = [
         '🧠 Đang phân tích yêu cầu & ngữ cảnh...',
-        '🌐 Đang tổng hợp dữ liệu tìm kiếm web...',
-        '💡 Đang tối ưu hóa mã nguồn và câu trả lời...'
+        '🌐 Đang thực thi công cụ & tổng hợp dữ liệu...',
+        '💡 Đang hoàn thiện câu trả lời...'
     ];
     
     if (!thinkEl) {
@@ -844,7 +844,7 @@ function initSocket() {
     });
     socket.on('new_message', (data) => {
         if (data.message && data.user_id !== userData?.id) {
-            addMessage('ai', data.message, data.sources);
+            addMessage('ai', data.message, data.sources, data.tool_executed);
         }
     });
 }
@@ -901,9 +901,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 // ================================================================
-// ADD MESSAGE & EDIT/COPY CỦA NGƯỜI DÙNG & AI (NÂNG CẤP MARKDOWN & ARTIFACTS)
+// ADD MESSAGE & EDIT/COPY CỦA NGƯỜI DÙNG & AI (XỬ LÝ TOOL/PLUGIN RESULT)
 // ================================================================
-function addMessage(role, content, sources = null) {
+function addMessage(role, content, sources = null, toolExecuted = null) {
     if (!chatContainer) return;
 
     const wrapper = document.createElement('div');
@@ -917,6 +917,11 @@ function addMessage(role, content, sources = null) {
     msgDiv.dataset.rawText = content;
 
     let formattedContent = content;
+
+    // Tự động làm sạch các thông báo hệ thống lặp lại nếu có từ plugin
+    if (typeof formattedContent === 'string') {
+        formattedContent = formattedContent.replace(/\[Plugin\s+executed:\s*.*?\]/gi, '').trim();
+    }
 
     // 1. Xử lý Claude Artifacts trước khi format Markdown
     if (role === 'ai') {
@@ -948,6 +953,17 @@ function addMessage(role, content, sources = null) {
         sourcesHeader = renderSourceCardsHtml(sources);
     }
 
+    // 4. Hiển thị Badge Tool Call đã xử lý hoàn tất (nếu Backend có trả về)
+    let toolBadgeHtml = '';
+    if (role === 'ai' && toolExecuted) {
+        const toolName = typeof toolExecuted === 'string' ? toolExecuted : (toolExecuted.name || 'Tool/Plugin');
+        toolBadgeHtml = `
+            <div style="display: inline-block; font-size: 0.78em; padding: 3px 8px; background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid #2ecc71; border-radius: 12px; margin-bottom: 8px;">
+                ⚡ Đã thực thi công cụ: <strong>${escapeHtml(toolName)}</strong> (tool_result đã gửi)
+            </div>
+        `;
+    }
+
     if (role === 'user') {
         msgDiv.innerHTML = `
             <div class="msg-content" id="content-${msgId}">${formattedContent}</div>
@@ -962,6 +978,7 @@ function addMessage(role, content, sources = null) {
     } else {
         msgDiv.innerHTML = `
             ${sourcesHeader}
+            ${toolBadgeHtml}
             <div class="msg-content" id="content-${msgId}">${formattedContent}</div>
             <div class="msg-actions" style="margin-top: 8px; font-size: 0.85em; display: flex; gap: 15px; opacity: 0.85;">
                 <span style="cursor:pointer;" onclick="copyMessage('${msgId}')">📋 Copy</span>
@@ -1110,7 +1127,7 @@ function handleFileUploadProcess(file) {
         }
 
         const analysisText = data.analysis || data.summary || data.message || data.reply || data.text;
-        addMessage('ai', `📑 **Kết quả phân tích tài liệu chuyên sâu (${file.name}):**\n\n${analysisText}`, data.sources);
+        addMessage('ai', `📑 **Kết quả phân tích tài liệu chuyên sâu (${file.name}):**\n\n${analysisText}`, data.sources, data.tool_executed || 'File Analyzer');
         loadUsage();
     })
     .catch(err => {
@@ -1165,7 +1182,7 @@ if (chatContainer) {
 }
 
 // ================================================================
-// SEND MESSAGE (TÍCH HỢP DUAL ROUTE & CHỐNG RELOAD FORM)
+// SEND MESSAGE (TÍCH HỢP TOOL/FUNCTION CALLING & DUAL ROUTE)
 // ================================================================
 function sendMessage() {
     if (!inputField || isGenerating) return; 
@@ -1205,6 +1222,8 @@ async function sendMessageInternal(text, isResend = false) {
         level: level,
         intent_recognition: true,
         web_synthesis: requiresWebSynthesis,
+        tool_calling_enabled: true,      // Kích hoạt nhận diện Tool/Plugin trên Backend
+        require_tool_result: true,       // Bắt buộc Backend chuyển đổi câu trả lời từ tool_result
         comprehensive_answer: true,
         full_code: true, 
         strict_code_focus: isCodeRequest, 
@@ -1250,8 +1269,9 @@ async function sendMessageInternal(text, isResend = false) {
         
         const aiResponseText = data.reply || data.message || data.text || 'Đã xử lý thành công.';
         const sourcesList = data.sources || data.web_sources || null;
+        const toolExecuted = data.tool_executed || data.tool_results ? (data.tool_name || 'Plugin System') : null;
 
-        addMessage('ai', aiResponseText, sourcesList);
+        addMessage('ai', aiResponseText, sourcesList, toolExecuted);
 
         if (isVoiceTriggered) {
             speakVietnamese(aiResponseText);
@@ -1357,7 +1377,7 @@ function loadConversation(id) {
                 const c = data.conversation;
                 currentConversationId = c.id;
                 if (chatContainer) chatContainer.innerHTML = '';
-                c.messages.forEach(m => addMessage(m.role, m.content, m.sources));
+                c.messages.forEach(m => addMessage(m.role, m.content, m.sources, m.tool_executed));
                 closeModal('historyModal');
                 if (exportBtn) exportBtn.style.display = 'inline-block';
                 if (c.level && levelSelect) {
@@ -1567,7 +1587,7 @@ function useMultiAI() {
         fetch(getApiUrl('/api/multi_ai'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: text, web_synthesis: true })
+            body: JSON.stringify({ query: text, web_synthesis: true, tool_calling_enabled: true })
         })
         .then(res => res.json())
         .then(data => {
@@ -1587,7 +1607,7 @@ function useMultiAI() {
             if (data.best) {
                 html += `🏆 **Kết quả tốt nhất:** ${data.best.model || data.best}`;
             }
-            addMessage('ai', html, data.sources);
+            addMessage('ai', html, data.sources, data.tool_executed || 'Multi-AI Plugin');
         })
         .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối AI Đa luồng'); });
     });
@@ -1621,7 +1641,7 @@ function summarizeText() {
             const summaryResult = data.summary || data.reply || data.message || data.text;
             const origLen = data.original_length || text.length;
             const sumLen = data.summarized_length || (summaryResult ? summaryResult.length : 0);
-            addMessage('ai', `📝 **Tóm tắt chuyên sâu:**\n\n${summaryResult}\n\n📊 Độ dài gốc: ${origLen} ký tự → ${sumLen} ký tự`, data.sources);
+            addMessage('ai', `📝 **Tóm tắt chuyên sâu:**\n\n${summaryResult}\n\n📊 Độ dài gốc: ${origLen} ký tự → ${sumLen} ký tự`, data.sources, data.tool_executed || 'Summarizer Tool');
         })
         .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối dịch vụ tóm tắt'); });
     });
@@ -1655,7 +1675,7 @@ function translateText() {
                 return;
             }
             const translatedText = data.translated || data.reply || data.message || data.text;
-            addMessage('ai', `🌐 **Dịch chuẩn xác sang [${lang}]:**\n\n${translatedText}`);
+            addMessage('ai', `🌐 **Dịch chuẩn xác sang [${lang}]:**\n\n${translatedText}`, null, data.tool_executed || 'Translation Tool');
         })
         .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối dịch thuật'); });
     });
@@ -1688,7 +1708,7 @@ function generateVideo() {
                 addMessage('ai', '❌ ' + data.error);
                 return;
             }
-            addMessage('ai', `🎬 **Video AI đang khởi tạo thành công:**\n\n📌 Tiêu đề: ${data.title || text}\n⏱️ Thời lượng: ${data.duration || 15}s\n📐 Độ phân giải: ${data.resolution || '1080p'}\n🎨 Phong cách: ${data.style || 'Chân thực'}\n🔗 Link xem: <a href="${data.url || '#'}" target="_blank">Tải / Xem Video</a>\n\n⏳ Trạng thái: ${data.status || 'Hoàn tất'}`, data.sources);
+            addMessage('ai', `🎬 **Video AI đang khởi tạo thành công:**\n\n📌 Tiêu đề: ${data.title || text}\n⏱️ Thời lượng: ${data.duration || 15}s\n📐 Độ phân giải: ${data.resolution || '1080p'}\n🎨 Phong cách: ${data.style || 'Chân thực'}\n🔗 Link xem: <a href="${data.url || '#'}" target="_blank">Tải / Xem Video</a>\n\n⏳ Trạng thái: ${data.status || 'Hoàn tất'}`, data.sources, data.tool_executed || 'AI Video Plugin');
         })
         .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối tạo video'); });
     });
@@ -1722,7 +1742,7 @@ function analyzeData() {
                     addMessage('ai', '❌ ' + data.error);
                     return;
                 }
-                addMessage('ai', `📊 **Kết quả phân tích thống kê số liệu:**\n\n📌 Số lượng phần tử: ${data.count}\n📉 Giá trị nhỏ nhất (Min): ${data.min}\n📈 Giá trị lớn nhất (Max): ${data.max}\n📊 Giá trị trung bình (Mean): ${data.mean}\n📏 Trung vị (Median): ${data.median}\n📐 Tổng cộng (Sum): ${data.sum}`);
+                addMessage('ai', `📊 **Kết quả phân tích thống kê số liệu:**\n\n📌 Số lượng phần tử: ${data.count}\n📉 Giá trị nhỏ nhất (Min): ${data.min}\n📈 Giá trị lớn nhất (Max): ${data.max}\n📊 Giá trị trung bình (Mean): ${data.mean}\n📏 Trung vị (Median): ${data.median}\n📐 Tổng cộng (Sum): ${data.sum}`, null, data.tool_executed || 'Data Analyzer Tool');
             })
             .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối phân tích dữ liệu số'); });
         } else {
@@ -1741,7 +1761,7 @@ function analyzeData() {
                     addMessage('ai', '❌ ' + data.error);
                     return;
                 }
-                addMessage('ai', `📊 **Chỉ số phân tích cấu trúc văn bản:**\n\n📌 Tổng số từ: ${data.word_count}\n📝 Tổng số câu: ${data.sentence_count}\n📏 Độ dài trung bình của từ: ${data.avg_word_length}\n🔤 Số từ độc nhất: ${data.unique_words}\n📖 Đánh giá độ dễ đọc: ${data.readability}`);
+                addMessage('ai', `📊 **Chỉ số phân tích cấu trúc văn bản:**\n\n📌 Tổng số từ: ${data.word_count}\n📝 Tổng số câu: ${data.sentence_count}\n📏 Độ dài trung bình của từ: ${data.avg_word_length}\n🔤 Số từ độc nhất: ${data.unique_words}\n📖 Đánh giá độ dễ đọc: ${data.readability}`, null, data.tool_executed || 'Text Analyzer Tool');
             })
             .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối phân tích văn bản'); });
         }
@@ -1793,7 +1813,7 @@ function generateMusicWithLyrics() {
                 const link = data.download_url || `/static/audio/${data.music_file}`;
                 html += `🔊 **Tải bản thu âm hoàn chỉnh:** <a href="${getApiUrl(link)}" download style="color:var(--color-primary);text-decoration:underline;">Tải File Nhạc MP3</a>`;
             }
-            addMessage('ai', html, data.sources);
+            addMessage('ai', html, data.sources, data.tool_executed || 'Suno Music Generator');
         })
         .catch(() => { unlockUI(); addMessage('ai', '❌ Lỗi kết nối máy chủ nhạc Suno AI'); });
     });
@@ -1822,4 +1842,4 @@ if (typeof io !== 'undefined') {
     initSocket();
 }
 
-console.log('🚀 T.VỸ-AI-SUPREME v16.0 FULL FIX: Đã tối ưu hóa kết nối Render & chống Reload trang!');
+console.log('🚀 T.VỸ-AI-SUPREME v16.0 FULL FIX: Đã tối ưu hóa Tool/Function Calling & kết nối Render!');
