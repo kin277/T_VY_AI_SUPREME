@@ -1998,15 +1998,17 @@
 
             <!-- NAVIGATION -->
             <nav>
-                <button class="nav-item" data-tab="history"><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử</button>
-                <button class="nav-item" data-tab="plugins"><i class="fa-solid fa-plug-circle-plus"></i> Kho Plugin</button>
-                <button class="nav-item" data-tab="upgrade"><i class="fa-solid fa-crown"></i> Nâng cấp</button>
-                <button class="nav-item" data-tab="settings"><i class="fa-solid fa-gear"></i> Cài đặt</button>
+                <button class="nav-item" data-tab="history" onclick="openModal('historyModal')"><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử</button>
+                <button class="nav-item" data-tab="plugins" onclick="openModal('pluginsModal')"><i class="fa-solid fa-plug-circle-plus"></i> Kho Plugin</button>
+                <button class="nav-item" data-tab="upgrade" onclick="openModal('upgradeModal')"><i class="fa-solid fa-crown"></i> Nâng cấp</button>
+                <button class="nav-item" data-tab="settings" onclick="openModal('settingsModal')"><i class="fa-solid fa-gear"></i> Cài đặt</button>
             </nav>
 
             <div class="sidebar-history" id="sidebarHistory">
                 <div class="sidebar-history-title">Lịch sử trò chuyện</div>
-                <div id="sidebarHistoryList"></div>
+                <div id="sidebarHistoryList">
+                    <!-- Sẽ render bằng JS -->
+                </div>
             </div>
 
             <div class="user-profile" id="userProfile">
@@ -2148,7 +2150,7 @@
                 <h2>Lịch sử trò chuyện</h2>
                 <button class="close-btn" onclick="closeModal('historyModal')">&times;</button>
             </div>
-            <div id="historyList">Đang tải...</div>
+            <div id="historyList">Bạn chưa có lịch sử nào.</div>
         </div>
     </div>
 
@@ -2264,7 +2266,7 @@
                 </div>
                 <div class="btn-group">
                   <button class="btn btn-secondary" onclick="exportData('json')">Export JSON</button>
-                  <button class="btn btn-secondary" onclick="exportData('markdown')">Export Markdown</button>
+                  <button class="btn btn-secondary" onclick="exportChatMarkdown()">Export Markdown</button>
                 </div>
               </div>
 
@@ -2273,7 +2275,7 @@
                   <label class="danger-text">Xóa toàn bộ lịch sử</label>
                   <p>Xóa toàn bộ các đoạn chat hiện có khỏi tài khoản. Hành động này không thể hoàn tác.</p>
                 </div>
-                <button class="btn btn-danger" onclick="clearAllConversations()">Xóa tất cả chat</button>
+                <button class="btn btn-danger" onclick="clearAllMessages()">Xóa tất cả chat</button>
               </div>
 
               <div class="setting-item col">
@@ -2406,7 +2408,7 @@
                   <label>Thông tin bảo mật</label>
                   <p>Thay đổi mật khẩu, bật xác thực 2 yếu tố (2FA).</p>
                 </div>
-                <button class="btn btn-secondary" onclick="openChangePasswordModal()">Đổi mật khẩu</button>
+                <button class="btn btn-secondary" onclick="showToast('Tính năng đang phát triển', 'info')">Đổi mật khẩu</button>
               </div>
 
               <div class="setting-item">
@@ -2440,16 +2442,15 @@
 
             <!-- TAB 5: TÍCH HỢP & CÔNG CỤ MỞ RỘNG -->
             <section id="integrationsTab" class="tab-content">
-              <h3>Tích hợp & API</h3>
+              <h3>Tích hợp & API (Google Gemini)</h3>
               <hr>
 
               <div class="setting-item col">
-                <label>Quản lý API Key cá nhân</label>
-                <p>Sử dụng API Key để kết nối ứng dụng bên ngoài với tài khoản AI của bạn.</p>
+                <label>Quản lý API Key (Gemini API)</label>
+                <p>Nhập Google Gemini API Key của bạn để sử dụng AI (Nếu để trống sẽ sử dụng Key Demo giới hạn).</p>
                 <div class="api-key-box">
-                  <input type="text" id="userApiKey" readonly value="tvai_sk_live_98a76b54c3210ef" />
-                  <button class="btn btn-secondary" onclick="copyApiKey()"><i class="fa-solid fa-copy"></i> Sao chép</button>
-                  <button class="btn btn-danger" onclick="regenerateApiKey()">Tạo mới</button>
+                  <input type="text" id="userApiKey" placeholder="Nhập Gemini API Key của bạn vào đây..." value="" />
+                  <button class="btn btn-secondary" onclick="saveApiKey()"><i class="fa-solid fa-save"></i> Lưu Key</button>
                 </div>
               </div>
 
@@ -2633,6 +2634,10 @@
         let recognition = null;
         let isRecording = false;
         let currentAbortController = null;
+        
+        // CẤU HÌNH API KEY (GEMINI)
+        // Thay YOUR_GEMINI_API_KEY bằng key của bạn, hoặc nhập qua giao diện Settings
+        let GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || ""; 
 
         const LEVEL_NAMES = {
             basic: 'AI Thường',
@@ -2947,6 +2952,9 @@
                 if (id === 'settingsModal') {
                     renderMemoryList();
                     populateVoiceList();
+                    if(document.getElementById('userApiKey')) {
+                        document.getElementById('userApiKey').value = GEMINI_API_KEY;
+                    }
                 } else if (id === 'pluginsModal') {
                     renderPluginsGrid();
                 }
@@ -2996,14 +3004,16 @@
         const PLUGINS_DATA = [
             { id: "python_repl", name: "Python Interpreter", desc: "Thực thi mã Python, phân tích dữ liệu và vẽ biểu đồ trực tiếp.", author: "Official", type: "official", enabled: true, icon: "fa-brands fa-python" },
             { id: "web_search", name: "Live Web Search", desc: "Tìm kiếm web thời gian thực để cập nhật thông tin mới nhất.", author: "T.VỸ-AI", type: "official", enabled: true, icon: "fa-solid fa-globe" },
-            { id: "github_tools", name: "GitHub Copilot", desc: "Đọc repo, pull request và phân tích mã nguồn từ GitHub.", author: "Community", type: "community", enabled: false, icon: "fa-brands fa-github" },
-            { id: "wolfram", name: "Wolfram Alpha", desc: "Giải toán, phân tích dữ liệu tính toán khoa học chuyên sâu.", author: "Official", type: "official", enabled: false, icon: "fa-solid fa-square-root-variable" }
+            { id: "github_sync", name: "GitHub Co-Pilot", desc: "Đọc/Ghi repositories, phân tích mã nguồn và pull requests.", author: "Community", type: "community", enabled: false, icon: "fa-brands fa-github" },
+            { id: "pandas_data", name: "Pandas Data Analyst", desc: "Xử lý, phân tích DataFrame mạnh mẽ với thư viện Pandas.", author: "Official", type: "official", enabled: false, icon: "fa-solid fa-database" },
+            { id: "wolfram_alpha", name: "Wolfram Alpha", desc: "Giải toán cao cấp, truy xuất dữ liệu khoa học thực tế.", author: "Community", type: "community", enabled: false, icon: "fa-solid fa-square-root-variable" },
+            { id: "arxiv_research", name: "ArXiv Research", desc: "Truy vấn các bài báo khoa học, học thuật mới nhất từ ArXiv.", author: "Official", type: "official", enabled: true, icon: "fa-solid fa-book-open-reader" }
         ];
 
         function renderPluginsGrid() {
             const grid = document.getElementById('pluginsGrid');
-            if (!grid) return;
-            const searchVal = document.getElementById('pluginSearchInput').value.toLowerCase();
+            if(!grid) return;
+            const searchVal = (document.getElementById('pluginSearchInput')?.value || '').toLowerCase();
             
             grid.innerHTML = PLUGINS_DATA.filter(p => p.name.toLowerCase().includes(searchVal) || p.desc.toLowerCase().includes(searchVal)).map(p => `
                 <div class="plugin-card">
@@ -3018,7 +3028,7 @@
                     <div class="plugin-bottom">
                         <span class="plugin-badge ${p.type}">${p.type === 'official' ? 'Official' : 'Community'}</span>
                         <label class="switch">
-                            <input type="checkbox" ${p.enabled ? 'checked' : ''} onchange="togglePlugin('${p.id}', this.checked)">
+                            <input type="checkbox" onchange="togglePlugin('${p.id}', this.checked)" ${p.enabled ? 'checked' : ''}>
                             <span class="slider-toggle"></span>
                         </label>
                     </div>
@@ -3026,309 +3036,335 @@
             `).join('');
         }
 
-        function filterPlugins() {
-            renderPluginsGrid();
-        }
-
-        function togglePlugin(id, status) {
+        function filterPlugins() { renderPluginsGrid(); }
+        
+        function togglePlugin(id, isEnabled) {
             const plugin = PLUGINS_DATA.find(p => p.id === id);
-            if (plugin) {
-                plugin.enabled = status;
-                showToast(`Đã ${status ? 'bật' : 'tắt'} plugin: ${plugin.name}`, 'info');
+            if(plugin) {
+                plugin.enabled = isEnabled;
+                showToast(`Đã ${isEnabled ? 'bật' : 'tắt'} plugin: ${plugin.name}`, 'info');
             }
         }
 
-        function enableAllPlugins(status) {
-            PLUGINS_DATA.forEach(p => p.enabled = status);
+        function enableAllPlugins(enable) {
+            PLUGINS_DATA.forEach(p => p.enabled = enable);
             renderPluginsGrid();
-            showToast(`Đã ${status ? 'bật' : 'tắt'} tất cả plugin!`, 'success');
+            showToast(`Đã ${enable ? 'bật' : 'tắt'} tất cả plugin!`, 'success');
         }
 
         // ---------------------------------------------------------
-        // 3. LOGIC CÀI ĐẶT & UI
+        // 3. LOGIC CÀI ĐẶT (SETTINGS) & GIAO DIỆN
         // ---------------------------------------------------------
         function switchTab(tabId) {
-            document.querySelectorAll('.settings-sidebar .tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.settings-content .tab-content').forEach(c => c.classList.remove('active'));
-            event.currentTarget.classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
             document.getElementById(tabId).classList.add('active');
         }
 
-        function changeFontFamily(font) {
-            document.body.style.fontFamily = font;
+        function populateVoiceList() {
+            const voiceSelect = document.getElementById('ttsVoiceSelect');
+            if(!voiceSelect || !('speechSynthesis' in window)) return;
+            
+            const voices = speechSynthesis.getVoices();
+            voiceSelect.innerHTML = voices.filter(v => v.lang.includes('vi')).map(v => 
+                `<option data-name="${v.name}">${v.name} (${v.lang})</option>`
+            ).join('') || `<option>Không tìm thấy giọng nói Tiếng Việt</option>`;
         }
-
-        function changeFontSize(size) {
-            const chatC = document.getElementById('chatContainer');
-            if (!chatC) return;
-            chatC.style.fontSize = size === 'small' ? '14px' : size === 'large' ? '18px' : '16px';
-        }
-
-        function saveAllSettings() {
-            showToast('✅ Đã lưu cấu hình cài đặt thành công!', 'success');
-            closeModal('settingsModal');
-        }
-
-        function clearAllConversations() {
-            if(confirm("Xóa toàn bộ lịch sử trò chuyện?")) {
-                document.getElementById('sidebarHistoryList').innerHTML = '';
-                clearAllMessages();
-                showToast("Đã xóa sạch lịch sử!", "success");
-            }
-        }
-
-        function toggleDataTraining(status) {
-            showToast(`Dữ liệu huấn luyện đã được ${status ? 'bật' : 'tắt'}.`, 'info');
-        }
-
-        function exportData(type) {
-            exportChatCombined();
-        }
-
-        function openChangePasswordModal() {
-            showToast('Chức năng đổi mật khẩu đang được bảo trì.', 'warning');
-        }
-
-        function copyApiKey() {
-            const key = document.getElementById('userApiKey').value;
-            navigator.clipboard.writeText(key);
-            showToast('Đã sao chép API Key!', 'success');
-        }
-
-        function regenerateApiKey() {
-            if(confirm("Tạo API Key mới sẽ vô hiệu hóa Key cũ. Tiếp tục?")) {
-                document.getElementById('userApiKey').value = "tvai_sk_live_" + Math.random().toString(36).substring(2, 15);
-                showToast('Đã tạo API Key mới!', 'success');
-            }
+        if('speechSynthesis' in window) {
+            speechSynthesis.onvoiceschanged = populateVoiceList;
         }
 
         function renderMemoryList() {
-            const ml = document.getElementById('memoryList');
-            if (!ml) return;
-            ml.innerHTML = `
-                <li>Biết người dùng là lập trình viên <span><i class="fa-solid fa-trash" style="cursor:pointer;color:#ef4444;" onclick="this.parentElement.parentElement.remove()"></i></span></li>
-                <li>Biết người dùng thích tone giọng ngắn gọn <span><i class="fa-solid fa-trash" style="cursor:pointer;color:#ef4444;" onclick="this.parentElement.parentElement.remove()"></i></span></li>
-            `;
+            const ul = document.getElementById('memoryList');
+            if(!ul) return;
+            // Dữ liệu mẫu bộ nhớ AI
+            const memories = ["Bạn là lập trình viên.", "Bạn thích giao diện Dark mode.", "Dự án hiện tại: T_VY_AI_SUPREME"];
+            ul.innerHTML = memories.map((m, i) => `<li><span>${m}</span> <button class="btn-icon" style="width:24px;height:24px;font-size:10px;border:none;" onclick="showToast('Đã xóa ghi nhớ!','info');this.parentElement.remove();"><i class="fa-solid fa-trash" style="color:#ef4444;"></i></button></li>`).join('');
         }
 
-        function populateVoiceList() {
-            if(typeof speechSynthesis === 'undefined') return;
-            let voices = speechSynthesis.getVoices();
-            const voiceSelect = document.getElementById('ttsVoiceSelect');
-            if(voices.length === 0) {
-                speechSynthesis.onvoiceschanged = () => {
-                    voices = speechSynthesis.getVoices();
-                    fillVoices(voices, voiceSelect);
-                };
+        function changeFontFamily(val) { document.body.style.fontFamily = val; }
+        function changeFontSize(val) {
+            let size = '16px';
+            if(val === 'small') size = '14px';
+            if(val === 'large') size = '18px';
+            document.documentElement.style.fontSize = size;
+        }
+
+        function toggleDataTraining(checked) {
+            showToast(checked ? "Dữ liệu sẽ được dùng để cải thiện AI." : "Đã từ chối chia sẻ dữ liệu huấn luyện.", checked ? 'info' : 'warning');
+        }
+
+        function saveApiKey() {
+            const keyInput = document.getElementById('userApiKey').value.trim();
+            if(keyInput) {
+                GEMINI_API_KEY = keyInput;
+                localStorage.setItem('gemini_api_key', keyInput);
+                showToast('Đã lưu API Key thành công!', 'success');
             } else {
-                fillVoices(voices, voiceSelect);
+                showToast('API Key không được để trống!', 'error');
             }
         }
 
-        function fillVoices(voices, select) {
-            if(!select) return;
-            select.innerHTML = '';
-            voices.forEach((voice) => {
-                if(voice.lang.includes('vi') || voice.lang.includes('en')) {
-                    const option = document.createElement('option');
-                    option.textContent = `${voice.name} (${voice.lang})`;
-                    option.setAttribute('data-lang', voice.lang);
-                    option.setAttribute('data-name', voice.name);
-                    select.appendChild(option);
-                }
-            });
+        function saveAllSettings() {
+            showToast('✅ Đã lưu toàn bộ cài đặt!', 'success');
+            closeModal('settingsModal');
         }
 
         // ---------------------------------------------------------
-        // 4. LOGIC CHAT CORE
+        // 4. LOGIC MENU TIỆN ÍCH AI (ĐẶT SẴN PROMPT)
         // ---------------------------------------------------------
         function setInputAndSend(text) {
             inputField.value = text;
+            inputField.style.height = 'auto';
             sendMessage();
         }
 
-        function sendMessage() {
+        function aiTextAndEmail() { setInputAndSend("Hãy đóng vai là trợ lý ảo chuyên nghiệp, viết một email thương lượng giá cả dự án phần mềm với khách hàng một cách khéo léo và lịch sự."); toggleMenu(); }
+        function aiCreativeAndMedia() { setInputAndSend("Hãy tạo một kịch bản Video TikTok ngắn (khoảng 45 giây) với chủ đề: '3 Công cụ AI giúp bạn làm việc hiệu quả gấp đôi'. Có đầy đủ Hook, Body, Call to action."); toggleMenu(); }
+        function aiDevAndData() { setInputAndSend("Viết một đoạn code Python sử dụng thư viện Pandas để đọc file CSV, lọc các hàng có giá trị null và vẽ biểu đồ phân phối bằng Matplotlib."); toggleMenu(); }
+        function aiMultiAndPrompt() { setInputAndSend("Hãy tối ưu hóa câu prompt sau để AI hiểu rõ hơn: 'Viết cho tôi bài blog về AI.'"); toggleMenu(); }
+
+        function clearAllMessages() {
+            if(confirm("Bạn có chắc chắn muốn xóa toàn bộ khung chat? Hành động này không thể hoàn tác!")) {
+                const msgs = document.querySelectorAll('.message-wrapper');
+                msgs.forEach(m => m.remove());
+                document.getElementById('welcomeHero').style.display = 'flex';
+                showToast("Đã dọn dẹp sạch khung chat!", "success");
+            }
+            toggleMenu();
+        }
+
+        function createNewChat() {
+            const msgs = document.querySelectorAll('.message-wrapper');
+            msgs.forEach(m => m.remove());
+            document.getElementById('welcomeHero').style.display = 'flex';
+            attachedFiles = [];
+            renderFilePreview();
+            showToast("Bắt đầu đoạn chat mới!", "info");
+        }
+
+        // ---------------------------------------------------------
+        // 5. CHỨC NĂNG CỐT LÕI: GỬI TIN NHẮN & KẾT NỐI GEMINI API
+        // ---------------------------------------------------------
+        async function sendMessage() {
             const text = inputField.value.trim();
             if (!text && attachedFiles.length === 0) return;
 
-            const welcome = document.getElementById('welcomeHero');
-            if (welcome) welcome.style.display = 'none';
+            // Xóa Welcome Hero
+            const welcomeHero = document.getElementById('welcomeHero');
+            if (welcomeHero) welcomeHero.style.display = 'none';
 
-            appendMessage('user', text, [...attachedFiles]);
+            let fileContextText = "";
+            if(attachedFiles.length > 0) {
+                fileContextText = "\n\n[Dữ liệu đính kèm]:\n" + attachedFiles.map(f => `File: ${f.name}\nContent:\n${f.content}`).join('\n\n');
+            }
+
+            const promptToSend = text + fileContextText;
+
+            // 1. In User Message ra màn hình
+            appendMessage('user', text + (attachedFiles.length > 0 ? ` <i>[Đã đính kèm ${attachedFiles.length} file]</i>` : ''));
+            
+            // Xóa input & files
             inputField.value = '';
             inputField.style.height = 'auto';
             attachedFiles = [];
             renderFilePreview();
 
-            simulateAIResponse(text);
-        }
-
-        function appendMessage(role, text, files = []) {
-            const wrapper = document.createElement('div');
-            wrapper.className = `message-wrapper ${role}`;
-
-            let fileHtml = '';
-            if (files.length > 0) {
-                fileHtml = `<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">` + 
-                    files.map(f => `<span style="background:rgba(255,255,255,0.1);padding:4px 8px;border-radius:4px;font-size:12px;"><i class="fa-solid fa-file"></i> ${f.name}</span>`).join('') + 
-                `</div>`;
-            }
-
-            const rawTextEscaped = text.replace(/"/g, '&quot;');
-            
-            let htmlContent = text;
-            if(role === 'ai') {
-                htmlContent = marked.parse(text);
-            }
-
-            const avatarIcon = role === 'user' ? '👤' : '<i class="fa-solid fa-robot"></i>';
-
-            wrapper.innerHTML = `
-                <div class="message-avatar">${avatarIcon}</div>
-                <div class="message ${role}" data-raw-text="${rawTextEscaped}">
-                    ${fileHtml}
-                    <div class="message-content">${role === 'user' ? text : htmlContent}</div>
-                    ${role === 'ai' ? `
-                    <div class="message-tools">
-                        <button class="tool-btn" onclick="navigator.clipboard.writeText(this.closest('.message').dataset.rawText); showToast('Đã chép!', 'success');"><i class="fa-regular fa-copy"></i> Copy</button>
-                        <button class="tool-btn" onclick="speakMsgText(this)"><i class="fa-solid fa-volume-high"></i> Đọc</button>
-                        <span class="time">${new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
-                    </div>` : ''}
-                </div>
-            `;
-            
-            chatContainer.insertBefore(wrapper, document.getElementById('deepThinkIndicator'));
+            // 2. Hiển thị Indicator Suy nghĩ
+            const thinkIndicator = document.getElementById('deepThinkIndicator');
+            thinkIndicator.style.display = 'block';
             chatContainer.scrollTop = chatContainer.scrollHeight;
-            
-            if (role === 'ai' && typeof mermaid !== 'undefined') {
-                mermaid.init(undefined, wrapper.querySelectorAll('.language-mermaid'));
-            }
-            if (role === 'ai') {
-                wrapper.querySelectorAll('pre code').forEach((block) => {
-                    hljs.highlightElement(block);
-                });
-            }
-        }
 
-        function simulateAIResponse(userText) {
             sendBtn.style.display = 'none';
             stopBtn.style.display = 'flex';
-            const indicator = document.getElementById('deepThinkIndicator');
-            indicator.style.display = 'block';
-            chatContainer.scrollTop = chatContainer.scrollHeight;
 
             currentAbortController = new AbortController();
 
-            setTimeout(() => {
-                if (currentAbortController.signal.aborted) return;
-                indicator.style.display = 'none';
+            // 3. GỌI API GOOGLE GEMINI THỰC TẾ
+            try {
+                if(!GEMINI_API_KEY) {
+                    throw new Error("MissingAPIKey");
+                }
+
+                // Endpoint Gemini 1.5 Flash (nhanh) hoặc Pro
+                const modelName = document.getElementById('defaultModelSelect').value === 'supreme-fast' ? 'gemini-1.5-flash' : 'gemini-1.5-pro';
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+                
+                const systemPrompt = document.getElementById('customInstructions')?.value || "";
+                
+                const requestBody = {
+                    contents: [{
+                        parts: [{
+                            text: (systemPrompt ? `[HƯỚNG DẪN HỆ THỐNG]: ${systemPrompt}\n\n` : "") + promptToSend
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: parseFloat(document.getElementById('tempSlider')?.value || 0.7),
+                        topP: parseFloat(document.getElementById('topPSlider')?.value || 0.9),
+                        maxOutputTokens: parseInt(document.getElementById('maxTokensSlider')?.value || 2048)
+                    }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody),
+                    signal: currentAbortController.signal
+                });
+
+                thinkIndicator.style.display = 'none';
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error?.message || "Lỗi kết nối tới Gemini API.");
+                }
+
+                const data = await response.json();
+                let aiResponseText = "";
+                
+                if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
+                    aiResponseText = data.candidates[0].content.parts[0].text;
+                } else {
+                    aiResponseText = "Xin lỗi, tôi không thể tạo phản hồi cho câu hỏi này.";
+                }
+
+                appendMessage('ai', aiResponseText);
+
+            } catch (error) {
+                thinkIndicator.style.display = 'none';
+                if (error.name === 'AbortError') {
+                    appendMessage('ai', '<i>Đã dừng tạo phản hồi.</i>');
+                } else if (error.message === "MissingAPIKey") {
+                    appendMessage('ai', '<b>Lỗi API Key:</b> Bạn chưa nhập Google Gemini API Key. Vui lòng vào mục <i class="fa-solid fa-gear"></i> Cài đặt -> Tích hợp & Công cụ để điền API Key thực tế.');
+                } else {
+                    appendMessage('ai', `<b>Lỗi kết nối:</b> ${error.message}`);
+                }
+            } finally {
                 sendBtn.style.display = 'flex';
                 stopBtn.style.display = 'none';
-
-                let response = `Đây là câu trả lời mô phỏng từ hệ thống **T.VỸ-AI v13.0 Ultra**. Bạn vừa yêu cầu: "${userText}"\n\n`;
-                if (userText.toLowerCase().includes("sơ đồ") || userText.toLowerCase().includes("mermaid")) {
-                    response += "Dưới đây là sơ đồ Mermaid như bạn yêu cầu:\n\n```mermaid\ngraph TD;\n    A[Bắt đầu] --> B{Điều kiện};\n    B -- Đúng --> C[Xử lý 1];\n    B -- Sai --> D[Xử lý 2];\n    C --> E[Kết thúc];\n    D --> E;\n```";
-                } else if (userText.toLowerCase().includes("code") || userText.toLowerCase().includes("lập trình")) {
-                    response += "Đây là ví dụ mã Python:\n\n```python\ndef hello_world():\n    print('Hello, T.VỸ AI Supreme!')\n\nhello_world()\n```";
-                } else {
-                    response += "Tôi đã xử lý yêu cầu của bạn qua nhiều mô hình nội bộ. Vui lòng cho tôi biết nếu cần điều chỉnh thêm chi tiết.";
-                }
-
-                appendMessage('ai', response);
-                
-                if (document.getElementById('soundEffectToggle') && document.getElementById('soundEffectToggle').checked) {
-                    const audio = new Audio('https://actions.google.com/sounds/v1/water/glass_water_pour.ogg'); // Âm thanh nhẹ
-                    audio.volume = 0.2;
-                    audio.play().catch(e=>{});
-                }
-            }, 1500);
+                currentAbortController = null;
+            }
         }
 
         function stopGeneration() {
             if (currentAbortController) {
                 currentAbortController.abort();
             }
-            document.getElementById('deepThinkIndicator').style.display = 'none';
-            sendBtn.style.display = 'flex';
-            stopBtn.style.display = 'none';
-            showToast('Đã dừng tạo phản hồi.', 'info');
         }
 
-        function createNewChat() {
-            clearAllMessages();
-            const welcome = document.getElementById('welcomeHero');
-            if (welcome) welcome.style.display = 'flex';
-            showToast('Bắt đầu đoạn chat mới', 'success');
-        }
+        function appendMessage(sender, text) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `message-wrapper ${sender}`;
 
-        function clearAllMessages() {
-            document.querySelectorAll('.message-wrapper').forEach(e => e.remove());
-        }
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = sender === 'user' ? '👤' : '<i class="fa-solid fa-robot"></i>';
 
-        function searchMessages() {
-            const query = searchInput.value.trim().toLowerCase();
-            if(!query) return;
-            let found = 0;
-            document.querySelectorAll('.message-wrapper .message-content').forEach(el => {
-                if(el.innerText.toLowerCase().includes(query)) found++;
-            });
-            showToast(`Tìm thấy ${found} kết quả trong cuộc trò chuyện hiện tại.`, 'info');
-        }
+            const msgContent = document.createElement('div');
+            msgContent.className = `message ${sender}`;
+            msgContent.dataset.rawText = text; // Lưu bản gốc
 
-        // ---------------------------------------------------------
-        // 5. NÂNG CẤP TIỆN ÍCH & TÍNH NĂNG
-        // ---------------------------------------------------------
-        function upgradeTier(tier) {
-            if(!isLoggedIn) {
-                showToast('Vui lòng đăng nhập để nâng cấp!', 'error');
-                openLoginModal();
-                return;
+            if (sender === 'ai') {
+                // Parse markdown
+                msgContent.innerHTML = marked.parse(text);
+                
+                // Wrap thẻ pre code để có header & button
+                const codeBlocks = msgContent.querySelectorAll('pre code');
+                codeBlocks.forEach(block => {
+                    const lang = block.className.replace('language-', '') || 'code';
+                    const pre = block.parentNode;
+                    const container = document.createElement('div');
+                    container.className = 'code-container';
+                    
+                    container.innerHTML = `
+                        <div class="code-header">
+                            <span>${lang.toUpperCase()}</span>
+                            <div class="code-actions">
+                                <button class="code-copy-btn" onclick="copyCode(this)"><i class="fa-solid fa-copy"></i> Copy</button>
+                            </div>
+                        </div>
+                    `;
+                    pre.parentNode.insertBefore(container, pre);
+                    container.appendChild(pre);
+                });
+
+                // Xử lý Mermaid JS
+                if (text.includes("```mermaid")) {
+                    const mermaidDivs = msgContent.querySelectorAll('.language-mermaid');
+                    mermaidDivs.forEach(div => {
+                        const code = div.textContent;
+                        const parentPre = div.closest('pre');
+                        const container = document.createElement('div');
+                        container.className = 'mermaid';
+                        container.textContent = code;
+                        
+                        if (parentPre && parentPre.parentNode.classList.contains('code-container')) {
+                            const codeContainer = parentPre.parentNode;
+                            codeContainer.parentNode.replaceChild(container, codeContainer);
+                        } else if(parentPre) {
+                            parentPre.parentNode.replaceChild(container, parentPre);
+                        }
+                    });
+                    // Chạy render Mermaid
+                    try {
+                        mermaid.init(undefined, msgContent.querySelectorAll('.mermaid'));
+                    } catch(e) { console.error("Mermaid Render Error", e); }
+                }
+
+                // Thanh công cụ dưới mỗi tin nhắn AI
+                const tools = document.createElement('div');
+                tools.className = 'message-tools';
+                tools.innerHTML = `
+                    <button class="tool-btn" onclick="copyText(this)"><i class="fa-regular fa-copy"></i> Sao chép</button>
+                    <button class="tool-btn" onclick="speakMsgText(this)"><i class="fa-solid fa-volume-high"></i> Đọc</button>
+                    <button class="tool-btn"><i class="fa-solid fa-rotate-right"></i> Tạo lại</button>
+                    <span class="time">${new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
+                `;
+                msgContent.appendChild(tools);
+            } else {
+                msgContent.innerHTML = text;
             }
-            currentLevel = tier;
-            levelSelect.value = tier;
-            levelBadge.textContent = LEVEL_NAMES[tier];
-            chatName.textContent = LEVEL_NAMES[tier];
-            closeModal('upgradeModal');
-            showToast(`Đã chọn nâng cấp: ${LEVEL_NAMES[tier]}`, 'success');
+
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(msgContent);
+            chatContainer.insertBefore(wrapper, document.getElementById('deepThinkIndicator'));
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            if (sender === 'ai' && document.getElementById('soundEffectToggle')?.checked) {
+                // Play a tiny beep sound (optional logic)
+            }
         }
 
-        function upgradeWithMomo(tier) {
-            showToast(`Đang chuyển hướng thanh toán MoMo cho gói ${LEVEL_NAMES[tier]}...`, 'info');
-            setTimeout(() => {
-                upgradeTier(tier);
-                showToast(`Thanh toán thành công gói ${LEVEL_NAMES[tier]}!`, 'success');
-            }, 2000);
+        // Utils
+        function copyCode(btn) {
+            const pre = btn.closest('.code-container').querySelector('pre');
+            if (pre) {
+                navigator.clipboard.writeText(pre.innerText);
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+                setTimeout(() => btn.innerHTML = originalText, 2000);
+            }
         }
 
-        function aiTextAndEmail() { setInputAndSend("Hãy đóng vai một trợ lý chuyên nghiệp, viết cho tôi một email gửi đối tác..."); }
-        function aiCreativeAndMedia() { setInputAndSend("Viết kịch bản video TikTok 60 giây chủ đề Công nghệ AI xu hướng..."); }
-        function aiDevAndData() { setInputAndSend("Viết code Python phân tích dữ liệu CSV kèm vẽ biểu đồ Matplotlib..."); }
-        function aiMultiAndPrompt() { setInputAndSend("Phân tích đa chiều vấn đề sau và đề xuất 3 giải pháp đột phá..."); }
-
-        // Live preview (Artifacts)
-        function refreshLivePreview() {
-            const frame = document.getElementById('artifactFrame');
-            if(frame) frame.src = frame.src;
-            showToast('Đã tải lại bản xem trước.', 'info');
+        function copyText(btn) {
+            const msg = btn.closest('.message').dataset.rawText;
+            if (msg) {
+                navigator.clipboard.writeText(msg);
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Đã chép';
+                setTimeout(() => btn.innerHTML = originalText, 2000);
+            }
         }
-
+        
+        // Artifacts Live Preview (Giả lập)
         function closeLivePreview() {
-            const pane = document.getElementById('artifactPreviewPane');
-            if(pane) pane.classList.remove('active');
+            document.getElementById('artifactPreviewPane').classList.remove('active');
         }
-
-        // Tích hợp thanh Sidebar Nav
-        document.querySelectorAll('nav .nav-item').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('nav .nav-item').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const tab = btn.getAttribute('data-tab');
-                if (tab === 'settings') openModal('settingsModal');
-                if (tab === 'upgrade') openModal('upgradeModal');
-                if (tab === 'history') openModal('historyModal');
-                if (tab === 'plugins') openModal('pluginsModal');
-            });
-        });
+        function refreshLivePreview() {
+            const iframe = document.getElementById('artifactFrame');
+            if(iframe) iframe.src = iframe.src;
+        }
 
     </script>
 </body>
