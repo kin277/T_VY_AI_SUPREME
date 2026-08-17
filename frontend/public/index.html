@@ -3204,11 +3204,12 @@
 					throw new Error("MissingAPIKey");
 				}
 
-				// Chuyển mặc định sang 'gemini-1.5-flash' hoặc 'gemini-2.0-flash' để tránh lỗi NOT_FOUND trên key miễn phí
+				// Đổi tên model mặc định sang gemini-3.6-flash
 				const selectedModel = document.getElementById('defaultModelSelect')?.value;
-				// Thay vì fix cứng gemini-1.5-flash, gọi hàm kiểm tra:
-				
-				const modelName = await getActiveModel(GEMINI_API_KEY);
+				const modelName = (selectedModel === 'supreme-fast' || !selectedModel) 
+					? 'gemini-3.6-flash' 
+					: 'gemini-3.6-flash';
+
 				const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
 				
 				const systemPrompt = document.getElementById('customInstructions')?.value || "";
