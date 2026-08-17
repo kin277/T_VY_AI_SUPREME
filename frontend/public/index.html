@@ -3233,12 +3233,13 @@
 					};
 				}
 
-				const response = await fetch(apiUrl, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(requestBody),
-					signal: currentAbortController.signal
-				});
+				// Thay thế đoạn gọi fetch cũ:
+				const response = await fetchWithRetryAndFallback(
+					'gemini-2.0-flash',        // Model chính
+					'gemini-2.0-flash-lite',   // Model dự phòng khi model chính quá tải
+					requestBody,
+					currentAbortController.signal
+				);
 
 				thinkIndicator.style.display = 'none';
 
@@ -3272,6 +3273,41 @@
 				stopBtn.style.display = 'none';
 				currentAbortController = null;
 			}
+		}
+		
+		// Hàm hỗ trợ gửi request có cơ chế Retry khi gặp lỗi quá tải
+		async function fetchWithRetryAndFallback(primaryModel, fallbackModel, requestBody, signal) {
+			const modelsToTry = [primaryModel, fallbackModel];
+
+			for (const model of modelsToTry) {
+				const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+				
+				// Thử tối đa 2 lần cho mỗi model
+				for (let attempt = 0; attempt < 2; attempt++) {
+					try {
+						const res = await fetch(url, {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify(requestBody),
+							signal
+						});
+
+						// Nếu lỗi 503 (High demand) hoặc 429 (Rate limit), chờ 1.5 giây rồi thử lại
+						if (res.status === 503 || res.status === 429) {
+							console.warn(`Model ${model} đang quá tải. Đang thử lại (lần ${attempt + 1})...`);
+							await new Promise(r => setTimeout(r, 1500));
+							continue;
+						}
+
+						return res; // Trả về response nếu thành công hoặc gặp lỗi khác (400, 401,...)
+					} catch (err) {
+						if (err.name === 'AbortError') throw err;
+						if (attempt === 1) break; // Thử hết lượt thì chuyển sang model tiếp theo
+					}
+				}
+			}
+
+			throw new Error("Hệ thống đang quá tải cao điểm trên mọi model. Vui lòng thử lại sau 1-2 phút.");
 		}
 
         function stopGeneration() {
