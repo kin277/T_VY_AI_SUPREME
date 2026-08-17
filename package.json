@@ -24,8 +24,9 @@
   "homepage": "https://github.com/kin277/T_VY_AI_SUPREME#readme",
   "dependencies": {
     "@google/genai": "^2.15.0",
+    "@google/generative-ai": "^0.24.1",
+    "cors": "^2.8.5",
     "dotenv": "^17.4.2",
-	"cors": "^2.8.5",
     "express": "^5.2.1"
   }
 }
