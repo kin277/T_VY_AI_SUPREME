@@ -3148,104 +3148,112 @@
         // 5. CHỨC NĂNG CỐT LÕI: GỬI TIN NHẮN & KẾT NỐI GEMINI API
         // ---------------------------------------------------------
         async function sendMessage() {
-            const text = inputField.value.trim();
-            if (!text && attachedFiles.length === 0) return;
+			const text = inputField.value.trim();
+			if (!text && attachedFiles.length === 0) return;
 
-            // Xóa Welcome Hero
-            const welcomeHero = document.getElementById('welcomeHero');
-            if (welcomeHero) welcomeHero.style.display = 'none';
+			// Xóa Welcome Hero
+			const welcomeHero = document.getElementById('welcomeHero');
+			if (welcomeHero) welcomeHero.style.display = 'none';
 
-            let fileContextText = "";
-            if(attachedFiles.length > 0) {
-                fileContextText = "\n\n[Dữ liệu đính kèm]:\n" + attachedFiles.map(f => `File: ${f.name}\nContent:\n${f.content}`).join('\n\n');
-            }
+			let fileContextText = "";
+			if(attachedFiles.length > 0) {
+				fileContextText = "\n\n[Dữ liệu đính kèm]:\n" + attachedFiles.map(f => `File: ${f.name}\nContent:\n${f.content}`).join('\n\n');
+			}
 
-            const promptToSend = text + fileContextText;
+			const promptToSend = text + fileContextText;
 
-            // 1. In User Message ra màn hình
-            appendMessage('user', text + (attachedFiles.length > 0 ? ` <i>[Đã đính kèm ${attachedFiles.length} file]</i>` : ''));
-            
-            // Xóa input & files
-            inputField.value = '';
-            inputField.style.height = 'auto';
-            attachedFiles = [];
-            renderFilePreview();
+			// 1. In User Message ra màn hình
+			appendMessage('user', text + (attachedFiles.length > 0 ? ` <i>[Đã đính kèm ${attachedFiles.length} file]</i>` : ''));
+			
+			// Xóa input & files
+			inputField.value = '';
+			inputField.style.height = 'auto';
+			attachedFiles = [];
+			renderFilePreview();
 
-            // 2. Hiển thị Indicator Suy nghĩ
-            const thinkIndicator = document.getElementById('deepThinkIndicator');
-            thinkIndicator.style.display = 'block';
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+			// 2. Hiển thị Indicator
+			const thinkIndicator = document.getElementById('deepThinkIndicator');
+			thinkIndicator.style.display = 'block';
+			chatContainer.scrollTop = chatContainer.scrollHeight;
 
-            sendBtn.style.display = 'none';
-            stopBtn.style.display = 'flex';
+			sendBtn.style.display = 'none';
+			stopBtn.style.display = 'flex';
 
-            currentAbortController = new AbortController();
+			currentAbortController = new AbortController();
 
-            // 3. GỌI API GOOGLE GEMINI THỰC TẾ
-            try {
-                if(!GEMINI_API_KEY) {
-                    throw new Error("MissingAPIKey");
-                }
+			// 3. GỌI API GOOGLE GEMINI
+			try {
+				if(!GEMINI_API_KEY) {
+					throw new Error("MissingAPIKey");
+				}
 
-                // Endpoint Gemini 1.5 Flash (nhanh) hoặc Pro
-                const modelName = document.getElementById('defaultModelSelect').value === 'supreme-fast' ? 'gemini-1.5-flash' : 'gemini-1.5-pro';
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
-                
-                const systemPrompt = document.getElementById('customInstructions')?.value || "";
-                
-                const requestBody = {
-                    contents: [{
-                        parts: [{
-                            text: (systemPrompt ? `[HƯỚNG DẪN HỆ THỐNG]: ${systemPrompt}\n\n` : "") + promptToSend
-                        }]
-                    }],
-                    generationConfig: {
-                        temperature: parseFloat(document.getElementById('tempSlider')?.value || 0.7),
-                        topP: parseFloat(document.getElementById('topPSlider')?.value || 0.9),
-                        maxOutputTokens: parseInt(document.getElementById('maxTokensSlider')?.value || 2048)
-                    }
-                };
+				// Chuyển mặc định sang 'gemini-1.5-flash' hoặc 'gemini-2.0-flash' để tránh lỗi NOT_FOUND trên key miễn phí
+				const selectedModel = document.getElementById('defaultModelSelect')?.value;
+				const modelName = (selectedModel === 'supreme-fast' || !selectedModel) ? 'gemini-1.5-flash' : 'gemini-1.5-flash'; 
+				
+				const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+				
+				const systemPrompt = document.getElementById('customInstructions')?.value || "";
+				
+				// Cấu trúc payload chuẩn Gemini API
+				const requestBody = {
+					contents: [{
+						parts: [{ text: promptToSend }]
+					}],
+					generationConfig: {
+						temperature: parseFloat(document.getElementById('tempSlider')?.value || 0.7),
+						topP: parseFloat(document.getElementById('topPSlider')?.value || 0.9),
+						maxOutputTokens: parseInt(document.getElementById('maxTokensSlider')?.value || 2048)
+					}
+				};
 
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody),
-                    signal: currentAbortController.signal
-                });
+				// Gửi System Instruction theo đúng tham số của API v1beta
+				if (systemPrompt.trim()) {
+					requestBody.systemInstruction = {
+						parts: [{ text: systemPrompt }]
+					};
+				}
 
-                thinkIndicator.style.display = 'none';
+				const response = await fetch(apiUrl, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(requestBody),
+					signal: currentAbortController.signal
+				});
 
-                if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.error?.message || "Lỗi kết nối tới Gemini API.");
-                }
+				thinkIndicator.style.display = 'none';
 
-                const data = await response.json();
-                let aiResponseText = "";
-                
-                if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
-                    aiResponseText = data.candidates[0].content.parts[0].text;
-                } else {
-                    aiResponseText = "Xin lỗi, tôi không thể tạo phản hồi cho câu hỏi này.";
-                }
+				if (!response.ok) {
+					const errData = await response.json();
+					throw new Error(errData.error?.message || "Lỗi kết nối tới Gemini API.");
+				}
 
-                appendMessage('ai', aiResponseText);
+				const data = await response.json();
+				let aiResponseText = "";
+				
+				if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+					aiResponseText = data.candidates[0].content.parts[0].text;
+				} else {
+					aiResponseText = "Xin lỗi, tôi không thể tạo phản hồi cho câu hỏi này.";
+				}
 
-            } catch (error) {
-                thinkIndicator.style.display = 'none';
-                if (error.name === 'AbortError') {
-                    appendMessage('ai', '<i>Đã dừng tạo phản hồi.</i>');
-                } else if (error.message === "MissingAPIKey") {
-                    appendMessage('ai', '<b>Lỗi API Key:</b> Bạn chưa nhập Google Gemini API Key. Vui lòng vào mục <i class="fa-solid fa-gear"></i> Cài đặt -> Tích hợp & Công cụ để điền API Key thực tế.');
-                } else {
-                    appendMessage('ai', `<b>Lỗi kết nối:</b> ${error.message}`);
-                }
-            } finally {
-                sendBtn.style.display = 'flex';
-                stopBtn.style.display = 'none';
-                currentAbortController = null;
-            }
-        }
+				appendMessage('ai', aiResponseText);
+
+			} catch (error) {
+				thinkIndicator.style.display = 'none';
+				if (error.name === 'AbortError') {
+					appendMessage('ai', '<i>Đã dừng tạo phản hồi.</i>');
+				} else if (error.message === "MissingAPIKey") {
+					appendMessage('ai', '<b>Lỗi API Key:</b> Bạn chưa nhập Google Gemini API Key. Vui lòng vào Cài đặt để điền API Key.');
+				} else {
+					appendMessage('ai', `<b>Lỗi kết nối:</b> ${error.message}`);
+				}
+			} finally {
+				sendBtn.style.display = 'flex';
+				stopBtn.style.display = 'none';
+				currentAbortController = null;
+			}
+		}
 
         function stopGeneration() {
             if (currentAbortController) {
