@@ -3233,10 +3233,10 @@
 					};
 				}
 
-				// Thay thế đoạn gọi fetch cũ:
+				// Cập nhật tham số model chính và dự phòng sang phiên bản 3.6
 				const response = await fetchWithRetryAndFallback(
-					'gemini-2.0-flash',        // Model chính
-					'gemini-2.0-flash-lite',   // Model dự phòng khi model chính quá tải
+					'gemini-3.6-flash',        // Model chính
+					'gemini-3.6-flash-lite',   // Model dự phòng
 					requestBody,
 					currentAbortController.signal
 				);
