@@ -3143,6 +3143,23 @@
             renderFilePreview();
             showToast("Bắt đầu đoạn chat mới!", "info");
         }
+		
+		// Hàm tự động lấy tên model hoạt động được với API Key của bạn
+		async function getActiveModel(apiKey) {
+			try {
+				const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+				const data = await res.json();
+				if (!data.models) return 'gemini-2.0-flash';
+				
+				// Tìm model đầu tiên hỗ trợ generateContent
+				const active = data.models.find(m => 
+					m.supportedGenerationMethods?.includes('generateContent')
+				);
+				return active ? active.name.replace('models/', '') : 'gemini-2.0-flash';
+			} catch (e) {
+				return 'gemini-2.0-flash';
+			}
+		}
 
         // ---------------------------------------------------------
         // 5. CHỨC NĂNG CỐT LÕI: GỬI TIN NHẮN & KẾT NỐI GEMINI API
@@ -3189,8 +3206,9 @@
 
 				// Chuyển mặc định sang 'gemini-1.5-flash' hoặc 'gemini-2.0-flash' để tránh lỗi NOT_FOUND trên key miễn phí
 				const selectedModel = document.getElementById('defaultModelSelect')?.value;
-				const modelName = (selectedModel === 'supreme-fast' || !selectedModel) ? 'gemini-1.5-flash' : 'gemini-1.5-flash'; 
+				// Thay vì fix cứng gemini-1.5-flash, gọi hàm kiểm tra:
 				
+				const modelName = await getActiveModel(GEMINI_API_KEY);
 				const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
 				
 				const systemPrompt = document.getElementById('customInstructions')?.value || "";
