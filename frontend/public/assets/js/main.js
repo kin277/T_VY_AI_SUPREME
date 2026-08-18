@@ -9,7 +9,6 @@ import { ApiService } from '../../../src/services/apiService.js';
 import { StorageService } from '../../../src/services/storageService.js';
 import { parseAiResponse } from '../../../src/utils/markdownParser.js';
 
-/ 🚨 CẤU HÌNH SERVER RENDER 🚨
 const RENDER_BASE_URL = "https://t-vy-ai-supreme-1.onrender.com"; 
 const storageService = new StorageService();
 
