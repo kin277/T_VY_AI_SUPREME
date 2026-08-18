@@ -4,10 +4,10 @@
 // Claude Artifacts, Perplexity Source Cards & Voice Mode Tiếng Việt
 // ================================================================
 
-// Import các module mới vào đầu file main.js
-import { ApiService } from '../../../src/services/apiService.js';
-import { StorageService } from '../../../src/services/storageService.js';
-import { parseAiResponse } from '../../../src/utils/markdownParser.js';
+// ✅ Đường dẫn ĐÚNG
+import { StorageService } from '/src/services/storageService.js';
+import { parseAiResponse } from '/src/utils/markdownParser.js';
+import { ApiService } from '/src/services/apiService.js';
 
 const RENDER_BASE_URL = "https://t-vy-ai-supreme-1.onrender.com"; 
 const storageService = new StorageService();

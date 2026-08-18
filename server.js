@@ -2,22 +2,23 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors'; 
 import { GoogleGenAI, Type } from '@google/genai';
-import path from 'path'; // 👈 1. THÊM DÒNG NÀY VÀO ĐẦU FILE
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Cấu hình __dirname cho ES Module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
 const app = express();
 
-// 1. Cấu hình CORS & JSON Parser
 app.use(cors());
 app.use(express.json());
 
-// 👈 2. THÊM 2 DÒNG NÀY VÀO ĐÂY ĐỂ MỞ QUYỀN TRUY CẬP THƯ MỤC PUBLIC VÀ SRC
-(// Phục vụ giao diện HTML/CSS/JS từ thư mục frontend/public
-app.use(express.static('frontend/public'));
-
-// Định tuyến đường dẫn /src trỏ đúng vào thư mục frontend/src
-app.use('/src', express.static('frontend/src'));
+// 🟢 CHỈNH SỬA DÒNG NÀY: Sử dụng path.join để định vị thư mục frontend
+app.use(express.static(path.join(__dirname, 'frontend/public')));
+app.use('/src', express.static(path.join(__dirname, 'frontend/src')));
 
 // Khởi tạo Gemini AI Client
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
