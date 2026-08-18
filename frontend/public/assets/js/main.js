@@ -4,8 +4,14 @@
 // Claude Artifacts, Perplexity Source Cards & Voice Mode Tiếng Việt
 // ================================================================
 
-// 🚨 CẤU HÌNH SERVER RENDER 🚨
+// Import các module mới vào đầu file main.js
+import { ApiService } from '../../../src/services/apiService.js';
+import { StorageService } from '../../../src/services/storageService.js';
+import { parseAiResponse } from '../../../src/utils/markdownParser.js';
+
+/ 🚨 CẤU HÌNH SERVER RENDER 🚨
 const RENDER_BASE_URL = "https://t-vy-ai-supreme-1.onrender.com"; 
+const storageService = new StorageService();
 
 function getApiUrl(path) {
     if (!path.startsWith('/')) path = '/' + path;
@@ -1184,19 +1190,44 @@ if (chatContainer) {
 // ================================================================
 // SEND MESSAGE (TÍCH HỢP TOOL/FUNCTION CALLING & DUAL ROUTE)
 // ================================================================
-function sendMessage() {
-    if (!inputField || isGenerating) return; 
+async function sendMessage() {
     const text = inputField.value.trim();
-    if (!text) return;
+    if (!text || isGenerating) return;
 
-    if (!isLoggedIn) {
-        const upgradeReq = document.getElementById('upgradeRequired');
-        if (upgradeReq) upgradeReq.style.display = 'none';
-    }
-
+    // 1. Hiển thị tin nhắn người dùng lên UI
+    addMessage('user', text);
     inputField.value = '';
-    inputField.style.height = 'auto';
-    sendMessageInternal(text, false);
+
+    // 2. Lưu tin nhắn User vào IndexedDB (StorageService)
+    await storageService.saveMessage(currentConversationId || 'default', 'user', text);
+
+    try {
+        isGenerating = true;
+        // 3. Gọi API qua ApiService chuẩn hóa
+        const data = await apiService.sendChatMessage(text, systemPrompt, {
+            model: 'gemini-3.6-flash',
+            temperature: 0.7
+        });
+
+        // 4. Phân tích phản hồi AI qua MarkdownParser (lấy text & artifacts)
+        const parsed = parseAiResponse(data.reply || data.text);
+
+        // 5. Hiển thị tin nhắn AI ra giao diện
+        addMessage('ai', parsed.formattedText);
+
+        // 6. Lưu tin nhắn AI vào IndexedDB
+        await storageService.saveMessage(currentConversationId || 'default', 'ai', parsed.formattedText);
+
+        // Nếu có đoạn code Artifact (HTML/CSS/JS), mở Live Preview panel
+        if (parsed.artifacts && parsed.artifacts.length > 0) {
+            renderArtifactPreview(parsed.artifacts);
+        }
+
+    } catch (error) {
+        addMessage('ai', `❌ Lỗi: ${error.message}`);
+    } finally {
+        isGenerating = false;
+    }
 }
 
 async function sendMessageInternal(text, isResend = false) {
@@ -1827,6 +1858,25 @@ function clearAllMessages() {
     currentConversationId = null;
     if (exportBtn) exportBtn.style.display = 'none';
 }
+
+// Hàm tự động nhúng các Component HTML vào trang chính index.html
+async function loadComponent(elementId, componentPath) {
+    try {
+        const response = await fetch(componentPath);
+        if (response.ok) {
+            document.getElementById(elementId).innerHTML = await response.text();
+        }
+    } catch (error) {
+        console.error(`Không thể tải component từ: ${componentPath}`, error);
+    }
+}
+
+// Khởi chạy khi load trang
+document.addEventListener("DOMContentLoaded", () => {
+    loadComponent("chat-container", "../components/chat/chat.html");
+    loadComponent("sidebar-container", "../components/sidebar/sidebar.html");
+    loadComponent("modals-container", "../components/modals/modals.html");
+});
 
 // ================================================================
 // INIT & KHỞI TẠO HỆ THỐNG
