@@ -13,8 +13,11 @@ app.use(cors());
 app.use(express.json());
 
 // 👈 2. THÊM 2 DÒNG NÀY VÀO ĐÂY ĐỂ MỞ QUYỀN TRUY CẬP THƯ MỤC PUBLIC VÀ SRC
-app.use(express.static('public'));
-app.use('/src', express.static('src'));
+(// Phục vụ giao diện HTML/CSS/JS từ thư mục frontend/public
+app.use(express.static('frontend/public'));
+
+// Định tuyến đường dẫn /src trỏ đúng vào thư mục frontend/src
+app.use('/src', express.static('frontend/src'));
 
 // Khởi tạo Gemini AI Client
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
