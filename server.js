@@ -1,15 +1,20 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import cors from 'cors'; // 👈 BẮT BUỘC KHI DÙNG RENDER
+import cors from 'cors'; 
 import { GoogleGenAI, Type } from '@google/genai';
+import path from 'path'; // 👈 1. THÊM DÒNG NÀY VÀO ĐẦU FILE
 
 dotenv.config();
 
 const app = express();
 
-// 1. Cấu hình CORS để cho phép Frontend kết nối tới Render
+// 1. Cấu hình CORS & JSON Parser
 app.use(cors());
 app.use(express.json());
+
+// 👈 2. THÊM 2 DÒNG NÀY VÀO ĐÂY ĐỂ MỞ QUYỀN TRUY CẬP THƯ MỤC PUBLIC VÀ SRC
+app.use(express.static('public'));
+app.use('/src', express.static('src'));
 
 // Khởi tạo Gemini AI Client
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
