@@ -5,19 +5,20 @@ import { GoogleGenAI, Type } from '@google/genai';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Cấu hình __dirname cho ES Module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 dotenv.config();
-
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// 🟢 CHỈNH SỬA DÒNG NÀY: Sử dụng path.join để định vị thư mục frontend
+// 🟢 1. PHỤC VỤ TÀI NGUYÊN FRONTEND
+// Phục vụ thư mục public (chứa index.html, assets,...)
 app.use(express.static(path.join(__dirname, 'frontend/public')));
+
+// Bảo hiểm: Mở thêm đường dẫn /src trỏ tới frontend/src (nếu src nằm ngoài public)
 app.use('/src', express.static(path.join(__dirname, 'frontend/src')));
 
 // Khởi tạo Gemini AI Client
@@ -73,8 +74,8 @@ const weatherDeclaration = {
 
 const SYSTEM_INSTRUCTION = "Bạn là trợ lý AI thông minh. Hãy trả lời trực tiếp, đầy đủ câu hỏi của người dùng bằng tiếng Việt. Tuyệt đối không xuất các câu thoại chào mừng mô phỏng hay danh sách plugin.";
 
-// Route kiểm tra Server Render có đang sống hay không
-app.get('/', (req, res) => {
+// 🟢 2. ROUTE KIỂM TRA TRẠNG THÁI SERVER (Đổi sang /health để không đè index.html)
+app.get('/health', (req, res) => {
     res.send("🚀 Server Render đang hoạt động bình thường!");
 });
 
@@ -135,7 +136,6 @@ app.post('/chat', async (req, res) => {
             }
         }
 
-        // Trả về đủ key để Frontend đọc kiểu nào cũng nhận được đúng dữ liệu
         return res.json({ 
             reply: finalAnswer,
             message: finalAnswer,
@@ -148,7 +148,6 @@ app.post('/chat', async (req, res) => {
     }
 });
 
-// Render sẽ tự động cấp cổng PORT qua process.env.PORT
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Server đang chạy tại cổng ${PORT}`);
